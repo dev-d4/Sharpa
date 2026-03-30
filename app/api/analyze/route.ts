@@ -1,6 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase, Fund } from "@/lib/supabase";
-import { analyzePortfolio, PortfolioEntry } from "@/lib/analysis";
+import { Fund } from "@/lib/supabase";
+import { fetchAvanzaFunds } from "@/lib/avanza";
+import { spawn } from "child_process";
+import path from "path";
+
+function runPythonAnalysis(input: object): Promise<object> {
+  return new Promise((resolve, reject) => {
+    const script = path.join(process.cwd(), "scripts", "analyze.py");
+    const py = spawn("python3", [script]);
+
+    let stdout = "";
+    let stderr = "";
+
+    py.stdout.on("data", (chunk) => (stdout += chunk));
+    py.stderr.on("data", (chunk) => (stderr += chunk));
+
+    py.on("close", (code) => {
+      if (code !== 0) {
+        return reject(new Error(stderr || `Python exited with code ${code}`));
+      }
+      try {
+        resolve(JSON.parse(stdout));
+      } catch {
+        reject(new Error(`Ogiltigt svar från analysskript: ${stdout}`));
+      }
+    });
+
+    py.stdin.write(JSON.stringify(input));
+    py.stdin.end();
+  });
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,47 +40,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Inga fonder angivna" }, { status: 400 });
     }
 
-    const isins = entries.map((e) => e.isin.trim().toUpperCase());
+    // Fetch all funds from Avanza cache
+    const allFunds = await fetchAvanzaFunds();
+    const fundMap = new Map<string, Fund>(allFunds.map((f) => [f.isin, f]));
 
-    // Hämta de angivna fonderna
-    const { data: foundFunds, error } = await supabase
-      .from("funds")
-      .select("*")
-      .in("isin", isins);
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    const fundMap = new Map<string, Fund>(
-      (foundFunds ?? []).map((f: Fund) => [f.isin, f])
-    );
-
-    const portfolioEntries: PortfolioEntry[] = entries.map((e) => ({
+    // Attach fund data to each portfolio entry
+    const portfolioEntries = entries.map((e) => ({
       isin: e.isin.trim().toUpperCase(),
       weight: e.weight,
-      fund: fundMap.get(e.isin.trim().toUpperCase()),
+      fund: fundMap.get(e.isin.trim().toUpperCase()) ?? null,
     }));
 
-    // Hämta alla fonder i relevanta kategorier för byteförslag
-    const categories = [
-      ...new Set(
-        portfolioEntries
-          .filter((e) => e.fund?.category)
-          .map((e) => e.fund!.category!)
-      ),
-    ];
+    // Find peer funds in the same categories for swap suggestions
+    const categories = new Set(
+      portfolioEntries.filter((e) => e.fund?.category).map((e) => e.fund!.category!)
+    );
+    const peerFunds = allFunds.filter(
+      (f) => f.category !== null && categories.has(f.category)
+    );
 
-    let allFunds: Fund[] = [];
-    if (categories.length > 0) {
-      const { data: peers } = await supabase
-        .from("funds")
-        .select("*")
-        .in("category", categories);
-      allFunds = peers ?? [];
-    }
-
-    const analysis = analyzePortfolio(portfolioEntries, allFunds);
+    const analysis = await runPythonAnalysis({
+      entries: portfolioEntries,
+      allFunds: peerFunds,
+    });
 
     return NextResponse.json(analysis);
   } catch (err) {
