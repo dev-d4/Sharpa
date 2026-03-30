@@ -1,6 +1,5 @@
 import { Fund } from "./supabase";
-import fs from "fs";
-import path from "path";
+import { unstable_cache } from "next/cache";
 
 // ── Raw shape returned by Avanza's fund-guide list API ────────────────────────
 interface AvanzaFund {
@@ -31,7 +30,6 @@ const FUND_TYPE_TO_CATEGORY_GROUP: Record<string, string> = {
   FUND_OF_FUNDS: "Allocation",
 };
 
-// Convert cumulative multi-year return to annualised %
 function annualize(cumulative: number | null, years: number): number | null {
   if (cumulative === null) return null;
   return (Math.pow(1 + cumulative / 100, 1 / years) - 1) * 100;
@@ -64,33 +62,7 @@ function mapAvanzaToFund(f: AvanzaFund, index: number): Fund {
   };
 }
 
-// ── File-based cache (30 days) ────────────────────────────────────────────────
-const CACHE_FILE = path.join(process.cwd(), "data", "avanza-funds.json");
-const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-
-interface CacheFile {
-  fetchedAt: number;
-  funds: Fund[];
-}
-
-function readCache(): Fund[] | null {
-  try {
-    const raw = fs.readFileSync(CACHE_FILE, "utf-8");
-    const cache: CacheFile = JSON.parse(raw);
-    if (Date.now() - cache.fetchedAt < CACHE_TTL_MS) {
-      return cache.funds;
-    }
-  } catch {
-    // File doesn't exist or is corrupt — treat as cache miss
-  }
-  return null;
-}
-
-function writeCache(funds: Fund[]): void {
-  const cache: CacheFile = { fetchedAt: Date.now(), funds };
-  fs.mkdirSync(path.dirname(CACHE_FILE), { recursive: true });
-  fs.writeFileSync(CACHE_FILE, JSON.stringify(cache), "utf-8");
-}
+// ── Avanza API fetch (paginated) ──────────────────────────────────────────────
 
 const PAGE_SIZE = 20;
 const API_URL =
@@ -143,7 +115,6 @@ function extractPage(data: unknown): { funds: AvanzaFund[]; total: number } {
 }
 
 async function fetchFromAvanza(): Promise<Fund[]> {
-  // Fetch first page to discover total count
   const firstRes = await fetch(API_URL, {
     method: "POST",
     headers: HEADERS,
@@ -154,13 +125,10 @@ async function fetchFromAvanza(): Promise<Fund[]> {
   const firstData = await firstRes.json();
   const { funds: firstPage, total } = extractPage(firstData);
 
-  console.log(
-    `[avanza] total=${total} first page=${firstPage.length} top-level keys=${Object.keys(firstData as object).join(",")}`
-  );
+  console.log(`[avanza] total=${total} first page=${firstPage.length}`);
 
   const all: AvanzaFund[] = [...firstPage];
 
-  // Fetch remaining pages in small batches to avoid hammering the API
   if (total > PAGE_SIZE) {
     const offsets: number[] = [];
     for (let i = PAGE_SIZE; i < total; i += PAGE_SIZE) offsets.push(i);
@@ -175,7 +143,7 @@ async function fetchFromAvanza(): Promise<Fund[]> {
             headers: HEADERS,
             body: buildBody(startIndex),
           });
-          if (!res.ok) throw new Error(`Avanza API svarade med ${res.status} (startIndex=${startIndex})`);
+          if (!res.ok) throw new Error(`Avanza API svarade med ${res.status}`);
           const { funds } = extractPage(await res.json());
           return funds;
         })
@@ -184,7 +152,6 @@ async function fetchFromAvanza(): Promise<Fund[]> {
     }
   }
 
-  // Deduplicate by ISIN — keep the first occurrence
   const seen = new Set<string>();
   const unique = all.filter((f) => {
     if (seen.has(f.isin)) return false;
@@ -195,11 +162,9 @@ async function fetchFromAvanza(): Promise<Fund[]> {
   return unique.map((f, i) => mapAvanzaToFund(f, i));
 }
 
-export async function fetchAvanzaFunds(): Promise<Fund[]> {
-  const cached = readCache();
-  if (cached) return cached;
-
-  const funds = await fetchFromAvanza();
-  writeCache(funds);
-  return funds;
-}
+// ── Cache (30 days via Next.js data cache) ────────────────────────────────────
+export const fetchAvanzaFunds = unstable_cache(
+  fetchFromAvanza,
+  ["avanza-funds"],
+  { revalidate: 30 * 24 * 60 * 60 }
+);
