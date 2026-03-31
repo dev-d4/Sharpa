@@ -21,12 +21,9 @@ export default function NavAuth() {
     return (
       <Link
         href="/account"
-        className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+        className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
       >
-        <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs">
-          {(user.email ?? "?")[0].toUpperCase()}
-        </div>
-        <span className="hidden sm:inline">Mitt konto</span>
+        Mitt konto
       </Link>
     );
   }

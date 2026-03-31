@@ -360,7 +360,7 @@ export default function AnalyzePage() {
 
         <button
           onClick={analyze} disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium rounded-xl py-3 transition-colors"
+          className="w-full bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 disabled:from-blue-300 disabled:to-blue-300 text-white font-medium rounded-xl py-3 transition-all shadow-md shadow-blue-200"
         >
           {loading ? "Analyserar…" : "Analysera portfölj"}
         </button>
