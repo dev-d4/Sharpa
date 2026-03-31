@@ -244,6 +244,10 @@ export default function AnalyzePage() {
       if (saved.custodian) setCustodian(saved.custodian);
       if (saved.entries?.length) setEntries(saved.entries);
       if (saved.analysis) setAnalysis(saved.analysis);
+    } else {
+      // Fall back to preferred custodian from account settings
+      const preferred = localStorage.getItem("fondanalys_preferred_custodian");
+      if (preferred) setCustodian(preferred);
     }
   }, []);
 
