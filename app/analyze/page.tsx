@@ -156,7 +156,78 @@ function FundSearchInput({
   );
 }
 
+// ── Custodian dropdown ────────────────────────────────────────────────────────
+
+function CustodianDropdown({ onSelect }: { onSelect: (value: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<string | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const current = CUSTODIANS.find((c) => c.value === selected);
+
+  return (
+    <div ref={ref} className="relative w-full sm:w-72">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border-2 bg-white text-sm font-medium transition-all
+          ${open ? "border-blue-500 ring-2 ring-blue-100" : "border-slate-200 hover:border-slate-300"}`}
+      >
+        <span className={current ? "text-slate-900" : "text-slate-400"}>
+          {current ? current.label : "Välj depåinstitut…"}
+        </span>
+        <svg
+          className={`w-4 h-4 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`}
+          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute z-10 top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+          {CUSTODIANS.map((c) => (
+            <button
+              key={c.value}
+              type="button"
+              onClick={() => { setSelected(c.value); setOpen(false); onSelect(c.value); }}
+              className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors hover:bg-blue-50 hover:text-blue-700
+                ${selected === c.value ? "bg-blue-50 text-blue-700" : "text-slate-700"}`}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
+
+const SESSION_KEY = "fondanalys_state";
+
+function loadSession() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as { custodian: string | null; entries: Entry[]; analysis: PortfolioAnalysis | null };
+  } catch { return null; }
+}
+
+function saveSession(custodian: string | null, entries: Entry[], analysis: PortfolioAnalysis | null) {
+  try {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ custodian, entries, analysis }));
+  } catch { /* ignore */ }
+}
 
 export default function AnalyzePage() {
   const [user, setUser] = useState<User | null>(null);
@@ -165,6 +236,21 @@ export default function AnalyzePage() {
   const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState<PortfolioAnalysis | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Restore state from sessionStorage on mount (survives login redirect)
+  useEffect(() => {
+    const saved = loadSession();
+    if (saved) {
+      if (saved.custodian) setCustodian(saved.custodian);
+      if (saved.entries?.length) setEntries(saved.entries);
+      if (saved.analysis) setAnalysis(saved.analysis);
+    }
+  }, []);
+
+  // Persist state on every change
+  useEffect(() => {
+    saveSession(custodian, entries, analysis);
+  }, [custodian, entries, analysis]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -214,19 +300,12 @@ export default function AnalyzePage() {
   if (!custodian) {
     return (
       <div className="space-y-8">
-        <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-          <h2 className="text-lg font-bold text-slate-900">Välj depåinstitut</h2>
-          <p className="text-sm text-slate-500">Välj var du förvaltar dina fonder.</p>
-          <select
-            defaultValue=""
-            onChange={(e) => setCustodian(e.target.value)}
-            className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-          >
-            <option value="" disabled>Välj depåinstitut…</option>
-            {CUSTODIANS.map((c) => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </select>
+        <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 space-y-6">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Välj depåinstitut</h2>
+            <p className="text-sm text-slate-500 mt-1">Välj var du förvaltar dina fonder.</p>
+          </div>
+          <CustodianDropdown onSelect={setCustodian} />
         </section>
       </div>
     );

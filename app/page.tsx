@@ -21,7 +21,7 @@ export default function LandingPage() {
             <div className="flex items-center gap-4">
               <Link
                 href="/analyze"
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-xl transition-colors"
+                className="bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white font-semibold px-6 py-3 rounded-xl transition-all shadow-md shadow-blue-200 hover:shadow-blue-300"
               >
                 Analysera din portfölj →
               </Link>
@@ -67,12 +67,12 @@ export default function LandingPage() {
       </section>
 
       {/* ── CTA ── */}
-      <section className="bg-blue-600 rounded-2xl p-10 text-center space-y-4">
+      <section className="bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 rounded-2xl p-10 text-center space-y-4 shadow-lg shadow-blue-200">
         <h2 className="text-2xl font-bold text-white">Redo att analysera din portfölj?</h2>
         <p className="text-blue-100">Det tar under en minut och är helt kostnadsfritt.</p>
         <Link
           href="/analyze"
-          className="inline-block bg-white text-blue-600 font-semibold px-6 py-3 rounded-xl hover:bg-blue-50 transition-colors"
+          className="inline-block bg-white text-blue-600 font-semibold px-6 py-3 rounded-xl hover:bg-blue-50 transition-colors shadow-sm"
         >
           Kom igång nu →
         </Link>

@@ -36,8 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         <footer className="border-t border-slate-200 mt-24">
           <div className="max-w-5xl mx-auto px-6 py-8 flex items-center justify-between text-xs text-slate-400">
-            <span>© 2025 Fondanalys</span>
-            <span>Data från Avanza</span>
+            <span>© 2026 Fondanalys</span>
           </div>
         </footer>
       </body>
