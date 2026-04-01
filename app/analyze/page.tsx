@@ -313,7 +313,7 @@ export default function AnalyzePage() {
 
   if (!custodian) {
     return (
-      <div className="bg-slate-50 min-h-screen"><div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
+      <div className="bg-gradient-to-br from-white via-slate-50 to-blue-50 min-h-screen"><div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
         <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 space-y-6">
           <div>
             <h2 className="text-lg font-bold text-slate-900">Välj depåinstitut</h2>
@@ -326,7 +326,7 @@ export default function AnalyzePage() {
   }
 
   return (
-    <div className="bg-slate-50 min-h-screen"><div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
+    <div className="bg-gradient-to-br from-white via-slate-50 to-blue-50 min-h-screen"><div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
       <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-900">Din portfölj</h2>
