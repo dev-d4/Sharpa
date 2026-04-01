@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="sv">
-      <body className={`${geist.className} min-h-screen text-slate-900`}>
+      <body className={`${geist.className} min-h-screen text-slate-900 bg-gradient-to-br from-white via-slate-50 to-blue-50`}>
         <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
           <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2.5">

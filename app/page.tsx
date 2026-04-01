@@ -1,11 +1,21 @@
 import Link from "next/link";
 import Hero from "@/components/ui/hero";
+import DotPattern from "@/components/ui/dot-pattern";
+import { cn } from "@/lib/utils";
 
 export default function LandingPage() {
   return (
-    <div className="bg-gradient-to-br from-white via-slate-50 to-blue-50 min-h-screen">
+    <div className="relative bg-gradient-to-br from-white via-slate-50 to-blue-50 min-h-screen overflow-hidden">
+      {/* Full-page dot pattern */}
+      <DotPattern className={cn("[mask-image:radial-gradient(80vw_circle_at_50%_20%,white,transparent)]")} />
+
+      {/* Glow blobs */}
+      <div className="absolute top-[-80px] left-[-80px] w-[320px] h-[320px] bg-blue-400/15 blur-[120px] rounded-full z-0 pointer-events-none" />
+      <div className="absolute top-[40%] right-[-80px] w-[400px] h-[400px] bg-indigo-400/10 blur-[160px] rounded-full z-0 pointer-events-none" />
+      <div className="absolute bottom-0 left-[30%] w-[500px] h-[300px] bg-blue-300/10 blur-[140px] rounded-full z-0 pointer-events-none" />
+
       <Hero />
-      <div className="max-w-5xl mx-auto px-6 space-y-24 py-16">
+      <div className="relative z-10 max-w-5xl mx-auto px-6 space-y-24 py-16">
 
         {/* ── Features ── */}
         <section className="pb-4">

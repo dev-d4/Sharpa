@@ -2,22 +2,10 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import DotPattern from "@/components/ui/dot-pattern";
-import { cn } from "@/lib/utils";
 
 export default function Hero() {
   return (
-    <section className="relative w-full min-h-[90vh] flex flex-col items-center justify-center px-6 py-24 overflow-hidden bg-gradient-to-br from-white via-slate-50 to-blue-50">
-      <DotPattern
-        className={cn(
-          "[mask-image:radial-gradient(60vw_circle_at_center,white,transparent)]"
-        )}
-      />
-
-      {/* Glow blobs */}
-      <div className="absolute top-[-80px] left-[-80px] w-[320px] h-[320px] bg-blue-400/15 blur-[120px] rounded-full z-0" />
-      <div className="absolute bottom-[-80px] right-[-80px] w-[400px] h-[400px] bg-indigo-400/10 blur-[160px] rounded-full z-0" />
-
+    <section className="relative w-full min-h-[90vh] flex flex-col items-center justify-center px-6 py-24">
       {/* Content */}
       <div className="relative z-10 text-center max-w-2xl space-y-6">
         {/* Badge */}
