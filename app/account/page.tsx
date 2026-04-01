@@ -66,7 +66,7 @@ export default function AccountPage() {
   );
 
   return (
-    <div className="max-w-lg space-y-6">
+    <div className="max-w-5xl mx-auto px-6 py-10"><div className="max-w-lg space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Mitt konto</h1>
         <p className="text-sm text-slate-500 mt-1">Hantera dina inställningar</p>
@@ -130,6 +130,6 @@ export default function AccountPage() {
           </button>
         </div>
       </section>
-    </div>
+    </div></div>
   );
 }

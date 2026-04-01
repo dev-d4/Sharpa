@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="sv">
-      <body className={`${geist.className} min-h-screen bg-slate-50 text-slate-900`}>
+      <body className={`${geist.className} min-h-screen text-slate-900`}>
         <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
           <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2.5">
@@ -32,7 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
         </header>
 
-        <main className="max-w-5xl mx-auto px-6 py-10">{children}</main>
+        <main>{children}</main>
 
         <footer className="border-t border-slate-200 mt-24">
           <div className="max-w-5xl mx-auto px-6 py-8 flex items-center justify-between text-xs text-slate-400">

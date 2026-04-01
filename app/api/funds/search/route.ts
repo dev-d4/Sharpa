@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchAvanzaFunds } from "@/lib/avanza";
+import { fetchFundsByCustodian, Custodian } from "@/lib/funds";
 
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get("q")?.trim().toLowerCase() ?? "";
+  const custodian = (req.nextUrl.searchParams.get("custodian") ?? "avanza") as Custodian;
   if (q.length < 2) return NextResponse.json([]);
 
-  const funds = await fetchAvanzaFunds();
+  const funds = await fetchFundsByCustodian(custodian);
 
   const results = funds
     .filter(

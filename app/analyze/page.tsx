@@ -11,7 +11,10 @@ import Link from "next/link";
 type Entry = { isin: string; name: string; weight: string };
 type FundSuggestion = { name: string; isin: string };
 
-const CUSTODIANS = [{ value: "avanza", label: "Avanza" }];
+const CUSTODIANS = [
+  { value: "avanza", label: "Avanza" },
+  { value: "nordnet", label: "Nordnet" },
+];
 
 // ── Login CTA text ────────────────────────────────────────────────────────────
 
@@ -86,11 +89,13 @@ function BlurGate({
 function FundSearchInput({
   isin,
   name,
+  custodian,
   onSelect,
   onClear,
 }: {
   isin: string;
   name: string;
+  custodian: string;
   onSelect: (isin: string, name: string) => void;
   onClear: () => void;
 }) {
@@ -115,7 +120,7 @@ function FundSearchInput({
     if (debounce.current) clearTimeout(debounce.current);
     if (q.length < 2) { setSuggestions([]); setNoResults(false); setOpen(false); return; }
     debounce.current = setTimeout(async () => {
-      const res = await fetch(`/api/funds/search?q=${encodeURIComponent(q)}`);
+      const res = await fetch(`/api/funds/search?q=${encodeURIComponent(q)}&custodian=${encodeURIComponent(custodian)}`);
       const data: FundSuggestion[] = await res.json();
       setSuggestions(data);
       setNoResults(data.length === 0);
@@ -237,6 +242,11 @@ export default function AnalyzePage() {
   const [analysis, setAnalysis] = useState<PortfolioAnalysis | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Warm up fund cache as soon as page loads so search is instant
+  useEffect(() => {
+    fetch("/api/funds/search?q=__warmup__").catch(() => {});
+  }, []);
+
   // Restore state from sessionStorage on mount (survives login redirect)
   useEffect(() => {
     const saved = loadSession();
@@ -287,7 +297,7 @@ export default function AnalyzePage() {
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ entries: valid.map((e) => ({ isin: e.isin.trim().toUpperCase(), weight: parseFloat(e.weight) })) }),
+        body: JSON.stringify({ custodian, entries: valid.map((e) => ({ isin: e.isin.trim().toUpperCase(), weight: parseFloat(e.weight) })) }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Okänt fel");
@@ -303,7 +313,7 @@ export default function AnalyzePage() {
 
   if (!custodian) {
     return (
-      <div className="space-y-8">
+      <div className="bg-slate-50 min-h-screen"><div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
         <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 space-y-6">
           <div>
             <h2 className="text-lg font-bold text-slate-900">Välj depåinstitut</h2>
@@ -311,12 +321,12 @@ export default function AnalyzePage() {
           </div>
           <CustodianDropdown onSelect={setCustodian} />
         </section>
-      </div>
+      </div></div>
     );
   }
 
   return (
-    <div className="space-y-8">
+    <div className="bg-slate-50 min-h-screen"><div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
       <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-900">Din portfölj</h2>
@@ -335,7 +345,7 @@ export default function AnalyzePage() {
           </div>
           {entries.map((entry, i) => (
             <div key={i} className="grid grid-cols-[1fr_100px_36px] gap-2">
-              <FundSearchInput isin={entry.isin} name={entry.name} onSelect={(isin, name) => selectFund(i, isin, name)} onClear={() => clearFund(i)} />
+              <FundSearchInput isin={entry.isin} name={entry.name} custodian={custodian} onSelect={(isin, name) => selectFund(i, isin, name)} onClear={() => clearFund(i)} />
               <input
                 type="number" placeholder="25" min={0} max={100}
                 value={entry.weight} onChange={(e) => updateWeight(i, e.target.value)}
@@ -367,7 +377,7 @@ export default function AnalyzePage() {
       </section>
 
       {analysis && <AnalysisResult analysis={analysis} user={user} />}
-    </div>
+    </div></div>
   );
 }
 
@@ -551,7 +561,7 @@ function SuggestedPortfolio({ current, suggested }: { current: CurrentMetrics; s
                   <td className="text-right py-3 pl-4 font-semibold">
                     {d ? (
                       <span className={d.better ? "text-green-600" : "text-red-500"}>
-                        {d.better ? "▲" : "▼"} {Math.abs(d.diff).toFixed(2)}%
+                        {d.diff > 0 ? "▲" : "▼"} {Math.abs(d.diff).toFixed(2)}%
                       </span>
                     ) : <span className="text-slate-400">–</span>}
                   </td>
