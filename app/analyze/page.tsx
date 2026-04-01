@@ -5,6 +5,8 @@ import type { PortfolioAnalysis, SuggestedMetrics } from "@/lib/analysis";
 import { createClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
+import DotPattern from "@/components/ui/dot-pattern";
+import { cn } from "@/lib/utils";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -313,7 +315,11 @@ export default function AnalyzePage() {
 
   if (!custodian) {
     return (
-      <div className="bg-gradient-to-br from-white via-slate-50 to-blue-50 min-h-screen"><div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
+      <div className="relative bg-gradient-to-br from-white via-slate-50 to-blue-50 min-h-screen overflow-hidden">
+        <DotPattern className={cn("[mask-image:radial-gradient(80vw_circle_at_50%_20%,white,transparent)]")} />
+        <div className="absolute top-[-80px] left-[-80px] w-[320px] h-[320px] bg-blue-400/15 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute bottom-0 right-[-80px] w-[400px] h-[400px] bg-indigo-400/10 blur-[160px] rounded-full pointer-events-none" />
+        <div className="relative z-10 max-w-5xl mx-auto px-6 py-10 space-y-8">
         <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 space-y-6">
           <div>
             <h2 className="text-lg font-bold text-slate-900">Välj depåinstitut</h2>
@@ -326,7 +332,11 @@ export default function AnalyzePage() {
   }
 
   return (
-    <div className="bg-gradient-to-br from-white via-slate-50 to-blue-50 min-h-screen"><div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
+    <div className="relative bg-gradient-to-br from-white via-slate-50 to-blue-50 min-h-screen overflow-hidden">
+      <DotPattern className={cn("[mask-image:radial-gradient(80vw_circle_at_50%_20%,white,transparent)]")} />
+      <div className="absolute top-[-80px] left-[-80px] w-[320px] h-[320px] bg-blue-400/15 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-0 right-[-80px] w-[400px] h-[400px] bg-indigo-400/10 blur-[160px] rounded-full pointer-events-none" />
+      <div className="relative z-10 max-w-5xl mx-auto px-6 py-10 space-y-8">
       <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-900">Din portfölj</h2>
