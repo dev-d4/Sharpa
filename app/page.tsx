@@ -2,7 +2,6 @@ import Link from "next/link";
 import Hero from "@/components/ui/hero";
 import DotPattern from "@/components/ui/dot-pattern";
 import { cn } from "@/lib/utils";
-import { Prefetch } from "@/components/ui/prefetch";
 
 export default function LandingPage() {
   return (
@@ -15,7 +14,6 @@ export default function LandingPage() {
       <div className="absolute top-[40%] right-[-80px] w-[400px] h-[400px] bg-indigo-400/10 blur-[160px] rounded-full z-0 pointer-events-none" />
       <div className="absolute bottom-0 left-[30%] w-[500px] h-[300px] bg-blue-300/10 blur-[140px] rounded-full z-0 pointer-events-none" />
 
-      <Prefetch href="/analyze" />
       <Hero />
       <div className="relative z-10 max-w-5xl mx-auto px-6 space-y-24 py-16">
 

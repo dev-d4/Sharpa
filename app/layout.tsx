@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import "./globals.css";
 import NavAuth from "./NavAuth";
+import { Prefetch } from "@/components/ui/prefetch";
 
 const geist = Geist({ subsets: ["latin"] });
 
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
         </header>
 
+        <Prefetch hrefs={["/analyze", "/risk-profile"]} />
         <main>{children}</main>
 
         <footer className="border-t border-slate-200 mt-24">
