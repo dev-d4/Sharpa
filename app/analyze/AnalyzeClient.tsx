@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import type { PortfolioAnalysis, SuggestedMetrics } from "@/lib/analysis";
 import { createClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
@@ -241,7 +241,6 @@ function saveSession(custodian: string | null, entries: Entry[], analysis: Portf
 
 export default function AnalyzeClient() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [user, setUser] = useState<User | null>(null);
   const [custodian, setCustodian] = useState<string | null>(null);
@@ -256,7 +255,9 @@ export default function AnalyzeClient() {
   const [showSaveForm, setShowSaveForm] = useState(false);
   const [savingName, setSavingName] = useState("");
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [portfolioLoading, setPortfolioLoading] = useState(() => searchParams.has("portfolio"));
+  const [portfolioLoading, setPortfolioLoading] = useState(() =>
+    new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").has("portfolio")
+  );
 
   // Warm up fund cache as soon as page loads so search is instant
   useEffect(() => {
@@ -265,7 +266,7 @@ export default function AnalyzeClient() {
 
   // Restore state from sessionStorage on mount, or load portfolio from URL param
   useEffect(() => {
-    const portfolioParam = searchParams.get("portfolio");
+    const portfolioParam = new URLSearchParams(window.location.search).get("portfolio");
     if (portfolioParam) {
       // Load saved portfolio from DB, ignore sessionStorage
       setPortfolioLoading(true);
