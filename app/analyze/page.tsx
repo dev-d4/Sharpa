@@ -1,10 +1,5 @@
-import { Suspense } from "react";
-import AnalyzeClient from "./AnalyzeClient";
+import AnalyzeWrapper from "./AnalyzeWrapper";
 
 export default function AnalyzePage() {
-  return (
-    <Suspense>
-      <AnalyzeClient />
-    </Suspense>
-  );
+  return <AnalyzeWrapper />;
 }

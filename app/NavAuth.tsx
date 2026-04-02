@@ -19,12 +19,20 @@ export default function NavAuth() {
 
   if (user) {
     return (
-      <Link
-        href="/account"
-        className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
-      >
-        Mitt konto
-      </Link>
+      <div className="flex items-center gap-4 sm:gap-6">
+        <Link
+          href="/risk-profile"
+          className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+        >
+          Riskprofil
+        </Link>
+        <Link
+          href="/account"
+          className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+        >
+          Mitt konto
+        </Link>
+      </div>
     );
   }
 

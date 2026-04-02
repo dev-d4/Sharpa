@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
 import type { SavedPortfolio } from "@/lib/portfolio";
+import { portfolioRiskLevel, riskMatch, RISK_LABELS, RISK_EQUITY, type RiskLevel } from "@/lib/risk";
 
 const CUSTODIANS = [
   { value: "avanza", label: "Avanza" },
@@ -18,6 +19,7 @@ export default function AccountPage() {
   const [preferredCustodian, setPreferredCustodian] = useState<string>("");
   const [portfolios, setPortfolios] = useState<SavedPortfolio[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [riskProfile, setRiskProfile] = useState<{ score: RiskLevel; label: string } | null | undefined>(undefined);
   const router = useRouter();
 
   useEffect(() => {
@@ -31,6 +33,10 @@ export default function AccountPage() {
         .then((r) => r.ok ? r.json() : [])
         .then(setPortfolios)
         .catch(() => {});
+      fetch("/api/risk-profile")
+        .then((r) => r.ok ? r.json() : null)
+        .then((p) => setRiskProfile(p ? { score: p.score as RiskLevel, label: p.label } : null))
+        .catch(() => setRiskProfile(null));
     });
     setPreferredCustodian(localStorage.getItem(PREF_KEY) ?? "");
   }, [router]);
@@ -128,6 +134,50 @@ export default function AccountPage() {
         </div>
       </section>
 
+      {/* Risk profile */}
+      <section className="space-y-3">
+        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Din riskprofil</p>
+        {riskProfile === undefined ? null : riskProfile === null ? (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-6 py-6 flex items-center justify-between gap-4">
+            <div>
+              <p className="font-semibold text-slate-900 text-sm">Du har ingen riskprofil ännu</p>
+              <p className="text-xs text-slate-400 mt-0.5">Svara på 4 frågor för att se om dina portföljer matchar din risknivå.</p>
+            </div>
+            <button
+              onClick={() => router.push("/risk-profile")}
+              className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-3 rounded-xl transition-colors"
+            >
+              Kom igång →
+            </button>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xl font-bold text-slate-900">{riskProfile.label}</p>
+                <p className="text-sm text-slate-500">{RISK_EQUITY[riskProfile.score]}</p>
+              </div>
+              <button
+                onClick={() => router.push("/risk-profile")}
+                className="text-xs text-slate-400 hover:text-slate-600 underline transition-colors"
+              >
+                Uppdatera
+              </button>
+            </div>
+            <div className="flex gap-1.5">
+              {([1, 2, 3, 4, 5] as RiskLevel[]).map((lvl) => (
+                <div key={lvl} className="flex-1 space-y-1">
+                  <div className={`h-2 rounded-full ${lvl <= riskProfile.score ? "bg-blue-500" : "bg-slate-100"}`} />
+                  <p className={`text-xs text-center truncate ${lvl === riskProfile.score ? "text-blue-600 font-semibold" : "text-slate-400"}`}>
+                    {RISK_LABELS[lvl]}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+
       {/* Portfolios */}
       <section className="space-y-3">
         <div>
@@ -159,6 +209,19 @@ export default function AccountPage() {
                           <span className="font-semibold text-slate-900 text-sm">{p.name}</span>
                           <span className="text-xs bg-blue-50 text-blue-600 font-medium px-2 py-0.5 rounded-full">{custodianLabel}</span>
                           <span className="text-xs text-slate-400">{p.holdings.length} fonder</span>
+                          {riskProfile && p.analysis.categoryBreakdown && (() => {
+                            const match = riskMatch(portfolioRiskLevel(p.analysis.categoryBreakdown), riskProfile.score);
+                            const colors = {
+                              green: "bg-green-50 text-green-700 border border-green-100",
+                              yellow: "bg-amber-50 text-amber-700 border border-amber-100",
+                              red: "bg-red-50 text-red-700 border border-red-100",
+                            };
+                            return (
+                              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${colors[match.color]}`}>
+                                {match.label}
+                              </span>
+                            );
+                          })()}
                         </div>
                         <div className="flex gap-4 mt-1.5">
                           {p.analysis.avgCost !== null && (
