@@ -58,10 +58,12 @@ function BlurGate({
   children,
   unlocked,
   ctaText,
+  onLoginClick,
 }: {
   children: React.ReactNode;
   unlocked: boolean;
   ctaText: string;
+  onLoginClick: () => void;
 }) {
   if (unlocked) return <>{children}</>;
 
@@ -76,12 +78,12 @@ function BlurGate({
         </div>
         <h3 className="text-base font-bold text-slate-900 mb-1">Fondbytesförslag</h3>
         <p className="text-sm text-slate-500 mb-5 max-w-xs leading-relaxed">{ctaText}</p>
-        <Link
-          href="/login"
+        <button
+          onClick={onLoginClick}
           className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-xl text-sm transition-colors"
         >
           Logga in kostnadsfritt
-        </Link>
+        </button>
       </div>
     </div>
   );
@@ -290,6 +292,7 @@ export default function AnalyzeClient() {
       if (saved.custodian) setCustodian(saved.custodian);
       if (saved.entries?.length) setEntries(saved.entries);
       if (saved.analysis) setAnalysis(saved.analysis);
+      sessionStorage.removeItem(SESSION_KEY); // one-time use — clear after restoring
     } else {
       // Fall back to preferred custodian from account settings
       const preferred = localStorage.getItem("fondanalys_preferred_custodian");
@@ -298,10 +301,6 @@ export default function AnalyzeClient() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Persist state on every change
-  useEffect(() => {
-    saveSession(custodian, entries, analysis);
-  }, [custodian, entries, analysis]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -495,7 +494,7 @@ export default function AnalyzeClient() {
         </button>
       </section>
 
-      {analysis && <AnalysisResult analysis={analysis} user={user} />}
+      {analysis && <AnalysisResult analysis={analysis} user={user} onLoginClick={() => { saveSession(custodian, entries, analysis); router.push("/login"); }} />}
 
       {analysis && user && !portfolioId && (
         <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
@@ -554,7 +553,7 @@ export default function AnalyzeClient() {
 
 // ── Results ───────────────────────────────────────────────────────────────────
 
-function AnalysisResult({ analysis, user }: { analysis: PortfolioAnalysis; user: User | null }) {
+function AnalysisResult({ analysis, user, onLoginClick }: { analysis: PortfolioAnalysis; user: User | null; onLoginClick: () => void }) {
   const unlocked = !!user;
   const ctaText = buildLoginCTA(analysis);
 
@@ -597,7 +596,7 @@ function AnalysisResult({ analysis, user }: { analysis: PortfolioAnalysis; user:
 
       {/* Swap suggestions — blurred if not logged in */}
       {analysis.swapSuggestions.length > 0 && (
-        <BlurGate unlocked={unlocked} ctaText={ctaText}>
+        <BlurGate unlocked={unlocked} ctaText={ctaText} onLoginClick={onLoginClick}>
           <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
             <h2 className="text-lg font-bold text-slate-900 mb-1">Fondbytesförslag</h2>
             <p className="text-sm text-slate-500 mb-4">Fonder i samma kategori med bättre nyckeltal.</p>
@@ -673,7 +672,7 @@ function AnalysisResult({ analysis, user }: { analysis: PortfolioAnalysis; user:
 
       {/* Suggested portfolio — also blurred */}
       {analysis.suggestedMetrics && (
-        <BlurGate unlocked={unlocked} ctaText={ctaText}>
+        <BlurGate unlocked={unlocked} ctaText={ctaText} onLoginClick={onLoginClick}>
           <SuggestedPortfolio
             current={{ avgCost: analysis.avgCost, weightedReturn1yr: analysis.weightedReturn1yr, weightedReturn3yr: analysis.weightedReturn3yr, weightedSharpe: analysis.weightedSharpe }}
             suggested={analysis.suggestedMetrics}
