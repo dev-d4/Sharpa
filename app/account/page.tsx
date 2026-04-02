@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
+import type { SavedPortfolio } from "@/lib/portfolio";
 
 const CUSTODIANS = [
   { value: "avanza", label: "Avanza" },
@@ -15,6 +16,8 @@ export default function AccountPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [preferredCustodian, setPreferredCustodian] = useState<string>("");
+  const [portfolios, setPortfolios] = useState<SavedPortfolio[]>([]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -23,10 +26,20 @@ export default function AccountPage() {
       const u = data.session?.user ?? null;
       setUser(u);
       setLoading(false);
-      if (!u) router.replace("/login");
+      if (!u) { router.replace("/login"); return; }
+      fetch("/api/portfolios")
+        .then((r) => r.ok ? r.json() : [])
+        .then(setPortfolios)
+        .catch(() => {});
     });
     setPreferredCustodian(localStorage.getItem(PREF_KEY) ?? "");
   }, [router]);
+
+  async function handleDeletePortfolio(id: string) {
+    await fetch(`/api/portfolios/${id}`, { method: "DELETE" });
+    setPortfolios((prev) => prev.filter((p) => p.id !== id));
+    if (expandedId === id) setExpandedId(null);
+  }
 
   function handleCustodianChange(value: string) {
     setPreferredCustodian(value);
@@ -113,6 +126,124 @@ export default function AccountPage() {
             </select>
           </div>
         </div>
+      </section>
+
+      {/* Portfolios */}
+      <section className="space-y-3">
+        <div>
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Mina portföljer</p>
+        </div>
+        {portfolios.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-6 py-8 text-center">
+            <p className="text-sm text-slate-400">Du har inga sparade portföljer än.</p>
+            <button onClick={() => router.push("/analyze")} className="mt-3 text-sm text-blue-600 hover:underline">
+              Analysera din första portfölj →
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {portfolios.map((p) => {
+              const isExpanded = expandedId === p.id;
+              const custodianLabel = p.custodian === "nordnet" ? "Nordnet" : "Avanza";
+              return (
+                <div key={p.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                  {/* Card header — click to expand */}
+                  <button
+                    type="button"
+                    onClick={() => setExpandedId(isExpanded ? null : p.id)}
+                    className="w-full text-left px-6 py-4 hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-slate-900 text-sm">{p.name}</span>
+                          <span className="text-xs bg-blue-50 text-blue-600 font-medium px-2 py-0.5 rounded-full">{custodianLabel}</span>
+                          <span className="text-xs text-slate-400">{p.holdings.length} fonder</span>
+                        </div>
+                        <div className="flex gap-4 mt-1.5">
+                          {p.analysis.avgCost !== null && (
+                            <span className="text-xs text-slate-500">Avgift: <span className="font-medium text-slate-700">{p.analysis.avgCost.toFixed(2)}%</span></span>
+                          )}
+                          {p.analysis.weightedReturn1yr !== null && (
+                            <span className="text-xs text-slate-500">Avk 1 år: <span className="font-medium text-slate-700">{p.analysis.weightedReturn1yr.toFixed(1)}%</span></span>
+                          )}
+                        </div>
+                      </div>
+                      <svg className={`w-4 h-4 text-slate-400 shrink-0 mt-1 transition-transform ${isExpanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </button>
+
+                  {/* Expanded detail */}
+                  {isExpanded && (
+                    <div className="border-t border-slate-100 px-6 py-4 space-y-5">
+                      {/* Holdings */}
+                      <div>
+                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Innehav</p>
+                        <div className="space-y-1.5">
+                          {p.holdings.map((h) => (
+                            <div key={h.isin} className="flex items-center justify-between text-sm">
+                              <div className="min-w-0">
+                                <span className="font-medium text-slate-900 truncate">{h.name}</span>
+                                <span className="text-xs text-slate-400 ml-2">{h.isin}</span>
+                              </div>
+                              <span className="font-semibold text-slate-600 shrink-0 ml-3">{h.weight}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Metrics */}
+                      <div>
+                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Nyckeltal</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          <div className="bg-slate-50 rounded-xl p-3">
+                            <p className="text-xs text-slate-500 mb-0.5">Snittavgift</p>
+                            <p className="font-bold text-slate-900">{p.analysis.avgCost !== null ? `${p.analysis.avgCost.toFixed(2)}%` : "–"}</p>
+                          </div>
+                          <div className="bg-slate-50 rounded-xl p-3">
+                            <p className="text-xs text-slate-500 mb-0.5">Avk 1 år</p>
+                            <p className="font-bold text-slate-900">{p.analysis.weightedReturn1yr !== null ? `${p.analysis.weightedReturn1yr.toFixed(1)}%` : "–"}</p>
+                          </div>
+                          <div className="bg-slate-50 rounded-xl p-3">
+                            <p className="text-xs text-slate-500 mb-0.5">Avk 3 år</p>
+                            <p className="font-bold text-slate-900">{p.analysis.weightedReturn3yr !== null ? `${p.analysis.weightedReturn3yr.toFixed(1)}%` : "–"}</p>
+                          </div>
+                          <div className="bg-slate-50 rounded-xl p-3">
+                            <p className="text-xs text-slate-500 mb-0.5">Sharpe 3 år</p>
+                            <p className="font-bold text-slate-900">{p.analysis.weightedSharpe !== null ? p.analysis.weightedSharpe.toFixed(2) : "–"}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Summary */}
+                      {p.analysis.summaryText && (
+                        <p className="text-sm text-slate-600 leading-relaxed bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">{p.analysis.summaryText}</p>
+                      )}
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-3 pt-1">
+                        <button
+                          onClick={() => router.push(`/analyze?portfolio=${p.id}`)}
+                          className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
+                        >
+                          Redigera
+                        </button>
+                        <button
+                          onClick={() => handleDeletePortfolio(p.id)}
+                          className="text-sm font-medium text-red-500 hover:text-red-600 border border-red-200 hover:border-red-300 px-4 py-2 rounded-xl transition-colors"
+                        >
+                          Ta bort
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {/* Sign out */}

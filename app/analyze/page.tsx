@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { PortfolioAnalysis, SuggestedMetrics } from "@/lib/analysis";
 import { createClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
@@ -237,6 +238,9 @@ function saveSession(custodian: string | null, entries: Entry[], analysis: Portf
 }
 
 export default function AnalyzePage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [user, setUser] = useState<User | null>(null);
   const [custodian, setCustodian] = useState<string | null>(null);
   const [entries, setEntries] = useState<Entry[]>([{ isin: "", name: "", weight: "" }]);
@@ -244,13 +248,40 @@ export default function AnalyzePage() {
   const [analysis, setAnalysis] = useState<PortfolioAnalysis | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Portfolio saving state
+  const [portfolioId, setPortfolioId] = useState<string | null>(null);
+  const [portfolioName, setPortfolioName] = useState<string | null>(null);
+  const [showSaveForm, setShowSaveForm] = useState(false);
+  const [savingName, setSavingName] = useState("");
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
   // Warm up fund cache as soon as page loads so search is instant
   useEffect(() => {
     fetch("/api/funds/search?q=__warmup__").catch(() => {});
   }, []);
 
-  // Restore state from sessionStorage on mount (survives login redirect)
+  // Restore state from sessionStorage on mount, or load portfolio from URL param
   useEffect(() => {
+    const portfolioParam = searchParams.get("portfolio");
+    if (portfolioParam) {
+      // Load saved portfolio from DB, ignore sessionStorage
+      fetch(`/api/portfolios/${portfolioParam}`)
+        .then((r) => r.ok ? r.json() : null)
+        .then((p) => {
+          if (p) {
+            setCustodian(p.custodian);
+            setEntries(p.holdings);
+            setAnalysis(p.analysis);
+            setPortfolioId(p.id);
+            setPortfolioName(p.name);
+            sessionStorage.removeItem(SESSION_KEY);
+          }
+          router.replace("/analyze");
+        })
+        .catch(() => router.replace("/analyze"));
+      return;
+    }
+
     const saved = loadSession();
     if (saved) {
       if (saved.custodian) setCustodian(saved.custodian);
@@ -261,6 +292,7 @@ export default function AnalyzePage() {
       const preferred = localStorage.getItem("fondanalys_preferred_custodian");
       if (preferred) setCustodian(preferred);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Persist state on every change
@@ -304,10 +336,45 @@ export default function AnalyzePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Okänt fel");
       setAnalysis(data);
+
+      // Auto-save if editing an existing portfolio
+      if (portfolioId) {
+        setSaveStatus("saving");
+        fetch(`/api/portfolios/${portfolioId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ holdings: entries, analysis: data }),
+        })
+          .then((r) => setSaveStatus(r.ok ? "saved" : "error"))
+          .catch(() => setSaveStatus("error"))
+          .finally(() => setTimeout(() => setSaveStatus("idle"), 3000));
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleSaveNew() {
+    if (!savingName.trim() || !analysis || !custodian) return;
+    setSaveStatus("saving");
+    try {
+      const res = await fetch("/api/portfolios", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: savingName.trim(), custodian, holdings: entries, analysis }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setPortfolioId(data.id);
+      setPortfolioName(data.name);
+      setShowSaveForm(false);
+      setSavingName("");
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus("idle"), 3000);
+    } catch {
+      setSaveStatus("error");
     }
   }
 
@@ -337,11 +404,24 @@ export default function AnalyzePage() {
       <div className="absolute top-[-80px] left-[-80px] w-[320px] h-[320px] bg-blue-400/15 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute bottom-0 right-[-80px] w-[400px] h-[400px] bg-indigo-400/10 blur-[160px] rounded-full pointer-events-none" />
       <div className="relative z-10 max-w-5xl mx-auto px-6 py-10 space-y-8">
+      {portfolioId && (
+        <div className="flex items-center gap-2 text-sm bg-blue-50 border border-blue-100 rounded-xl px-4 py-2.5">
+          <span className="text-blue-700 font-medium">Redigerar: &ldquo;{portfolioName}&rdquo;</span>
+          <span className="text-blue-400">·</span>
+          <span className="text-blue-500">
+            {saveStatus === "saving" && "Sparar…"}
+            {saveStatus === "saved" && "Sparad ✓"}
+            {saveStatus === "error" && "Kunde inte spara"}
+            {saveStatus === "idle" && "Sparas automatiskt vid ny analys"}
+          </span>
+        </div>
+      )}
+
       <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-900">Din portfölj</h2>
           <button
-            onClick={() => { setCustodian(null); setAnalysis(null); setError(null); }}
+            onClick={() => { setCustodian(null); setAnalysis(null); setError(null); setPortfolioId(null); setPortfolioName(null); }}
             className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
           >
             {CUSTODIANS.find((c) => c.value === custodian)?.label} · <span className="underline">Byt</span>
@@ -387,6 +467,58 @@ export default function AnalyzePage() {
       </section>
 
       {analysis && <AnalysisResult analysis={analysis} user={user} />}
+
+      {analysis && user && !portfolioId && (
+        <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+          {!showSaveForm ? (
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-semibold text-slate-900 text-sm">Spara portföljen?</p>
+                <p className="text-xs text-slate-400 mt-0.5">Kom åt den när som helst från Mitt konto.</p>
+              </div>
+              <button
+                onClick={() => setShowSaveForm(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
+              >
+                Spara portfölj
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="font-semibold text-slate-900 text-sm">Namnge din portfölj</p>
+              <input
+                autoFocus
+                type="text"
+                placeholder="t.ex. ISK, Pension, Barnspar…"
+                value={savingName}
+                onChange={(e) => setSavingName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSaveNew()}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {saveStatus === "error" && <p className="text-xs text-red-600">Något gick fel. Försök igen.</p>}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSaveNew}
+                  disabled={!savingName.trim() || saveStatus === "saving"}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
+                >
+                  {saveStatus === "saving" ? "Sparar…" : "Spara"}
+                </button>
+                <button
+                  onClick={() => { setShowSaveForm(false); setSavingName(""); }}
+                  className="text-sm text-slate-500 hover:text-slate-700 px-4 py-2 rounded-xl border border-slate-200 transition-colors"
+                >
+                  Avbryt
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
+      {analysis && user && portfolioId && saveStatus === "saved" && (
+        <p className="text-center text-sm text-green-600 font-medium">Portföljen sparades ✓</p>
+      )}
     </div></div>
   );
 }

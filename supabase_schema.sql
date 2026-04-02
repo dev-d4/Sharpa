@@ -34,3 +34,23 @@ CREATE INDEX IF NOT EXISTS idx_funds_category ON funds(category);
 -- Tillåt läsning utan inloggning (anon key)
 ALTER TABLE funds ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow public read" ON funds FOR SELECT USING (true);
+
+-- ── Portfolios ────────────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS portfolios (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name       TEXT NOT NULL,
+  custodian  TEXT NOT NULL,
+  holdings   JSONB NOT NULL,  -- [{isin, name, weight}]
+  analysis   JSONB NOT NULL,  -- full PortfolioAnalysis snapshot
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_portfolios_user_id ON portfolios(user_id);
+ALTER TABLE portfolios ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "select own" ON portfolios FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "insert own" ON portfolios FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "update own" ON portfolios FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "delete own" ON portfolios FOR DELETE USING (auth.uid() = user_id);
