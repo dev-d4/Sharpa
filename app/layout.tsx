@@ -33,6 +33,25 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
         </header>
 
+        {/* Shared background effects — all pages */}
+        <div className="fixed inset-0 pointer-events-none -z-10">
+          {/* Dot pattern */}
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: "radial-gradient(circle, #94a3b8 1px, transparent 1px)",
+              backgroundSize: "20px 20px",
+              opacity: 0.2,
+            }}
+          />
+          {/* Blue glow top-left — gradient, no blur */}
+          <div
+            className="absolute top-0 left-0 w-[600px] h-[500px]"
+            style={{
+              background: "radial-gradient(ellipse at 0% 0%, rgba(59,130,246,0.18) 0%, transparent 65%)",
+            }}
+          />
+        </div>
         <Prefetch hrefs={["/analyze", "/risk-profile"]} />
         <main>{children}</main>
 
