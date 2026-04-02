@@ -25,17 +25,29 @@ export default function LandingPage() {
           </div>
           <div className="grid sm:grid-cols-3 gap-6">
             <FeatureCard
-              step="1"
+              icon={
+                <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+                </svg>
+              }
               title="Lägg in dina fonder"
               description="Sök på fondnamn eller ISIN och ange vikten för varje fond i din portfölj."
             />
             <FeatureCard
-              step="2"
+              icon={
+                <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2zm0 0V9a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v10m-6 0a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2m0 0V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z" />
+                </svg>
+              }
               title="Se dina nyckeltal"
               description="Få direkt en bild av din genomsnittliga avgift, avkastning och Sharpe-kvot."
             />
             <FeatureCard
-              step="3"
+              icon={
+                <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636-.707.707M21 12h-1M4 12H3m1.636-6.364-.707-.707M12 21v-1M7.05 7.05l-.707-.707M16.95 7.05l.707-.707M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" />
+                </svg>
+              }
               title="Optimera portföljen"
               description="Logga in för att se personliga fondbytesförslag och hur din portfölj kan förbättras."
             />
@@ -59,11 +71,11 @@ export default function LandingPage() {
   );
 }
 
-function FeatureCard({ step, title, description }: { step: string; title: string; description: string }) {
+function FeatureCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-3 shadow-sm">
-      <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-sm">
-        {step}
+      <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+        {icon}
       </div>
       <h3 className="font-bold text-slate-900">{title}</h3>
       <p className="text-sm text-slate-500 leading-relaxed">{description}</p>

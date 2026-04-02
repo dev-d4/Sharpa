@@ -35,8 +35,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main>{children}</main>
 
         <footer className="border-t border-slate-200 mt-24">
-          <div className="max-w-5xl mx-auto px-6 py-8 flex items-center justify-between text-xs text-slate-400">
-            <span>© 2026 Fondanalys</span>
+          <div className="max-w-5xl mx-auto px-6 py-8 space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-2.5">
+                <Image src="/logo.svg" alt="Fondanalys" width={24} height={24} />
+                <span className="text-sm font-semibold text-slate-700">Fondanalys</span>
+              </div>
+              <nav className="flex items-center gap-6 text-xs text-slate-400">
+                <Link href="/analyze" className="hover:text-slate-600 transition-colors">Analysera</Link>
+                <Link href="/account" className="hover:text-slate-600 transition-colors">Mitt konto</Link>
+              </nav>
+            </div>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Fondanalys tillhandahåller inte finansiell rådgivning. All information är endast i informationssyfte och ska inte ses som råd om köp eller försäljning av finansiella instrument.
+            </p>
+            <p className="text-xs text-slate-300">© 2026 Fondanalys</p>
           </div>
         </footer>
       </body>
