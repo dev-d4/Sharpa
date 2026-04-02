@@ -651,6 +651,26 @@ function AnalysisResult({ analysis, user }: { analysis: PortfolioAnalysis; user:
         </BlurGate>
       )}
 
+      {/* Best in category */}
+      {analysis.bestInCategory.length > 0 && (
+        <section className="bg-green-50 border border-green-100 rounded-2xl p-6">
+          <div className="flex items-center gap-2 mb-3">
+            <svg className="w-4 h-4 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
+            </svg>
+            <h2 className="text-sm font-bold text-green-900">Redan bäst i sin kategori</h2>
+          </div>
+          <div className="space-y-1.5">
+            {analysis.bestInCategory.map((f) => (
+              <div key={f.isin} className="flex items-baseline justify-between text-sm">
+                <span className="font-medium text-green-900">{f.fundName}</span>
+                <span className="text-xs text-green-600 ml-3 shrink-0">{f.category}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Suggested portfolio — also blurred */}
       {analysis.suggestedMetrics && (
         <BlurGate unlocked={unlocked} ctaText={ctaText}>

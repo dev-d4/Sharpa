@@ -33,6 +33,12 @@ export type SuggestedMetrics = {
   funds: { name: string; isin: string; weight: number }[];
 };
 
+export type BestInCategory = {
+  fundName: string;
+  isin: string;
+  category: string;
+};
+
 export type PortfolioAnalysis = {
   totalWeight: number;
   notFound: string[];
@@ -42,6 +48,7 @@ export type PortfolioAnalysis = {
   weightedReturn3yr: number | null;
   weightedSharpe: number | null;
   swapSuggestions: SwapSuggestion[];
+  bestInCategory: BestInCategory[];
   summaryText: string;
   suggestedMetrics: SuggestedMetrics | null;
 };
@@ -96,8 +103,9 @@ function absoluteScore(f: Fund): number {
 function generateSwaps(
   entries: PortfolioEntry[],
   allFunds: Fund[]
-): SwapSuggestion[] {
+): { suggestions: SwapSuggestion[]; bestInCategory: BestInCategory[] } {
   const suggestions: SwapSuggestion[] = [];
+  const bestInCategory: BestInCategory[] = [];
   const portfolioIsins = new Set(
     entries.filter((e) => e.fund).map((e) => e.fund!.isin)
   );
@@ -117,7 +125,14 @@ function generateSwaps(
       absoluteScore(b) > absoluteScore(a) ? b : a
     );
 
-    if (absoluteScore(best) <= absoluteScore(current)) continue;
+    if (absoluteScore(best) <= absoluteScore(current)) {
+      bestInCategory.push({
+        fundName: current.name,
+        isin: current.isin,
+        category: current.category ?? current.category_group ?? "Okänd kategori",
+      });
+      continue;
+    }
 
     const consolidate = portfolioIsins.has(best.isin);
 
@@ -153,7 +168,7 @@ function generateSwaps(
     });
   }
 
-  return suggestions;
+  return { suggestions, bestInCategory };
 }
 
 // ── Suggested portfolio metrics ───────────────────────────────────────────────
@@ -275,7 +290,7 @@ export function analyzePortfolio(
   const weightedReturn3yr = weightedAvg(found, (f) => f.return_3yr);
   const weightedSharpe = weightedAvg(found, (f) => f.sharpe_3yr);
 
-  const swapSuggestions = generateSwaps(found, allFunds);
+  const { suggestions: swapSuggestions, bestInCategory } = generateSwaps(found, allFunds);
   const suggestedMetrics = buildSuggestedMetrics(found, swapSuggestions);
 
   const summaryText = buildSummary(
@@ -292,6 +307,7 @@ export function analyzePortfolio(
     weightedReturn3yr,
     weightedSharpe,
     swapSuggestions,
+    bestInCategory,
     summaryText,
     suggestedMetrics,
   };

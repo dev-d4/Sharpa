@@ -1,9 +1,17 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Link from "next/link";
 
 export default function Hero() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.prefetch("/analyze");
+  }, [router]);
+
   return (
     <section className="relative w-full min-h-[90vh] flex flex-col items-center justify-center px-6 py-24">
       {/* Content */}
