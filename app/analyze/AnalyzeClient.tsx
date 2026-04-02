@@ -141,7 +141,7 @@ function FundSearchInput({
         value={query}
         onChange={(e) => handleChange(e.target.value)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
-        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-full border border-slate-300 rounded-lg px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       {open && suggestions.length > 0 && (
         <ul className="absolute z-10 top-full left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-lg mt-1 max-h-56 overflow-y-auto">
@@ -149,7 +149,7 @@ function FundSearchInput({
             <li
               key={`${s.isin}-${i}`}
               onMouseDown={() => { onSelect(s.isin, s.name); setQuery(""); setOpen(false); setNoResults(false); }}
-              className="px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 flex items-baseline justify-between gap-3"
+              className="px-3 py-3 text-sm cursor-pointer hover:bg-blue-50 flex items-center justify-between gap-3"
             >
               <span className="font-medium text-slate-900">{s.name}</span>
               <span className="text-xs text-slate-400 shrink-0">{s.isin}</span>
@@ -458,27 +458,29 @@ export default function AnalyzeClient() {
         <p className="text-sm text-slate-500">Sök på fondnamn eller ISIN och ange vikt (%) för varje fond.</p>
 
         <div className="space-y-2">
-          <div className="grid grid-cols-[1fr_100px_36px] gap-2 text-xs font-semibold text-slate-500 px-1">
+          <div className="hidden sm:grid grid-cols-[1fr_100px_36px] gap-2 text-xs font-semibold text-slate-500 px-1">
             <span>Fond</span><span>Vikt (%)</span><span />
           </div>
           {entries.map((entry, i) => (
-            <div key={i} className="grid grid-cols-[1fr_100px_36px] gap-2">
+            <div key={i} className="flex flex-col gap-2 sm:grid sm:grid-cols-[1fr_100px_36px]">
               <FundSearchInput isin={entry.isin} name={entry.name} custodian={custodian} onSelect={(isin, name) => selectFund(i, isin, name)} onClear={() => clearFund(i)} />
-              <input
-                type="number" placeholder="25" min={0} max={100}
-                value={entry.weight} onChange={(e) => updateWeight(i, e.target.value)}
-                className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button
-                onClick={() => removeRow(i)} disabled={entries.length === 1}
-                className="flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-200 disabled:opacity-30 transition-colors"
-              >✕</button>
+              <div className="flex gap-2 sm:contents">
+                <input
+                  type="number" placeholder="Vikt %" min={0} max={100}
+                  value={entry.weight} onChange={(e) => updateWeight(i, e.target.value)}
+                  className="flex-1 sm:flex-none border border-slate-300 rounded-lg px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  onClick={() => removeRow(i)} disabled={entries.length === 1}
+                  className="h-12 w-12 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-200 disabled:opacity-30 transition-colors shrink-0"
+                >✕</button>
+              </div>
             </div>
           ))}
         </div>
 
         <div className="flex items-center justify-between pt-1">
-          <button onClick={addRow} className="text-sm text-blue-600 hover:underline">+ Lägg till fond</button>
+          <button onClick={addRow} className="text-sm text-blue-600 hover:underline py-2">+ Lägg till fond</button>
           <span className={`text-sm font-semibold ${Math.abs(totalWeight - 100) < 0.1 ? "text-green-600" : "text-slate-600"}`}>
             Summa: {totalWeight.toFixed(1)}%
           </span>

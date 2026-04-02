@@ -117,7 +117,7 @@ export default function AccountPage() {
             <select
               value={preferredCustodian}
               onChange={(e) => handleCustodianChange(e.target.value)}
-              className="border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="border border-slate-200 rounded-xl px-3 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             >
               <option value="">Inget valt</option>
               {CUSTODIANS.map((c) => (
@@ -197,7 +197,7 @@ export default function AccountPage() {
                       {/* Metrics */}
                       <div>
                         <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Nyckeltal</p>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-3">
                           <div className="bg-slate-50 rounded-xl p-3">
                             <p className="text-xs text-slate-500 mb-0.5">Snittavgift</p>
                             <p className="font-bold text-slate-900">{p.analysis.avgCost !== null ? `${p.analysis.avgCost.toFixed(2)}%` : "–"}</p>
@@ -226,13 +226,13 @@ export default function AccountPage() {
                       <div className="flex items-center gap-3 pt-1">
                         <button
                           onClick={() => router.push(`/analyze?portfolio=${p.id}`)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
+                          className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-3 rounded-xl transition-colors"
                         >
                           Redigera
                         </button>
                         <button
                           onClick={() => handleDeletePortfolio(p.id)}
-                          className="text-sm font-medium text-red-500 hover:text-red-600 border border-red-200 hover:border-red-300 px-4 py-2 rounded-xl transition-colors"
+                          className="text-sm font-medium text-red-500 hover:text-red-600 border border-red-200 hover:border-red-300 px-4 py-3 rounded-xl transition-colors"
                         >
                           Ta bort
                         </button>

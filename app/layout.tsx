@@ -23,7 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <span className="font-bold text-slate-900">Fondanalys</span>
             </Link>
 
-            <nav className="flex items-center gap-6">
+            <nav className="flex items-center gap-4 sm:gap-6">
               <Link href="/analyze" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
                 Analysera
               </Link>

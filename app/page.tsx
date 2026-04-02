@@ -2,6 +2,7 @@ import Link from "next/link";
 import Hero from "@/components/ui/hero";
 import DotPattern from "@/components/ui/dot-pattern";
 import { cn } from "@/lib/utils";
+import { Prefetch } from "@/components/ui/prefetch";
 
 export default function LandingPage() {
   return (
@@ -14,6 +15,7 @@ export default function LandingPage() {
       <div className="absolute top-[40%] right-[-80px] w-[400px] h-[400px] bg-indigo-400/10 blur-[160px] rounded-full z-0 pointer-events-none" />
       <div className="absolute bottom-0 left-[30%] w-[500px] h-[300px] bg-blue-300/10 blur-[140px] rounded-full z-0 pointer-events-none" />
 
+      <Prefetch href="/analyze" />
       <Hero />
       <div className="relative z-10 max-w-5xl mx-auto px-6 space-y-24 py-16">
 
@@ -55,7 +57,7 @@ export default function LandingPage() {
         </section>
 
         {/* ── CTA ── */}
-        <section className="bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 rounded-2xl p-10 text-center space-y-4 shadow-lg shadow-blue-200">
+        <section className="bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 rounded-2xl p-6 sm:p-10 text-center space-y-4 shadow-lg shadow-blue-200">
           <h2 className="text-2xl font-bold text-white">Redo att analysera din portfölj?</h2>
           <p className="text-blue-100">Det tar under en minut och är helt kostnadsfritt.</p>
           <Link

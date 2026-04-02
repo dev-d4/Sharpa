@@ -1,17 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Link from "next/link";
 
 export default function Hero() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.prefetch("/analyze");
-  }, [router]);
-
   return (
     <section className="relative w-full min-h-[90vh] flex flex-col items-center justify-center px-6 py-24">
       {/* Content */}
@@ -59,7 +51,7 @@ export default function Hero() {
         >
           <Link
             href="/analyze"
-            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 text-white font-semibold px-7 py-3 rounded-xl transition-all shadow-lg shadow-blue-200 text-sm"
+            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 text-white font-semibold px-7 py-3.5 rounded-xl transition-all shadow-lg shadow-blue-200 text-sm"
           >
             Analysera din portfölj →
           </Link>
@@ -71,7 +63,7 @@ export default function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.5 }}
-          className="flex items-center justify-center gap-8 pt-4"
+          className="flex items-center justify-center gap-4 sm:gap-8 pt-4"
         >
           {[
             { value: "3 000+", label: "Fonder analyserade" },
