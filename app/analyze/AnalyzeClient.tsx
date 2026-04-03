@@ -8,6 +8,7 @@ import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Building2, Landmark, Search } from "lucide-react"
+import type { SavedPortfolio } from "@/lib/portfolio"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -256,10 +257,10 @@ export default function AnalyzeClient() {
 
   // Portfolio saving state
   const [portfolioId, setPortfolioId] = useState<string | null>(null);
-  const [portfolioName, setPortfolioName] = useState<string | null>(null);
   const [showSaveForm, setShowSaveForm] = useState(false);
   const [savingName, setSavingName] = useState("");
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [savedPortfolios, setSavedPortfolios] = useState<SavedPortfolio[]>([]);
   const [portfolioLoading, setPortfolioLoading] = useState(() =>
     new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").has("portfolio")
   );
@@ -283,7 +284,6 @@ export default function AnalyzeClient() {
             setEntries(p.holdings);
             setAnalysis(p.analysis);
             setPortfolioId(p.id);
-            setPortfolioName(p.name);
             sessionStorage.removeItem(SESSION_KEY);
           }
           router.replace("/analyze");
@@ -310,12 +310,29 @@ export default function AnalyzeClient() {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
+    supabase.auth.getSession().then(({ data }) => {
+      const u = data.session?.user ?? null;
+      setUser(u);
+      if (u) {
+        fetch("/api/portfolios")
+          .then((r) => r.ok ? r.json() : [])
+          .then(setSavedPortfolios)
+          .catch(() => {});
+      }
+    });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       setUser(session?.user ?? null);
     });
     return () => subscription.unsubscribe();
   }, []);
+
+  function loadPortfolio(p: SavedPortfolio) {
+    setCustodian(p.custodian);
+    setEntries(p.holdings);
+    setAnalysis(p.analysis);
+    setPortfolioId(p.id);
+    setError(null);
+  }
 
   function addRow() { setEntries((p) => [...p, { isin: "", name: "", weight: "" }]); }
   function removeRow(i: number) { setEntries((p) => p.filter((_, idx) => idx !== i)); }
@@ -376,7 +393,7 @@ export default function AnalyzeClient() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setPortfolioId(data.id);
-      setPortfolioName(data.name);
+      setSavedPortfolios((prev) => [...prev, data]);
       setShowSaveForm(false);
       setSavingName("");
       setSaveStatus("saved");
@@ -481,16 +498,44 @@ export default function AnalyzeClient() {
   return (
     <div className="min-h-screen">
       <div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
-      {portfolioId && (
-        <div className="flex items-center gap-2 text-sm bg-blue-50 border border-blue-100 rounded-xl px-4 py-2.5">
-          <span className="text-blue-700 font-medium">Redigerar: &ldquo;{portfolioName}&rdquo;</span>
-          <span className="text-blue-400">·</span>
-          <span className="text-blue-500">
-            {saveStatus === "saving" && "Sparar…"}
-            {saveStatus === "saved" && "Sparad ✓"}
-            {saveStatus === "error" && "Kunde inte spara"}
-            {saveStatus === "idle" && "Sparas automatiskt vid ny analys"}
-          </span>
+      {/* Saved portfolios switcher — only shown when logged in with saved portfolios */}
+      {savedPortfolios.length > 0 && (
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Mina portföljer</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            {savedPortfolios.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => loadPortfolio(p)}
+                className={cn(
+                  "text-sm px-3 py-1.5 rounded-lg border transition-all",
+                  portfolioId === p.id
+                    ? "bg-blue-50 border-blue-200 text-blue-700 font-medium"
+                    : "bg-white border-slate-200 text-slate-600 hover:border-blue-200 hover:text-blue-600"
+                )}
+              >
+                {p.name}
+              </button>
+            ))}
+            <button
+              onClick={() => { setPortfolioId(null); setCustodian(null); setEntries([{ isin: "", name: "", weight: "" }]); setAnalysis(null); setError(null); }}
+              className={cn(
+                "text-sm px-3 py-1.5 rounded-lg border transition-all",
+                !portfolioId
+                  ? "bg-blue-50 border-blue-200 text-blue-700 font-medium"
+                  : "bg-white border-slate-200 text-slate-600 hover:border-blue-200 hover:text-blue-600"
+              )}
+            >
+              + Ny portfölj
+            </button>
+          </div>
+          {portfolioId && (
+            <span className="text-xs text-slate-400 ml-auto">
+              {saveStatus === "saving" && "Sparar…"}
+              {saveStatus === "saved" && "Sparad ✓"}
+              {saveStatus === "error" && "Kunde inte spara"}
+            </span>
+          )}
         </div>
       )}
 
@@ -498,7 +543,7 @@ export default function AnalyzeClient() {
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-900">Din portfölj</h2>
           <button
-            onClick={() => { setCustodian(null); setAnalysis(null); setError(null); setPortfolioId(null); setPortfolioName(null); }}
+            onClick={() => { setCustodian(null); setAnalysis(null); setError(null); setPortfolioId(null); }}
             className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
           >
             {CUSTODIANS.find((c) => c.value === custodian)?.label} · <span className="underline">Byt</span>

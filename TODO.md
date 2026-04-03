@@ -5,8 +5,8 @@
 - [X] Riskprofiliering
 - [X] Nordnet
 - [ ] Kolla att all fonddata stämmer
-- [ ]
-- [ ]
+- [ ] Fixa bakgrund
+- [ ] Om man väljer övrigt så syns det inte så på Mitt konto
 - [ ]
 - [ ]
 - [ ]
