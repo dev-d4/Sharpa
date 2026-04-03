@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
-import Image from "next/image";
-import Link from "next/link";
 import "./globals.css";
-import NavAuth from "./NavAuth";
+import Header from "./Header";
+import Footer from "./Footer";
 import { Prefetch } from "@/components/ui/prefetch";
 
 const geist = Geist({ subsets: ["latin"] });
@@ -17,24 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="sv">
       <body className={`${geist.className} min-h-screen text-slate-900`}>
-        <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
-          <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-1">
-              <Image src="/logo.svg" alt="Fondanalys" width={48} height={48} />
-              <span className="font-bold text-slate-900">Fondanalys</span>
-            </Link>
-
-            <nav className="flex items-center gap-4 sm:gap-6">
-              <Link href="/analyze" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
-                Analysera
-              </Link>
-              <Link href="/risk-profile" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
-                Riskprofil
-              </Link>
-              <NavAuth />
-            </nav>
-          </div>
-        </header>
+        <Header />
 
         {/* Blue glow top-left — fixed, behind all content */}
         <div
@@ -46,25 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Prefetch hrefs={["/analyze", "/risk-profile"]} />
         <main>{children}</main>
 
-        <footer className="bg-slate-50 border-t border-slate-200 mt-24">
-          <div className="max-w-5xl mx-auto px-6 py-8 space-y-4">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-1">
-                <Image src="/logo.svg" alt="Fondanalys" width={24} height={24} />
-                <span className="text-sm font-semibold text-slate-700">Fondanalys</span>
-              </div>
-              <nav className="flex items-center gap-6 text-xs text-slate-400">
-                <Link href="/analyze" className="hover:text-slate-600 transition-colors">Analysera</Link>
-                <Link href="/risk-profile" className="hover:text-slate-600 transition-colors">Riskprofil</Link>
-                <NavAuth variant="footer" />
-              </nav>
-            </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Fondanalys tillhandahåller inte finansiell rådgivning. All information är endast i informationssyfte och ska inte ses som råd om köp eller försäljning av finansiella instrument.
-            </p>
-            <p className="text-xs text-slate-300">© 2026 Fondanalys</p>
-          </div>
-        </footer>
+        <Footer />
       </body>
     </html>
   );
