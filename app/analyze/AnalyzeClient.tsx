@@ -568,7 +568,7 @@ export default function AnalyzeClient() {
               </div>
               <button
                 onClick={() => setShowSaveForm(true)}
-                className="bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
+                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
               >
                 Spara portfölj
               </button>
@@ -631,10 +631,10 @@ function AnalysisResult({ analysis, user, onLoginClick }: { analysis: PortfolioA
       <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
         <h2 className="text-lg font-bold text-slate-900 mb-4">Nyckeltal</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <Metric label="Snittavgift" value={analysis.avgCost !== null ? `${analysis.avgCost.toFixed(2)}%` : "–"} sub="per år" />
-          <Metric label="Avkastning 1 år" value={analysis.weightedReturn1yr !== null ? `${analysis.weightedReturn1yr.toFixed(1)}%` : "–"} sub="viktad" />
-          <Metric label="Avkastning 3 år" value={analysis.weightedReturn3yr !== null ? `${analysis.weightedReturn3yr.toFixed(1)}%` : "–"} sub="annualiserad" />
-          <Metric label="Sharpe 3 år" value={analysis.weightedSharpe !== null ? analysis.weightedSharpe.toFixed(2) : "–"} sub="riskjusterad" />
+          <Metric label="Snittavgift" value={analysis.avgCost !== null ? `${analysis.avgCost.toFixed(2)}%` : "–"} sub="per år" info="Den genomsnittliga årliga avgiften viktat efter din fördelning." />
+          <Metric label="Avkastning 1 år" value={analysis.weightedReturn1yr !== null ? `${analysis.weightedReturn1yr.toFixed(1)}%` : "–"} sub="viktad" info="Portföljens viktade avkastning de senaste 12 månaderna." />
+          <Metric label="Avkastning 3 år" value={analysis.weightedReturn3yr !== null ? `${analysis.weightedReturn3yr.toFixed(1)}%` : "–"} sub="annualiserad" info="Genomsnittlig årlig avkastning de senaste 3 åren." />
+          <Metric label="Sharpe 3 år" value={analysis.weightedSharpe !== null ? analysis.weightedSharpe.toFixed(2) : "–"} sub="riskjusterad" info="Avkastning i förhållande till risk. Högre är bättre." />
         </div>
       </section>
 
@@ -751,10 +751,30 @@ function AnalysisResult({ analysis, user, onLoginClick }: { analysis: PortfolioA
   );
 }
 
-function Metric({ label, value, sub }: { label: string; value: string; sub: string }) {
+function Metric({ label, value, sub, info }: { label: string; value: string; sub: string; info: string }) {
   return (
-    <div className="bg-slate-50 rounded-xl p-4">
-      <p className="text-xs font-semibold text-slate-500 mb-1">{label}</p>
+    <div className="relative group bg-slate-50 rounded-xl p-4">
+      
+      {/* Tooltip (centered on card, above it) */}
+      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-44
+        bg-slate-400/90 backdrop-blur-sm text-white text-xs
+        rounded-xl px-2.5 py-1.5
+        opacity-0 group-hover:opacity-100 transition-opacity
+        z-10 text-center leading-snug
+        shadow-md shadow-slate-500/20
+        ring-1 ring-white/20">
+        {info}
+      </span>
+
+      <div className="flex items-center gap-1 mb-1">
+        <p className="text-xs font-semibold text-slate-500">{label}</p>
+
+        {/* Info icon */}
+        <span className="flex items-center justify-center w-3 h-3 rounded-full bg-slate-300 text-[9px] text-white cursor-default">
+          i
+        </span>
+      </div>
+
       <p className="text-2xl font-bold text-slate-900">{value}</p>
       <p className="text-xs text-slate-400 mt-1">{sub}</p>
     </div>

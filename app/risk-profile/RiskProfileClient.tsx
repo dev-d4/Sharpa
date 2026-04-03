@@ -153,7 +153,7 @@ export default function RiskProfileClient() {
         <div className="flex gap-3">
           <button
             onClick={() => router.push("/account")}
-            className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 rounded-xl transition-colors"
+            className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium py-3 rounded-xl transition-colors"
           >
             Tillbaka till konto
           </button>

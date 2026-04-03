@@ -3,7 +3,7 @@ import Hero from "@/components/ui/hero";
 
 export default function LandingPage() {
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div className="relative min-h-screen">
 
 
       <Hero />
