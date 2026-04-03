@@ -1,11 +1,16 @@
-<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="260" height="260" viewBox="0 0 260 260" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%"   stop-color="#4f9bf6" />
-      <stop offset="50%"  stop-color="#2563EB" />
-      <stop offset="100%" stop-color="#4766c5" />
+    <linearGradient id="lineGrad" x1="50" y1="170" x2="210" y2="70" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#93C5FD"/>
+      <stop offset="100%" stop-color="#3B82F6"/>
     </linearGradient>
   </defs>
-  <rect x="10" y="10" width="180" height="180" rx="70" fill="url(#logoGrad)"/>
-  <path d="M 40 140 L 70 110 L 100 125 L 130 85 L 160 60" stroke="white" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Line -->
+  <path d="M 50 170 L 95 125 L 140 135 L 210 70"
+        stroke="url(#lineGrad)"
+        stroke-width="36"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        fill="none"/>
 </svg>

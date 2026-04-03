@@ -19,8 +19,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${geist.className} min-h-screen text-slate-900 bg-gradient-to-br from-white via-slate-50 to-blue-50`}>
         <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
           <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2.5">
-              <Image src="/logo.svg" alt="Fondanalys" width={32} height={32} />
+            <Link href="/" className="flex items-center gap-1">
+              <Image src="/logo.svg" alt="Fondanalys" width={48} height={48} />
               <span className="font-bold text-slate-900">Fondanalys</span>
             </Link>
 
@@ -58,7 +58,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <footer className="border-t border-slate-200 mt-24">
           <div className="max-w-5xl mx-auto px-6 py-8 space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-1">
                 <Image src="/logo.svg" alt="Fondanalys" width={24} height={24} />
                 <span className="text-sm font-semibold text-slate-700">Fondanalys</span>
               </div>
