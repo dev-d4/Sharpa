@@ -732,14 +732,12 @@ function AnalysisResult({ analysis, user, onLoginClick }: { analysis: PortfolioA
         </section>
       )}
 
-      {/* Suggested portfolio — also blurred */}
-      {analysis.suggestedMetrics && (
-        <BlurGate unlocked={unlocked} ctaText={ctaText} onLoginClick={onLoginClick}>
-          <SuggestedPortfolio
-            current={{ avgCost: analysis.avgCost, weightedReturn1yr: analysis.weightedReturn1yr, weightedReturn3yr: analysis.weightedReturn3yr, weightedSharpe: analysis.weightedSharpe }}
-            suggested={analysis.suggestedMetrics}
-          />
-        </BlurGate>
+      {/* Suggested portfolio — only visible when logged in */}
+      {analysis.suggestedMetrics && unlocked && (
+        <SuggestedPortfolio
+          current={{ avgCost: analysis.avgCost, weightedReturn1yr: analysis.weightedReturn1yr, weightedReturn3yr: analysis.weightedReturn3yr, weightedSharpe: analysis.weightedSharpe }}
+          suggested={analysis.suggestedMetrics}
+        />
       )}
 
       {analysis.notFound.length > 0 && (
