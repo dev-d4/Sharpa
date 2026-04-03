@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="sv">
-      <body className={`${geist.className} min-h-screen text-slate-900 bg-gradient-to-br from-white via-slate-50 to-blue-50`}>
+      <body className={`${geist.className} min-h-screen text-slate-900`}>
         <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
           <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-1">
@@ -36,29 +36,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
         </header>
 
-        {/* Shared background effects — all pages */}
-        <div className="fixed inset-0 pointer-events-none -z-10">
-          {/* Dot pattern */}
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage: "radial-gradient(circle, #94a3b8 1px, transparent 1px)",
-              backgroundSize: "20px 20px",
-              opacity: 0.2,
-            }}
-          />
-          {/* Blue glow top-left — gradient, no blur */}
-          <div
-            className="absolute top-0 left-0 w-[600px] h-[500px]"
-            style={{
-              background: "radial-gradient(ellipse at 0% 0%, rgba(59,130,246,0.18) 0%, transparent 65%)",
-            }}
-          />
-        </div>
+        {/* Blue glow top-left — fixed, behind all content */}
+        <div
+          className="fixed top-0 left-0 w-[600px] h-[500px] pointer-events-none -z-10"
+          style={{
+            background: "radial-gradient(ellipse at 0% 0%, rgba(59,130,246,0.15) 0%, transparent 65%)",
+          }}
+        />
         <Prefetch hrefs={["/analyze", "/risk-profile"]} />
         <main>{children}</main>
 
-        <footer className="border-t border-slate-200 mt-24">
+        <footer className="bg-slate-50 border-t border-slate-200 mt-24">
           <div className="max-w-5xl mx-auto px-6 py-8 space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div className="flex items-center gap-1">

@@ -2,6 +2,10 @@
 
 body {
   color: #1a1a2e;
+  background-color: #ffffff;
+  background-image: radial-gradient(circle, rgba(148, 163, 184, 0.25) 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-attachment: fixed;
 }
 
 @keyframes fade-in-up {
