@@ -8,6 +8,7 @@ import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
 import DotPattern from "@/components/ui/dot-pattern";
 import { cn } from "@/lib/utils";
+import { Building2, Landmark, Search } from "lucide-react"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -17,6 +18,7 @@ type FundSuggestion = { name: string; isin: string };
 const CUSTODIANS = [
   { value: "avanza", label: "Avanza" },
   { value: "nordnet", label: "Nordnet" },
+  { value: "övrigt", label: "Övrigt" },
 ];
 
 // ── Login CTA text ────────────────────────────────────────────────────────────
@@ -95,12 +97,14 @@ function FundSearchInput({
   isin,
   name,
   custodian,
+  excludeIsins,
   onSelect,
   onClear,
 }: {
   isin: string;
   name: string;
   custodian: string;
+  excludeIsins: string[];
   onSelect: (isin: string, name: string) => void;
   onClear: () => void;
 }) {
@@ -126,7 +130,9 @@ function FundSearchInput({
     if (q.length < 2) { setSuggestions([]); setNoResults(false); setOpen(false); return; }
     debounce.current = setTimeout(async () => {
       const res = await fetch(`/api/funds/search?q=${encodeURIComponent(q)}&custodian=${encodeURIComponent(custodian)}`);
-      const data: FundSuggestion[] = await res.json();
+      const data: FundSuggestion[] = (await res.json()).filter(
+        (s: FundSuggestion) => !excludeIsins.includes(s.isin)
+      );
       setSuggestions(data);
       setNoResults(data.length === 0);
       setOpen(true);
@@ -390,35 +396,88 @@ export default function AnalyzeClient() {
       </div>
     );
   }
-
+    
   if (!custodian) {
     return (
       <div className="relative bg-gradient-to-br from-white via-slate-50 to-blue-50 min-h-screen overflow-hidden">
         <DotPattern className={cn("[mask-image:radial-gradient(80vw_circle_at_50%_20%,white,transparent)]")} />
-        <div className="absolute top-[-80px] left-[-80px] w-[320px] h-[320px] bg-blue-400/15 blur-[120px] rounded-full pointer-events-none" />
-        <div className="absolute bottom-0 right-[-80px] w-[400px] h-[400px] bg-indigo-400/10 blur-[160px] rounded-full pointer-events-none" />
-        <div className="relative z-10 max-w-2xl mx-auto px-6 py-20 space-y-8">
-          <div className="text-center space-y-2">
-            <h1 className="text-2xl font-bold text-slate-900">Var förvaltar du dina fonder?</h1>
-            <p className="text-slate-500 text-sm">Vi hämtar rätt fondutbud baserat på ditt val.</p>
+
+        {/* Background glow */}
+        <div className="absolute top-[-80px] left-[-80px] w-[320px] h-[320px] bg-blue-400/20 blur-[140px] rounded-full pointer-events-none" />
+        <div className="absolute bottom-0 right-[-80px] w-[400px] h-[400px] bg-indigo-400/15 blur-[180px] rounded-full pointer-events-none" />
+
+        {/* Content */}
+        <div className="relative z-10 max-w-4xl mx-auto px-6 py-24 space-y-10">
+          {/* Header */}
+          <div className="text-center space-y-3">
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+              Var förvaltar du dina fonder?
+            </h1>
+            <p className="text-slate-600 text-sm">
+              Vi hämtar rätt fondutbud baserat på ditt val.
+            </p>
           </div>
-          <div className="grid sm:grid-cols-2 gap-4">
+
+          {/* Cards */}
+          <div className="grid sm:grid-cols-3 gap-5 w-full">
             {[
-              { value: "avanza",  label: "Avanza",  funds: "1 500+", description: "Sveriges största nätmäklare med ett brett utbud av fonder." },
-              { value: "nordnet", label: "Nordnet", funds: "1 700+", description: "Nordisk nätmäklare med ett av marknadens bredaste fondutbud." },
+              {
+                value: "avanza",
+                label: "Avanza",
+                funds: "1 500+",
+                description: "Sveriges största nätmäklare med ett brett utbud av fonder.",
+                icon: Landmark,
+              },
+              {
+                value: "nordnet",
+                label: "Nordnet",
+                funds: "1 700+",
+                description: "Nordisk nätmäklare med ett av marknadens bredaste fondutbud.",
+                icon: Landmark,
+              },
+              {
+                value: "övrigt",
+                label: "Övrigt",
+                description: "Sök bland alla tillgängliga fonder oavsett depå.",
+                icon: Search,
+              },
             ].map((c) => (
               <button
                 key={c.value}
                 type="button"
                 onClick={() => setCustodian(c.value)}
-                className="group text-left bg-white rounded-2xl border-2 border-slate-200 hover:border-blue-400 hover:shadow-md p-6 space-y-3 transition-all"
+                className={cn(
+                  "group text-left rounded-2xl border p-6 space-y-4 transition-all duration-300",
+                  "bg-white/80 backdrop-blur",
+                  "border-slate-200 hover:border-blue-300 hover:shadow-xl hover:-translate-y-1"
+                )}
               >
+                {/* Top */}
                 <div className="flex items-start justify-between">
-                  <p className="font-bold text-slate-900 text-base">{c.label}</p>
-                  <span className="text-xs font-semibold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-full">{c.funds} fonder</span>
+                  <div className="flex items-center gap-2">
+                    <c.icon className="w-5 h-5 text-blue-500" />
+                    <p className="font-bold text-slate-900">{c.label}</p>
+                  </div>
+
+                  {"funds" in c && (
+                    <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">
+                      {c.funds} fonder
+                    </span>
+                  )}
                 </div>
-                <p className="text-sm text-slate-500 leading-relaxed">{c.description}</p>
-                <p className="text-sm font-medium text-blue-600 group-hover:underline">Välj {c.label} →</p>
+
+                {/* Description */}
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  {c.description}
+                </p>
+
+                {/* CTA */}
+                <div className="text-sm font-medium text-blue-600 flex items-center gap-1">
+                  Välj {c.label}
+                  <span className="transition-transform group-hover:translate-x-1">
+                    →
+                  </span>
+                </div>
               </button>
             ))}
           </div>
@@ -464,7 +523,7 @@ export default function AnalyzeClient() {
           </div>
           {entries.map((entry, i) => (
             <div key={i} className="flex flex-col gap-2 sm:grid sm:grid-cols-[1fr_100px_36px]">
-              <FundSearchInput isin={entry.isin} name={entry.name} custodian={custodian} onSelect={(isin, name) => selectFund(i, isin, name)} onClear={() => clearFund(i)} />
+              <FundSearchInput isin={entry.isin} name={entry.name} custodian={custodian} excludeIsins={entries.filter((_, idx) => idx !== i).map((e) => e.isin).filter(Boolean)} onSelect={(isin, name) => selectFund(i, isin, name)} onClear={() => clearFund(i)} />
               <div className="flex gap-2 sm:contents">
                 <input
                   type="number" placeholder="Vikt %" min={0} max={100}
@@ -491,7 +550,7 @@ export default function AnalyzeClient() {
 
         <button
           onClick={analyze} disabled={loading}
-          className="w-full bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 disabled:from-blue-300 disabled:to-blue-300 text-white font-medium rounded-xl py-3 transition-all shadow-md shadow-blue-200"
+          className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:from-blue-300 disabled:to-blue-300 text-white font-medium rounded-xl py-3 transition-all shadow-md shadow-blue-200"
         >
           {loading ? "Analyserar…" : "Analysera portfölj"}
         </button>
@@ -509,7 +568,7 @@ export default function AnalyzeClient() {
               </div>
               <button
                 onClick={() => setShowSaveForm(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
+                className="bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
               >
                 Spara portfölj
               </button>

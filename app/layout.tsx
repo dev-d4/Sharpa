@@ -28,6 +28,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/analyze" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
                 Analysera
               </Link>
+              <Link href="/risk-profile" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
+                Riskprofil
+              </Link>
               <NavAuth />
             </nav>
           </div>
@@ -64,7 +67,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
               <nav className="flex items-center gap-6 text-xs text-slate-400">
                 <Link href="/analyze" className="hover:text-slate-600 transition-colors">Analysera</Link>
-                <Link href="/account" className="hover:text-slate-600 transition-colors">Mitt konto</Link>
+                <Link href="/risk-profile" className="hover:text-slate-600 transition-colors">Riskprofil</Link>
+                <NavAuth variant="footer" />
               </nav>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">

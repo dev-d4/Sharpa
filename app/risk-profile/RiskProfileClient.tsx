@@ -41,15 +41,18 @@ const QUESTIONS = [
 export default function RiskProfileClient() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [authed, setAuthed] = useState(true);
   const [existing, setExisting] = useState<{ score: RiskLevel; label: string } | null>(null);
   const [editing, setEditing] = useState(false);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
+
 
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getSession().then(({ data }) => {
-      if (!data.session?.user) { router.replace("/login"); return; }
+      if (!data.session?.user) { setAuthed(false); setLoading(false); return; }
       fetch("/api/risk-profile")
         .then((r) => r.json())
         .then((p) => {
@@ -86,6 +89,28 @@ export default function RiskProfileClient() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="w-6 h-6 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  if (!authed) {
+    return (
+      <div className="max-w-sm mx-auto px-6 py-24 text-center space-y-5">
+        <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mx-auto">
+          <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+        </div>
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">Logga in för att fortsätta</h1>
+          <p className="text-sm text-slate-500 mt-2">Du behöver ett konto för att skapa och spara din riskprofil.</p>
+        </div>
+        <button
+          onClick={() => router.push("/login")}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl transition-colors"
+        >
+          Logga in
+        </button>
       </div>
     );
   }
@@ -128,7 +153,7 @@ export default function RiskProfileClient() {
         <div className="flex gap-3">
           <button
             onClick={() => router.push("/account")}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl transition-colors"
+            className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 rounded-xl transition-colors"
           >
             Tillbaka till konto
           </button>
@@ -152,7 +177,10 @@ export default function RiskProfileClient() {
         <p className="text-sm text-slate-500 mt-1">Svara på 4 frågor — tar under en minut.</p>
       </div>
 
-      {QUESTIONS.map((q, qi) => (
+      {(() => {
+        const q = QUESTIONS[currentStep];
+        const qi = currentStep;
+        return (
         <section key={q.key} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
           <div>
             <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">Fråga {qi + 1} av 4</p>
@@ -167,8 +195,10 @@ export default function RiskProfileClient() {
                 <button
                   key={opt}
                   type="button"
-                  onClick={() => setAnswers((prev) => ({ ...prev, [q.key]: value }))}
-                  className={`w-full text-left px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                  onClick={() => {
+                    setAnswers((prev) => ({ ...prev, [q.key]: value }));
+                  }}                  
+                    className={`w-full text-left px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
                     selected
                       ? "border-blue-500 bg-blue-50 text-blue-800"
                       : "border-slate-200 text-slate-700 hover:border-slate-300"
@@ -180,7 +210,8 @@ export default function RiskProfileClient() {
             })}
           </div>
         </section>
-      ))}
+      );
+    })()}
 
       {allAnswered && (
         <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-sm text-blue-800">
@@ -191,6 +222,15 @@ export default function RiskProfileClient() {
         </div>
       )}
 
+    {currentStep < QUESTIONS.length - 1 ? (
+      <button
+        onClick={() => setCurrentStep((s) => s + 1)}
+        disabled={!answers[QUESTIONS[currentStep].key]}
+        className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium rounded-xl py-3 transition-colors"
+      >
+        Nästa fråga →
+      </button>
+    ) : (
       <button
         onClick={handleSubmit}
         disabled={!allAnswered || saving}
@@ -198,6 +238,7 @@ export default function RiskProfileClient() {
       >
         {saving ? "Sparar…" : "Spara riskprofil"}
       </button>
+    )}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
 
-export default function NavAuth() {
+export default function NavAuth({ variant = "header" }: { variant?: "header" | "footer" }) {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -19,20 +19,20 @@ export default function NavAuth() {
 
   if (user) {
     return (
-      <div className="flex items-center gap-4 sm:gap-6">
-        <Link
-          href="/risk-profile"
-          className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
-        >
-          Riskprofil
-        </Link>
-        <Link
-          href="/account"
-          className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
-        >
-          Mitt konto
-        </Link>
-      </div>
+      <Link
+        href="/account"
+        className={variant === "footer" ? "hover:text-slate-600 transition-colors" : "text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"}
+      >
+        Mitt konto
+      </Link>
+    );
+  }
+
+  if (variant === "footer") {
+    return (
+      <Link href="/login" className="hover:text-slate-600 transition-colors">
+        Logga in
+      </Link>
     );
   }
 

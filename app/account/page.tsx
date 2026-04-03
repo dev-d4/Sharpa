@@ -9,6 +9,7 @@ import { portfolioRiskLevel, riskMatch, RISK_LABELS, RISK_EQUITY, type RiskLevel
 
 const CUSTODIANS = [
   { value: "avanza", label: "Avanza" },
+  { value: "nordnet", label: "Nordnet" }
 ];
 
 const PREF_KEY = "fondanalys_preferred_custodian";

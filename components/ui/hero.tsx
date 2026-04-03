@@ -39,7 +39,7 @@ export default function Hero() {
 
         <div className="animate-fade-in-up flex items-center justify-center gap-4 sm:gap-8 pt-4 [animation-delay:500ms]">
           {[
-            { value: "3 000+", label: "Fonder analyserade" },
+            { value: "1 500+", label: "Fonder analyserade" },
             { value: "Gratis", label: "Alltid kostnadsfritt" },
             { value: "< 1 min", label: "Tid för analys" },
           ].map((stat) => (

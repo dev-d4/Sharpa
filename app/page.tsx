@@ -34,7 +34,7 @@ export default function LandingPage() {
                 </svg>
               }
               title="Lägg in dina fonder"
-              description="Sök på fondnamn eller ISIN och ange vikten för varje fond i din portfölj."
+              description="Sök på fondnamn ange vikten för varje fond i din portfölj."
             />
             <FeatureCard
               step={3}
@@ -49,23 +49,39 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── CTA ── */}
-        <section className="bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 rounded-2xl p-6 sm:p-10 text-center space-y-4 shadow-lg shadow-blue-200">
-          <h2 className="text-2xl font-bold text-white">Börja med din riskprofil</h2>
-          <p className="text-blue-100">Svara på 4 frågor så vet du om din portfölj är rätt för dig. Helt gratis.</p>
-          <div className="flex items-center justify-center gap-3 flex-wrap">
-            <Link
-              href="/risk-profile"
-              className="inline-block bg-white text-blue-600 font-semibold px-6 py-3 rounded-xl hover:bg-blue-50 transition-colors shadow-sm"
-            >
-              Ta fram riskprofil →
-            </Link>
-            <Link
-              href="/analyze"
-              className="inline-block text-blue-100 hover:text-white text-sm font-medium underline underline-offset-2 transition-colors"
-            >
-              Eller analysera direkt
-            </Link>
+        {/* ── Example swap ── */}
+        <section className="space-y-5 text-center">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">Så här ser ett fondbytesförslag ut</h2>
+            <p className="text-slate-500 mt-2 text-sm">Exempel på ett fondbyte — Globalfonder</p>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 max-w-sm mx-auto">
+            <div className="flex items-center gap-3">
+              {/* From */}
+              <div className="flex-1 text-left">
+                <p className="text-xs text-slate-400 mb-0.5">Byt från</p>
+                <p className="text-sm font-semibold text-slate-800 leading-tight">Nordea Globalfond</p>
+                <p className="text-base font-bold text-red-500 mt-1">1.40% / år</p>
+              </div>
+
+              {/* Arrow */}
+              <svg className="w-5 h-5 text-slate-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+
+              {/* To */}
+              <div className="flex-1 text-right">
+                <p className="text-xs text-green-600 mb-0.5">Byt till</p>
+                <p className="text-sm font-semibold text-slate-800 leading-tight">Avanza Global</p>
+                <p className="text-base font-bold text-green-600 mt-1">0.05% / år</p>
+              </div>
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-slate-100 text-center">
+              <p className="text-xs text-slate-400">Avgiftsbesparing</p>
+              <p className="text-lg font-bold text-blue-600">−1.35 procentenheter / år</p>
+            </div>
           </div>
         </section>
 

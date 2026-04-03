@@ -2,7 +2,7 @@ import { fetchAvanzaFunds } from "./avanza";
 import { fetchNordnetFunds } from "./nordnet";
 import { Fund } from "./supabase";
 
-export type Custodian = "avanza" | "nordnet";
+export type Custodian = "avanza" | "nordnet" | "övrigt";
 
 // Returns funds for a specific custodian.
 // Avanza: only Avanza funds (has Sharpe ratio for all).
@@ -10,6 +10,10 @@ export type Custodian = "avanza" | "nordnet";
 export async function fetchFundsByCustodian(custodian: Custodian): Promise<Fund[]> {
   if (custodian === "avanza") {
     return fetchAvanzaFunds();
+  }
+
+  if (custodian === "övrigt") {
+    return fetchAllFunds();
   }
 
   // Nordnet: use Nordnet list but enrich overlapping ISINs with Avanza data
