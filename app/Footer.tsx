@@ -4,6 +4,9 @@ import Link from "next/link";
 import Image from "next/image";
 import NavAuth from "./NavAuth";
 
+// Update this each month when fund data is refreshed
+const FUND_DATA_UPDATED = "april 2026";
+
 export default function Footer() {
   return (
     <footer className="bg-slate-50 border-t border-slate-200 mt-24">
@@ -22,7 +25,7 @@ export default function Footer() {
         <p className="text-xs text-slate-400 leading-relaxed">
           Fondanalys tillhandahåller inte finansiell rådgivning. All information är endast i informationssyfte och ska inte ses som råd om köp eller försäljning av finansiella instrument.
         </p>
-        <p className="text-xs text-slate-300">© 2026 Fondanalys</p>
+        <p className="text-xs text-slate-300">© 2026 Fondanalys · Fonddata senast uppdaterad: {FUND_DATA_UPDATED}</p>
       </div>
     </footer>
   );
