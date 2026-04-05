@@ -174,15 +174,29 @@ export async function fetchNordnetFunds(): Promise<Fund[]> {
 
   if (supabase && funds.length > 0) {
     const now = new Date().toISOString();
-    const rows = entries.map((e) => ({ ...e.fund, display_slug: e.slug, fetched_at: now }));
+    // Upsert fund data first (no display_slug — avoids failure if column not yet added)
+    const fundRows = funds.map((f) => ({ ...f, fetched_at: now }));
     const BATCH = 500;
-    for (let i = 0; i < rows.length; i += BATCH) {
+    for (let i = 0; i < fundRows.length; i += BATCH) {
       const { error } = await supabase
         .from("nordnet_funds")
-        .upsert(rows.slice(i, i + BATCH), { onConflict: "isin" });
+        .upsert(fundRows.slice(i, i + BATCH), { onConflict: "isin" });
       if (error) console.error(`[nordnet] upsert batch ${i} failed:`, error.message);
     }
     console.log(`[nordnet] cached ${funds.length} funds in Supabase`);
+
+    // Separately update display_slug (requires ALTER TABLE nordnet_funds ADD COLUMN display_slug TEXT)
+    const slugRows = entries
+      .filter((e) => e.slug)
+      .map((e) => ({ isin: e.fund.isin, display_slug: e.slug }));
+    if (slugRows.length > 0) {
+      for (let i = 0; i < slugRows.length; i += BATCH) {
+        const { error } = await supabase
+          .from("nordnet_funds")
+          .upsert(slugRows.slice(i, i + BATCH), { onConflict: "isin" });
+        if (error) console.error(`[nordnet] slug upsert batch ${i} failed:`, error.message);
+      }
+    }
   }
 
   return funds;
