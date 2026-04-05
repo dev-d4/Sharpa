@@ -51,10 +51,15 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        console.log(`[analyze] needsDetail=${needsDetail.length} slugsFound=${nordnetSlugMap.size}`);
+
         const details = await Promise.all(
           needsDetail.map(async (isin) => {
             const slug = nordnetSlugMap.get(isin) ?? "";
-            if (!slug) return { isin, detail: {} };
+            if (!slug) {
+              console.log(`[analyze] no slug for ${isin}, skipping detail fetch`);
+              return { isin, detail: {} };
+            }
             return { isin, detail: await fetchNordnetDetail(isin, slug) };
           })
         );
