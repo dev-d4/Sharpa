@@ -56,11 +56,14 @@ export async function POST(req: NextRequest) {
         const details = await Promise.all(
           needsDetail.map(async (isin) => {
             const slug = nordnetSlugMap.get(isin) ?? "";
+            console.log(`[analyze] isin=${isin} slug=${slug}`);
             if (!slug) {
               console.log(`[analyze] no slug for ${isin}, skipping detail fetch`);
               return { isin, detail: {} };
             }
-            return { isin, detail: await fetchNordnetDetail(isin, slug) };
+            const detail = await fetchNordnetDetail(isin, slug);
+            console.log(`[analyze] detail keys=${Object.keys(detail).join(",")}`);
+            return { isin, detail };
           })
         );
         for (const { isin, detail } of details) {
