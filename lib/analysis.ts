@@ -40,10 +40,23 @@ export type BestInCategory = {
   category: string;
 };
 
+export type ManagementBreakdown = {
+  active: number;   // % of portfolio weight
+  passive: number;  // % of portfolio weight
+  unknown: number;  // % of portfolio weight (Nordnet funds lack this field)
+};
+
+export type ConcentrationWarning = {
+  category: string;
+  weight: number;
+};
+
 export type PortfolioAnalysis = {
   totalWeight: number;
   notFound: string[];
   categoryBreakdown: CategoryBreakdown[];
+  managementBreakdown: ManagementBreakdown;
+  concentrationWarnings: ConcentrationWarning[];
   avgCost: number | null;
   weightedReturn1yr: number | null;
   weightedReturn3yr: number | null;
@@ -150,6 +163,56 @@ function categoryToSwedish(category: string | null): string {
   return parts.length > 0 ? `${parts.join(" ")} fonder` : category;
 }
 
+// ── Geographic focus extracted from fund name ─────────────────────────────────
+// Returns a normalised tag so peers with different geographic focus are never
+// compared even when they share the same broad category string.
+
+function geographicFocus(name: string): string {
+  const n = name.toLowerCase();
+
+  // Specific countries / markets — checked before broader regions
+  if (/sverig|sweden|swedish|svenska/.test(n)) return "sweden";
+  if (/norg|norway|norwegian|norsk/.test(n)) return "norway";
+  if (/danm|denmark|danish|dansk/.test(n)) return "denmark";
+  if (/finlan|finska|suomi/.test(n)) return "finland";
+  if (/\bisland|\biceland/.test(n)) return "iceland";
+
+  // Nordics (must come before "europe")
+  if (/nordic|norden|skandin/.test(n)) return "nordic";
+
+  // USA / North America
+  if (/\busa\b|united states|amerik|s&p|nasdaq|dow jones|north americ/.test(n)) return "usa";
+
+  // Emerging markets
+  if (/emerging|tillväxtmark|frontier/.test(n)) return "emerging";
+
+  // Specific large markets
+  if (/japan|japanese/.test(n)) return "japan";
+  if (/kina|china|chinese|hong kong/.test(n)) return "china";
+  if (/indien|india|indian/.test(n)) return "india";
+  if (/\bbrasil|\bbrazil/.test(n)) return "brazil";
+
+  // Broad regions
+  if (/europ/.test(n)) return "europe";
+  if (/asia|pacific|apac/.test(n)) return "asia";
+  if (/latin americ|latinameri/.test(n)) return "latam";
+  if (/africa|afrik/.test(n)) return "africa";
+  if (/middle east|nahost/.test(n)) return "middleeast";
+
+  // Truly global — no geographic restriction
+  if (/global|world|värld|international/.test(n)) return "global";
+
+  // No geographic signal — treat as unconstrained (matches everything in same category)
+  return "";
+}
+
+// Two funds are geographic peers if their focus is the same, OR if either has
+// no detectable focus (broadly-named funds can match within any geography).
+function geographicMatch(a: string, b: string): boolean {
+  if (a === "" || b === "") return true;
+  return a === b;
+}
+
 function buildSimilarityNote(current: Fund, suggested: Fund): string {
   const cat = categoryToSwedish(current.category);
   const styleMatch =
@@ -174,11 +237,14 @@ function generateSwaps(
   for (const entry of entries) {
     const current = entry.fund!;
 
+    const currentGeo = geographicFocus(current.name);
+
     const peers = allFunds.filter(
       (f) =>
         f.isin !== current.isin &&
         f.category !== null &&
-        f.category === current.category
+        f.category === current.category &&
+        geographicMatch(currentGeo, geographicFocus(f.name))
     );
     if (peers.length === 0) continue;
 
@@ -187,10 +253,20 @@ function generateSwaps(
     );
 
     if (absoluteScore(best) <= absoluteScore(current)) {
+      const GEO_LABELS: Record<string, string> = {
+        sweden: "Sverige", norway: "Norge", denmark: "Danmark",
+        finland: "Finland", iceland: "Island", nordic: "Norden",
+        usa: "USA", emerging: "Tillväxtmarknader", japan: "Japan",
+        china: "Kina", india: "Indien", brazil: "Brasilien",
+        europe: "Europa", asia: "Asien", latam: "Latinamerika",
+        africa: "Afrika", middleeast: "Mellanöstern", global: "Global",
+      };
+      const geoLabel = currentGeo ? GEO_LABELS[currentGeo] ?? null : null;
       bestInCategory.push({
         fundName: current.name,
         isin: current.isin,
-        category: current.category ?? current.category_group ?? "Okänd kategori",
+        category: (current.category ?? current.category_group ?? "Okänd kategori") +
+          (geoLabel ? ` (${geoLabel})` : ""),
       });
       continue;
     }
@@ -356,6 +432,37 @@ export function analyzePortfolio(
   const weightedStdDev = weightedAvg(found, (f) => f.std_dev_3yr);
   const weightedReturn5yr = weightedAvg(found, (f) => f.return_5yr);
 
+  // ── Active / passive breakdown ───────────────────────────────────────────────
+  let activeW = 0, passiveW = 0, unknownW = 0;
+  for (const e of found) {
+    const t = e.fund!.investment_type?.toUpperCase() ?? "";
+    if (t.includes("PASSIVE") || t.includes("INDEX")) passiveW += e.weight;
+    else if (t.includes("ACTIVE") || t.includes("ACTIVELY")) activeW += e.weight;
+    else unknownW += e.weight;
+  }
+  const wSum = activeW + passiveW + unknownW || 1;
+  const managementBreakdown: ManagementBreakdown = {
+    active: (activeW / wSum) * 100,
+    passive: (passiveW / wSum) * 100,
+    unknown: (unknownW / wSum) * 100,
+  };
+
+  // ── Concentration warnings — based on specific fund category, not category_group
+  // Warn if a single specific category (e.g. "Global Large-Cap Blend Equity") makes
+  // up ≥50% of the portfolio. This catches "5 globalfonder" but not generic "lots of equity".
+  const specificCatMap: Record<string, number> = {};
+  for (const e of found) {
+    const key = e.fund!.category ?? "__unknown__";
+    specificCatMap[key] = (specificCatMap[key] ?? 0) + e.weight;
+  }
+  const concentrationWarnings: ConcentrationWarning[] = Object.entries(specificCatMap)
+    .filter(([key, w]) => key !== "__unknown__" && totalWeight > 0 && (w / totalWeight) * 100 >= 50)
+    .map(([key, w]) => ({
+      category: categoryToSwedish(key) || key,
+      weight: (w / totalWeight) * 100,
+    }))
+    .sort((a, b) => b.weight - a.weight);
+
   const { suggestions: swapSuggestions, bestInCategory } = generateSwaps(found, allFunds);
   const suggestedMetrics = buildSuggestedMetrics(found, swapSuggestions);
 
@@ -368,6 +475,8 @@ export function analyzePortfolio(
     totalWeight,
     notFound,
     categoryBreakdown,
+    managementBreakdown,
+    concentrationWarnings,
     avgCost,
     weightedReturn1yr,
     weightedReturn3yr,

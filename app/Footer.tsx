@@ -30,6 +30,7 @@ export default function Footer() {
             <Link href="/risk-profile" className="hover:text-slate-600 transition-colors">Riskprofil</Link>
             <Link href="/analyze" className="hover:text-slate-600 transition-colors">Analysera</Link>
             {loggedIn && <Link href="/portfolios" className="hover:text-slate-600 transition-colors">Portföljer</Link>}
+            <Link href="/hur-det-fungerar" className="hover:text-slate-600 transition-colors">Hur det fungerar</Link>
             <NavAuth variant="footer" />
           </nav>
         </div>

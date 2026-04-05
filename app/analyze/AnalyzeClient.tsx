@@ -854,9 +854,26 @@ function AnalysisResult({ analysis, user, portfolioValue, onLoginClick }: { anal
         </button>
       </section>
 
-      {/* Category breakdown — always visible */}
-      <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-        <h2 className="text-lg font-bold text-slate-900 mb-4">Fördelning</h2>
+      {/* Concentration warnings */}
+      {(analysis.concentrationWarnings?.length ?? 0) > 0 && (
+        <div className="flex items-start gap-3 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+          <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+          <div>
+            <p className="text-sm font-semibold text-amber-800">Koncentrationsrisk</p>
+            {(analysis.concentrationWarnings ?? []).map((w) => (
+              <p key={w.category} className="text-sm text-amber-700 mt-0.5">
+                {w.weight.toFixed(0)}% av portföljen är i {w.category.toLowerCase()} — överväg att sprida risken över fler kategorier.
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Category breakdown + active/passive — always visible */}
+      <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-5">
+        <h2 className="text-lg font-bold text-slate-900">Fördelning</h2>
         <div className="space-y-3">
           {analysis.categoryBreakdown.map((cat) => (
             <div key={cat.label}>
@@ -870,6 +887,44 @@ function AnalysisResult({ analysis, user, portfolioValue, onLoginClick }: { anal
             </div>
           ))}
         </div>
+
+        {/* Active / passive breakdown — only show if we have actual data (not all unknown) */}
+        {analysis.managementBreakdown && analysis.managementBreakdown.unknown < 99.5 && (
+          <div className="pt-3 border-t border-slate-100">
+            <p className="text-sm font-semibold text-slate-700 mb-2">Aktiv vs. passiv förvaltning</p>
+            <div className="flex h-3 rounded-full overflow-hidden gap-px">
+              {analysis.managementBreakdown.passive > 0 && (
+                <div className="bg-blue-500 h-full" style={{ width: `${analysis.managementBreakdown.passive}%` }} title={`Passiv ${analysis.managementBreakdown.passive.toFixed(1)}%`} />
+              )}
+              {analysis.managementBreakdown.active > 0 && (
+                <div className="bg-violet-400 h-full" style={{ width: `${analysis.managementBreakdown.active}%` }} title={`Aktiv ${analysis.managementBreakdown.active.toFixed(1)}%`} />
+              )}
+              {analysis.managementBreakdown.unknown > 0 && (
+                <div className="bg-slate-200 h-full" style={{ width: `${analysis.managementBreakdown.unknown}%` }} title={`Okänd ${analysis.managementBreakdown.unknown.toFixed(1)}%`} />
+              )}
+            </div>
+            <div className="flex items-center gap-4 mt-2 flex-wrap">
+              {analysis.managementBreakdown.passive > 0 && (
+                <span className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-blue-500 inline-block" />
+                  Passiv (index) {analysis.managementBreakdown.passive.toFixed(1)}%
+                </span>
+              )}
+              {analysis.managementBreakdown.active > 0 && (
+                <span className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-violet-400 inline-block" />
+                  Aktivt förvaltad {analysis.managementBreakdown.active.toFixed(1)}%
+                </span>
+              )}
+              {analysis.managementBreakdown.unknown > 0.5 && (
+                <span className="flex items-center gap-1.5 text-xs text-slate-400">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-slate-200 inline-block" />
+                  Uppgift saknas {analysis.managementBreakdown.unknown.toFixed(1)}%
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Swap suggestions + best in category — blurred if not logged in */}
