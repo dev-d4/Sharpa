@@ -177,9 +177,10 @@ export async function fetchNordnetFunds(): Promise<Fund[]> {
     const rows = entries.map((e) => ({ ...e.fund, display_slug: e.slug, fetched_at: now }));
     const BATCH = 500;
     for (let i = 0; i < rows.length; i += BATCH) {
-      await supabase
+      const { error } = await supabase
         .from("nordnet_funds")
         .upsert(rows.slice(i, i + BATCH), { onConflict: "isin" });
+      if (error) console.error(`[nordnet] upsert batch ${i} failed:`, error.message);
     }
     console.log(`[nordnet] cached ${funds.length} funds in Supabase`);
   }
