@@ -244,7 +244,7 @@ export async function fetchNordnetDetail(isin: string, displaySlug: string): Pro
 
   // 3. Cache in Supabase
   if (supabase) {
-    await supabase.from("nordnet_fund_details").upsert({
+    const { error } = await supabase.from("nordnet_fund_details").upsert({
       isin,
       sharpe_3yr: detail.sharpe_3yr,
       std_dev_3yr: detail.std_dev_3yr,
@@ -255,6 +255,8 @@ export async function fetchNordnetDetail(isin: string, displaySlug: string): Pro
       ongoing_cost_estimated: detail.ongoing_cost_estimated,
       fetched_at: new Date().toISOString(),
     });
+    if (error) console.error(`[nordnet] detail upsert failed for ${isin}:`, error.message);
+    else console.log(`[nordnet] cached detail for ${isin}`);
   }
 
   return detail;
