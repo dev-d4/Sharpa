@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS avanza_funds (
 
 ALTER TABLE avanza_funds ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "public read avanza_funds" ON avanza_funds FOR SELECT USING (true);
+CREATE POLICY "service write avanza_funds" ON avanza_funds FOR ALL USING (true) WITH CHECK (true);
 
 -- ── Nordnet fund cache ────────────────────────────────────────────────────────
 
@@ -61,6 +62,7 @@ CREATE TABLE IF NOT EXISTS nordnet_funds (
 
 ALTER TABLE nordnet_funds ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "public read nordnet_funds" ON nordnet_funds FOR SELECT USING (true);
+CREATE POLICY "service write nordnet_funds" ON nordnet_funds FOR ALL USING (true) WITH CHECK (true);
 
 -- ── Nordnet per-fund detail cache (Sharpe, alpha, beta, std dev) ──────────────
 
@@ -78,41 +80,7 @@ CREATE TABLE IF NOT EXISTS nordnet_fund_details (
 
 ALTER TABLE nordnet_fund_details ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "public read nordnet_fund_details" ON nordnet_fund_details FOR SELECT USING (true);
-
-CREATE TABLE IF NOT EXISTS funds (
-  id SERIAL PRIMARY KEY,
-  name TEXT,
-  base_currency TEXT,
-  isin TEXT UNIQUE NOT NULL,
-  category_group TEXT,       -- Equity, Fixed Income, Allocation, etc.
-  category TEXT,             -- EAA Fund Global Large-Cap Growth Equity etc.
-  global_category TEXT,
-  equity_style_box TEXT,
-  return_ytd NUMERIC,
-  return_1yr NUMERIC,
-  return_2yr NUMERIC,
-  return_3yr NUMERIC,
-  return_5yr NUMERIC,
-  investment_type TEXT,
-  std_dev_3yr NUMERIC,
-  std_dev_1yr NUMERIC,
-  sharpe_3yr NUMERIC,
-  alpha_3yr NUMERIC,
-  beta_3yr NUMERIC,
-  sri_value INTEGER,
-  ongoing_cost_actual NUMERIC,
-  ongoing_cost_estimated NUMERIC,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Index för snabba uppslagningar
-CREATE INDEX IF NOT EXISTS idx_funds_isin ON funds(isin);
-CREATE INDEX IF NOT EXISTS idx_funds_category_group ON funds(category_group);
-CREATE INDEX IF NOT EXISTS idx_funds_category ON funds(category);
-
--- Tillåt läsning utan inloggning (anon key)
-ALTER TABLE funds ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public read" ON funds FOR SELECT USING (true);
+CREATE POLICY "service write nordnet_fund_details" ON nordnet_fund_details FOR ALL USING (true) WITH CHECK (true);
 
 -- ── Portfolios ────────────────────────────────────────────────────────────────
 

@@ -199,12 +199,13 @@ export async function fetchAvanzaFunds(): Promise<Fund[]> {
   // Upsert into Supabase in batches of 500
   if (supabase && funds.length > 0) {
     const now = new Date().toISOString();
-    const rows = funds.map((f) => ({ ...f, fetched_at: now }));
+    const rows = funds.map((f) => ({ ...f, sri_value: f.sri_value != null ? Math.round(f.sri_value) : null, fetched_at: now }));
     const BATCH = 500;
     for (let i = 0; i < rows.length; i += BATCH) {
-      await supabase
+      const { error } = await supabase
         .from("avanza_funds")
         .upsert(rows.slice(i, i + BATCH), { onConflict: "isin" });
+      if (error) console.error(`[avanza] upsert batch ${i} failed:`, error.message);
     }
     console.log(`[avanza] cached ${funds.length} funds in Supabase`);
   }
