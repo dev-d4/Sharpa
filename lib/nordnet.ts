@@ -162,10 +162,17 @@ export async function fetchNordnetFunds(): Promise<Fund[]> {
       .single();
 
     if (sample && Date.now() - new Date(sample.fetched_at).getTime() < CACHE_TTL_MS) {
-      const { data } = await supabase.from("nordnet_funds").select("*").limit(5000);
-      if (data && data.length > 0) {
-        console.log(`[nordnet] serving ${data.length} funds from Supabase cache`);
-        return data as Fund[];
+      const all: Fund[] = [];
+      const PAGE = 1000;
+      for (let from = 0; ; from += PAGE) {
+        const { data } = await supabase.from("nordnet_funds").select("*").range(from, from + PAGE - 1);
+        if (!data || data.length === 0) break;
+        all.push(...(data as Fund[]));
+        if (data.length < PAGE) break;
+      }
+      if (all.length > 0) {
+        console.log(`[nordnet] serving ${all.length} funds from Supabase cache`);
+        return all;
       }
     }
   }
