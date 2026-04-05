@@ -1,4 +1,3 @@
-import { unstable_cache } from "next/cache";
 import { Fund } from "./supabase";
 import { createClient } from "@supabase/supabase-js";
 
@@ -134,14 +133,7 @@ async function fetchNordnetList(): Promise<Fund[]> {
     .map((f, i) => mapNordnetListToFund(f, i));
 }
 
-export const fetchNordnetFunds = unstable_cache(
-  fetchNordnetList,
-  ["nordnet-funds"],
-  { revalidate: 30 * 24 * 60 * 60 }
-);
-
-// ── Fetch Nordnet fund detail (Sharpe, alpha, beta, fees) ─────────────────────
-// Called on-demand for ISINs not in Avanza. Results cached in Supabase.
+// ── Supabase-backed cache ─────────────────────────────────────────────────────
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -149,6 +141,47 @@ function getSupabase() {
   if (!url || !key) return null;
   return createClient(url, key);
 }
+
+const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+export async function fetchNordnetFunds(): Promise<Fund[]> {
+  const supabase = getSupabase();
+
+  if (supabase) {
+    const { data: sample } = await supabase
+      .from("nordnet_funds")
+      .select("fetched_at")
+      .limit(1)
+      .single();
+
+    if (sample && Date.now() - new Date(sample.fetched_at).getTime() < CACHE_TTL_MS) {
+      const { data } = await supabase.from("nordnet_funds").select("*");
+      if (data && data.length > 0) {
+        console.log(`[nordnet] serving ${data.length} funds from Supabase cache`);
+        return data as Fund[];
+      }
+    }
+  }
+
+  const funds = await fetchNordnetList();
+
+  if (supabase && funds.length > 0) {
+    const now = new Date().toISOString();
+    const rows = funds.map((f) => ({ ...f, fetched_at: now }));
+    const BATCH = 500;
+    for (let i = 0; i < rows.length; i += BATCH) {
+      await supabase
+        .from("nordnet_funds")
+        .upsert(rows.slice(i, i + BATCH), { onConflict: "isin" });
+    }
+    console.log(`[nordnet] cached ${funds.length} funds in Supabase`);
+  }
+
+  return funds;
+}
+
+// ── Fetch Nordnet fund detail (Sharpe, alpha, beta, fees) ─────────────────────
+// Called on-demand for ISINs not in Avanza. Results cached in Supabase.
 
 export async function fetchNordnetDetail(isin: string, displaySlug: string): Promise<Partial<Fund>> {
   // 1. Check Supabase cache first

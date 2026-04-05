@@ -1,5 +1,5 @@
 import { Fund } from "./supabase";
-import { unstable_cache } from "next/cache";
+import { createClient } from "@supabase/supabase-js";
 
 // ── Raw shape returned by Avanza's fund-guide list API ────────────────────────
 interface AvanzaFund {
@@ -162,9 +162,52 @@ async function fetchFromAvanza(): Promise<Fund[]> {
   return unique.map((f, i) => mapAvanzaToFund(f, i));
 }
 
-// ── Cache (30 days via Next.js data cache) ────────────────────────────────────
-export const fetchAvanzaFunds = unstable_cache(
-  fetchFromAvanza,
-  ["avanza-funds"],
-  { revalidate: 30 * 24 * 60 * 60 }
-);
+// ── Supabase-backed cache (7 days) ────────────────────────────────────────────
+
+function getSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key);
+}
+
+const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+export async function fetchAvanzaFunds(): Promise<Fund[]> {
+  const supabase = getSupabase();
+
+  if (supabase) {
+    // Check if cached data is fresh
+    const { data: sample } = await supabase
+      .from("avanza_funds")
+      .select("fetched_at")
+      .limit(1)
+      .single();
+
+    if (sample && Date.now() - new Date(sample.fetched_at).getTime() < CACHE_TTL_MS) {
+      const { data } = await supabase.from("avanza_funds").select("*");
+      if (data && data.length > 0) {
+        console.log(`[avanza] serving ${data.length} funds from Supabase cache`);
+        return data as Fund[];
+      }
+    }
+  }
+
+  // Fetch fresh from API
+  const funds = await fetchFromAvanza();
+
+  // Upsert into Supabase in batches of 500
+  if (supabase && funds.length > 0) {
+    const now = new Date().toISOString();
+    const rows = funds.map((f) => ({ ...f, fetched_at: now }));
+    const BATCH = 500;
+    for (let i = 0; i < rows.length; i += BATCH) {
+      await supabase
+        .from("avanza_funds")
+        .upsert(rows.slice(i, i + BATCH), { onConflict: "isin" });
+    }
+    console.log(`[avanza] cached ${funds.length} funds in Supabase`);
+  }
+
+  return funds;
+}
