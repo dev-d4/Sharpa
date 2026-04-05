@@ -73,6 +73,17 @@ const NN_HEADERS = {
   Referer: "https://www.nordnet.se/",
 };
 
+async function fetchNtag(): Promise<string> {
+  try {
+    const res = await fetch("https://www.nordnet.se/api/2/login", {
+      headers: { "client-id": "NEXT", Accept: "application/json" },
+    });
+    return res.headers.get("ntag") ?? "NO_NTAG_RECEIVED_YET";
+  } catch {
+    return "NO_NTAG_RECEIVED_YET";
+  }
+}
+
 // ── Map Nordnet list entry → Fund (without Sharpe) ───────────────────────────
 
 function mapNordnetListToFund(f: NordnetListFund, index: number): Fund {
@@ -226,14 +237,11 @@ export async function fetchNordnetDetail(isin: string, displaySlug: string): Pro
     }
   }
 
-  // 2. Fetch from Nordnet detail API
+  // 2. Fetch from Nordnet detail API (requires a real ntag session token)
+  const ntag = await fetchNtag();
   const url = `https://www.nordnet.se/api/2/instrument_search/query/slugdata?slug=${displaySlug}`;
-  console.log(`[nordnet] fetching detail for ${isin} slug=${displaySlug}`);
-  const res = await fetch(url, { headers: NN_HEADERS });
-  if (!res.ok) {
-    console.error(`[nordnet] detail API failed for ${isin}: ${res.status}`);
-    return {};
-  }
+  const res = await fetch(url, { headers: { ...NN_HEADERS, ntag } });
+  if (!res.ok) return {};
   const data: NordnetDetailResponse = await res.json();
 
   const detail: Partial<Fund> = {
@@ -260,7 +268,6 @@ export async function fetchNordnetDetail(isin: string, displaySlug: string): Pro
       fetched_at: new Date().toISOString(),
     });
     if (error) console.error(`[nordnet] detail upsert failed for ${isin}:`, error.message);
-    else console.log(`[nordnet] cached detail for ${isin}`);
   }
 
   return detail;
