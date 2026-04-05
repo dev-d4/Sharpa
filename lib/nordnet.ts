@@ -73,21 +73,6 @@ const NN_HEADERS = {
   Referer: "https://www.nordnet.se/",
 };
 
-async function fetchNtag(): Promise<string> {
-  try {
-    const res = await fetch("https://www.nordnet.se/api/2/login", {
-      headers: { "client-id": "NEXT", Accept: "application/json" },
-    });
-    const fromHeader = res.headers.get("ntag");
-    const fromCookie = res.headers.get("set-cookie")?.match(/ntag=([^;]+)/)?.[1];
-    const ntag = fromHeader ?? fromCookie ?? "NO_NTAG_RECEIVED_YET";
-    console.log(`[nordnet] ntag=${ntag} status=${res.status}`);
-    return ntag;
-  } catch (e) {
-    console.error(`[nordnet] fetchNtag failed:`, e);
-    return "NO_NTAG_RECEIVED_YET";
-  }
-}
 
 // ── Map Nordnet list entry → Fund (without Sharpe) ───────────────────────────
 
@@ -242,11 +227,18 @@ export async function fetchNordnetDetail(isin: string, displaySlug: string): Pro
     }
   }
 
-  // 2. Fetch from Nordnet detail API (requires a real ntag session token)
-  const ntag = await fetchNtag();
-  const url = `https://www.nordnet.se/api/2/instrument_search/query/slugdata?slug=${displaySlug}`;
-  const res = await fetch(url, { headers: { ...NN_HEADERS, ntag } });
-  console.log(`[nordnet] slugdata status=${res.status} isin=${isin}`);
+  // 2. Fetch from Nordnet detail API
+  const url = `https://api.prod.nntech.io/instrument-screening/v2/mutual-funds/web/${displaySlug}`;
+  const res = await fetch(url, {
+    headers: {
+      Accept: "*/*",
+      "Accept-Language": "sv-SE,sv;q=0.9",
+      Origin: "https://www.nordnet.se",
+      Referer: "https://www.nordnet.se/",
+      "User-Agent": "Mozilla/5.0",
+      "x-locale": "sv-SE",
+    },
+  });
   if (!res.ok) return {};
   const data: NordnetDetailResponse = await res.json();
 
