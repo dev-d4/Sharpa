@@ -75,6 +75,89 @@ const NN_HEADERS = {
 };
 
 
+// ── Normalize Nordnet English Morningstar categories → Avanza Swedish format ──
+// Ensures Nordnet-exclusive funds share the same category vocabulary as Avanza
+// funds, so peer comparison and swap suggestions work across both brokers.
+
+const NN_CATEGORY_TO_AVANZA: Record<string, string> = {
+  // Global equity
+  "Global Equity Large Cap":               "Global, Mix bolag",
+  "Global Equity Mid/Small Cap":           "Global, Små/medelstora bolag",
+  "Global Emerging Markets Equity":        "Tillväxtmarknader",
+
+  // European equity
+  "Europe Equity Large Cap":               "Europa, Mix bolag",
+  "Europe Equity Mid/Small Cap":           "Europa, Småbolag",
+  "Europe Emerging Markets Equity":        "Östeuropa ex Ryssland",
+
+  // US equity
+  "US Equity Large Cap Blend":             "USA, Mix bolag",
+  "US Equity Large Cap Growth":            "USA, Tillväxtbolag",
+  "US Equity Large Cap Value":             "USA, Värdebolag",
+  "US Equity Small Cap":                   "USA, Småbolag",
+  "US Equity Mid Cap":                     "USA, Medelstora bolag",
+
+  // Regional equity
+  "Asia ex-Japan Equity":                  "Asien ex Japan",
+  "Asia Equity":                           "Asien & Australien ex Japan",
+  "Japan Equity":                          "Japan, Mix bolag",
+  "Greater China Equity":                  "Kina & närliggande",
+  "India Equity":                          "Indien",
+  "Latin America Equity":                  "Latinamerika",
+  "Africa Equity":                         "Afrika och Mellanöstern",
+  "UK Equity Large Cap":                   "Storbritannien",
+  "Korea Equity":                          "Övriga aktiefonder",
+  "Thailand Equity":                       "Övriga aktiefonder",
+  "Australia & New Zealand Equity":        "Övriga aktiefonder",
+  "Equity Miscellaneous":                  "Övriga aktiefonder",
+
+  // Sector equity
+  "Technology Sector Equity":              "Branschfond, Ny teknik",
+  "Healthcare Sector Equity":              "Branschfond, Bioteknik",
+  "Real Estate Sector Equity":             "Branschfond, Fastighetsbolag övriga",
+  "Energy Sector Equity":                  "Branschfond, Energi",
+  "Natural Resources Sector Equity":       "Branschfond, Råvaror",
+  "Infrastructure Sector Equity":          "Branschfond, Infrastruktur",
+  "Precious Metals Sector Equity":         "Branschfond, Ädelmetaller",
+  "Consumer Goods & Services Sector Equity": "Branschfond, Konsument",
+  "Industrials Sector Equity":             "Branschfond, Industrimaterial",
+  "Financials Sector Equity":              "Branschfond, Finans",
+  "Communications Sector Equity":          "Branschfond, Kommunikation",
+
+  // Fixed income
+  "Europe Fixed Income":                   "Ränte - euro obligationer",
+  "Global Fixed Income":                   "Ränte - övriga obligationer",
+  "Emerging Markets Fixed Income":         "Ränte - tillväxtmarknader, Obligationer",
+  "US Fixed Income":                       "Ränte - övriga obligationer",
+  "Asia Fixed Income":                     "Ränte - övriga obligationer",
+  "Fixed Income Miscellaneous":            "Ränte - övriga obligationer",
+
+  // Allocation
+  "Moderate Allocation":                   "Blandfond - SEK, Balanserad",
+  "Flexible Allocation":                   "Blandfond - SEK, Flexibel",
+  "Aggressive Allocation":                 "Blandfond - SEK, Aggressiv",
+  "Cautious Allocation":                   "Blandfond - SEK, Försiktig",
+  "Allocation Miscellaneous":              "Blandfond - SEK, Flexibel",
+  "Target Date":                           "Blandfond - SEK, Balanserad",
+
+  // Alternative / hedge
+  "Long/Short Equity":                     "Lång/kort, Övriga",
+  "Global Macro":                          "Hedgefond, Global makro, Övriga",
+  "Market Neutral":                        "Hedgefond, Marknadsneutral, Övriga",
+  "Multialternative":                      "Hedgefond, Multi-strategi, Övriga",
+  "Alternative Miscellaneous":             "Hedgefond, Övriga",
+  "Options Trading":                       "Hedgefond, Övriga",
+
+  // Money market
+  "Euro Money Market":                     "Penningmarknadsfond",
+  "US Money Market":                       "Penningmarknadsfond",
+  "Money Market Miscellaneous":            "Penningmarknadsfond",
+
+  // Other
+  "Convertibles":                          "Konvertibler - global",
+  "Commodities Broad Basket":              "Råvaror - Blandade",
+};
+
 // ── Map Nordnet list entry → Fund (without Sharpe) ───────────────────────────
 
 function mapNordnetListToFund(f: NordnetListFund, index: number): Fund {
@@ -179,7 +262,49 @@ export async function fetchNordnetFunds(): Promise<Fund[]> {
   }
 
   const entries = await fetchNordnetList();
-  const funds = entries.map((e) => e.fund);
+  let funds = entries.map((e) => e.fund);
+
+  // ── Normalize categories: cross-reference with Avanza funds ──────────────────
+  // Build a map of nordnet English category → avanza Swedish category by finding
+  // funds that exist on both platforms (same ISIN). Nordnet-exclusive funds get
+  // the correct Swedish category via a bridge fund in the same Nordnet category.
+  if (supabase) {
+    const avanzaCats: { isin: string; category: string | null }[] = [];
+    const PAGE = 1000;
+    for (let from = 0; ; from += PAGE) {
+      const { data } = await supabase
+        .from("avanza_funds")
+        .select("isin, category")
+        .range(from, from + PAGE - 1);
+      if (!data || data.length === 0) break;
+      avanzaCats.push(...data);
+      if (data.length < PAGE) break;
+    }
+
+    const avanzaByIsin = new Map(
+      avanzaCats.filter((f) => f.category).map((f) => [f.isin, f.category as string])
+    );
+
+    // For each Nordnet English category, find the Avanza Swedish equivalent via shared ISIN
+    const dynamicCatMap = new Map<string, string>();
+    for (const fund of funds) {
+      if (!fund.category) continue;
+      const avanzaCategory = avanzaByIsin.get(fund.isin);
+      if (avanzaCategory && !dynamicCatMap.has(fund.category)) {
+        dynamicCatMap.set(fund.category, avanzaCategory);
+      }
+    }
+
+    console.log(`[nordnet] dynamic category mappings built: ${dynamicCatMap.size}`);
+
+    // Apply: dynamic map first, static fallback second, raw category last
+    funds = funds.map((f) => ({
+      ...f,
+      category: f.category
+        ? dynamicCatMap.get(f.category) ?? NN_CATEGORY_TO_AVANZA[f.category] ?? f.category
+        : null,
+    }));
+  }
 
   if (supabase && funds.length > 0) {
     const now = new Date().toISOString();
