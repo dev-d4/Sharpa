@@ -78,8 +78,13 @@ async function fetchNtag(): Promise<string> {
     const res = await fetch("https://www.nordnet.se/api/2/login", {
       headers: { "client-id": "NEXT", Accept: "application/json" },
     });
-    return res.headers.get("ntag") ?? "NO_NTAG_RECEIVED_YET";
-  } catch {
+    const fromHeader = res.headers.get("ntag");
+    const fromCookie = res.headers.get("set-cookie")?.match(/ntag=([^;]+)/)?.[1];
+    const ntag = fromHeader ?? fromCookie ?? "NO_NTAG_RECEIVED_YET";
+    console.log(`[nordnet] ntag=${ntag} status=${res.status}`);
+    return ntag;
+  } catch (e) {
+    console.error(`[nordnet] fetchNtag failed:`, e);
     return "NO_NTAG_RECEIVED_YET";
   }
 }
@@ -241,6 +246,7 @@ export async function fetchNordnetDetail(isin: string, displaySlug: string): Pro
   const ntag = await fetchNtag();
   const url = `https://www.nordnet.se/api/2/instrument_search/query/slugdata?slug=${displaySlug}`;
   const res = await fetch(url, { headers: { ...NN_HEADERS, ntag } });
+  console.log(`[nordnet] slugdata status=${res.status} isin=${isin}`);
   if (!res.ok) return {};
   const data: NordnetDetailResponse = await res.json();
 
