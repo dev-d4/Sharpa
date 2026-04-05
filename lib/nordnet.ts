@@ -59,11 +59,12 @@ interface NordnetDetailResponse {
 
 const NN_FUND_TYPE_MAP: Record<string, string> = {
   Aktie: "Equity",
+  Index: "Equity",      // index funds are equity funds
   Ränta: "Fixed Income",
-  Blandfond: "Allocation",
+  Bland: "Allocation",  // API returns "Bland" not "Blandfond"
   Hedge: "Alternative",
   Penningmarknad: "Money Market",
-  "Fond-i-fond": "Allocation",
+  Övrigt: "Other",
 };
 
 const NN_HEADERS = {

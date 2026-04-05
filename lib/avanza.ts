@@ -24,10 +24,13 @@ interface AvanzaFund {
 const FUND_TYPE_TO_CATEGORY_GROUP: Record<string, string> = {
   EQUITY_FUND: "Equity",
   BOND_FUND: "Fixed Income",
+  INTEREST_FUND: "Fixed Income",   // actual API value for bond funds
   MIXED_FUND: "Allocation",
   HEDGE_FUND: "Alternative",
+  ALTERNATIVE_FUND: "Alternative", // actual API value for hedge/alternative funds
   MONEY_MARKET_FUND: "Money Market",
   FUND_OF_FUNDS: "Allocation",
+  MISC_FUND: "Other",
 };
 
 function annualize(cumulative: number | null, years: number): number | null {
