@@ -165,7 +165,7 @@ async function fetchFromAvanza(): Promise<Fund[]> {
   return unique.map((f, i) => mapAvanzaToFund(f, i));
 }
 
-// ── Supabase-backed cache (7 days) ────────────────────────────────────────────
+// ── Supabase-backed cache ─────────────────────────────────────────────────────
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -180,9 +180,8 @@ export async function fetchAvanzaFunds(): Promise<Fund[]> {
   const supabase = getSupabase();
 
   if (supabase) {
-    // Check if cached data is fresh
     const { data: sample } = await supabase
-      .from("avanza_funds")
+      .from("avanza_offerings")
       .select("fetched_at")
       .limit(1)
       .single();
@@ -191,33 +190,48 @@ export async function fetchAvanzaFunds(): Promise<Fund[]> {
       const all: Fund[] = [];
       const PAGE = 1000;
       for (let from = 0; ; from += PAGE) {
-        const { data } = await supabase.from("avanza_funds").select("*").range(from, from + PAGE - 1);
+        const { data } = await supabase.from("avanza_fund_data").select("*").range(from, from + PAGE - 1);
         if (!data || data.length === 0) break;
         all.push(...(data as Fund[]));
         if (data.length < PAGE) break;
       }
       if (all.length > 0) {
-        console.log(`[avanza] serving ${all.length} funds from Supabase cache`);
+        console.log(`[avanza] serving ${all.length} funds from cache`);
         return all;
       }
     }
   }
 
-  // Fetch fresh from API
   const funds = await fetchFromAvanza();
 
-  // Upsert into Supabase in batches of 500
   if (supabase && funds.length > 0) {
     const now = new Date().toISOString();
-    const rows = funds.map((f) => ({ ...f, sri_value: f.sri_value != null ? Math.round(f.sri_value) : null, fetched_at: now }));
     const BATCH = 500;
-    for (let i = 0; i < rows.length; i += BATCH) {
+
+    // Upsert fund data into unified funds table
+    const fundRows = funds.map((f) => ({
+      ...f,
+      sri_value: f.sri_value != null ? Math.round(f.sri_value) : null,
+      source: "avanza",
+      fetched_at: now,
+    }));
+    for (let i = 0; i < fundRows.length; i += BATCH) {
       const { error } = await supabase
-        .from("avanza_funds")
-        .upsert(rows.slice(i, i + BATCH), { onConflict: "isin" });
-      if (error) console.error(`[avanza] upsert batch ${i} failed:`, error.message);
+        .from("funds")
+        .upsert(fundRows.slice(i, i + BATCH), { onConflict: "isin" });
+      if (error) console.error(`[avanza] funds upsert batch ${i} failed:`, error.message);
     }
-    console.log(`[avanza] cached ${funds.length} funds in Supabase`);
+
+    // Upsert avanza_offerings (isin + name only)
+    const offeringRows = funds.map((f) => ({ isin: f.isin, name: f.name, fetched_at: now }));
+    for (let i = 0; i < offeringRows.length; i += BATCH) {
+      const { error } = await supabase
+        .from("avanza_offerings")
+        .upsert(offeringRows.slice(i, i + BATCH), { onConflict: "isin" });
+      if (error) console.error(`[avanza] offerings upsert batch ${i} failed:`, error.message);
+    }
+
+    console.log(`[avanza] cached ${funds.length} funds`);
   }
 
   return funds;

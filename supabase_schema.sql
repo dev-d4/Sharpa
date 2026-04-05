@@ -1,8 +1,8 @@
 -- Kör detta i Supabase SQL Editor (https://supabase.com/dashboard/project/jgbwzrlkmgyyglscasfe/sql)
 
--- ── Avanza fund cache ─────────────────────────────────────────────────────────
+-- ── Unified fund data (one row per ISIN) ─────────────────────────────────────
 
-CREATE TABLE IF NOT EXISTS avanza_funds (
+CREATE TABLE IF NOT EXISTS funds (
   isin TEXT PRIMARY KEY,
   id INTEGER,
   name TEXT,
@@ -25,64 +25,51 @@ CREATE TABLE IF NOT EXISTS avanza_funds (
   sri_value INTEGER,
   ongoing_cost_actual NUMERIC,
   ongoing_cost_estimated NUMERIC,
+  source TEXT DEFAULT 'unknown',
   fetched_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-ALTER TABLE avanza_funds ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "public read avanza_funds" ON avanza_funds FOR SELECT USING (true);
-CREATE POLICY "service write avanza_funds" ON avanza_funds FOR ALL USING (true) WITH CHECK (true);
+ALTER TABLE funds ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "public read funds" ON funds FOR SELECT USING (true);
+CREATE POLICY "service write funds" ON funds FOR ALL USING (true) WITH CHECK (true);
 
--- ── Nordnet fund cache ────────────────────────────────────────────────────────
+-- ── Avanza offerings (which ISINs Avanza carries) ─────────────────────────────
 
-CREATE TABLE IF NOT EXISTS nordnet_funds (
+CREATE TABLE IF NOT EXISTS avanza_offerings (
   isin TEXT PRIMARY KEY,
-  id INTEGER,
   name TEXT,
-  base_currency TEXT,
-  category_group TEXT,
-  category TEXT,
-  global_category TEXT,
-  equity_style_box TEXT,
-  return_ytd NUMERIC,
-  return_1yr NUMERIC,
-  return_2yr NUMERIC,
-  return_3yr NUMERIC,
-  return_5yr NUMERIC,
-  investment_type TEXT,
-  std_dev_3yr NUMERIC,
-  std_dev_1yr NUMERIC,
-  sharpe_3yr NUMERIC,
-  alpha_3yr NUMERIC,
-  beta_3yr NUMERIC,
-  sri_value INTEGER,
-  ongoing_cost_actual NUMERIC,
-  ongoing_cost_estimated NUMERIC,
   fetched_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-ALTER TABLE nordnet_funds ADD COLUMN IF NOT EXISTS display_slug TEXT;
+ALTER TABLE avanza_offerings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "public read avanza_offerings" ON avanza_offerings FOR SELECT USING (true);
+CREATE POLICY "service write avanza_offerings" ON avanza_offerings FOR ALL USING (true) WITH CHECK (true);
 
-ALTER TABLE nordnet_funds ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "public read nordnet_funds" ON nordnet_funds FOR SELECT USING (true);
-CREATE POLICY "service write nordnet_funds" ON nordnet_funds FOR ALL USING (true) WITH CHECK (true);
+-- ── Nordnet offerings (which ISINs Nordnet carries) ───────────────────────────
 
--- ── Nordnet per-fund detail cache (Sharpe, alpha, beta, std dev) ──────────────
-
-CREATE TABLE IF NOT EXISTS nordnet_fund_details (
+CREATE TABLE IF NOT EXISTS nordnet_offerings (
   isin TEXT PRIMARY KEY,
-  sharpe_3yr NUMERIC,
-  std_dev_3yr NUMERIC,
-  std_dev_1yr NUMERIC,
-  alpha_3yr NUMERIC,
-  beta_3yr NUMERIC,
-  ongoing_cost_actual NUMERIC,
-  ongoing_cost_estimated NUMERIC,
+  name TEXT,
+  display_slug TEXT,
   fetched_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-ALTER TABLE nordnet_fund_details ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "public read nordnet_fund_details" ON nordnet_fund_details FOR SELECT USING (true);
-CREATE POLICY "service write nordnet_fund_details" ON nordnet_fund_details FOR ALL USING (true) WITH CHECK (true);
+ALTER TABLE nordnet_offerings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "public read nordnet_offerings" ON nordnet_offerings FOR SELECT USING (true);
+CREATE POLICY "service write nordnet_offerings" ON nordnet_offerings FOR ALL USING (true) WITH CHECK (true);
+
+-- ── Views for easy browsing and cache reads ───────────────────────────────────
+
+CREATE OR REPLACE VIEW avanza_fund_data AS
+SELECT f.* FROM funds f
+INNER JOIN avanza_offerings ao ON f.isin = ao.isin;
+
+CREATE OR REPLACE VIEW nordnet_fund_data AS
+SELECT f.* FROM funds f
+INNER JOIN nordnet_offerings no ON f.isin = no.isin;
+
+GRANT SELECT ON avanza_fund_data TO anon, authenticated;
+GRANT SELECT ON nordnet_fund_data TO anon, authenticated;
 
 -- ── Portfolios ────────────────────────────────────────────────────────────────
 
@@ -103,3 +90,28 @@ CREATE POLICY "select own" ON portfolios FOR SELECT USING (auth.uid() = user_id)
 CREATE POLICY "insert own" ON portfolios FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "update own" ON portfolios FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "delete own" ON portfolios FOR DELETE USING (auth.uid() = user_id);
+
+-- ── Risk profiles ─────────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS risk_profiles (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
+  q1         INTEGER NOT NULL,
+  q2         INTEGER NOT NULL,
+  q3         INTEGER NOT NULL,
+  q4         INTEGER NOT NULL,
+  score      INTEGER NOT NULL,
+  label      TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE risk_profiles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "select own" ON risk_profiles FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "insert own" ON risk_profiles FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "update own" ON risk_profiles FOR UPDATE USING (auth.uid() = user_id);
+
+-- ── Old tables (can be dropped after migration) ───────────────────────────────
+-- DROP TABLE IF EXISTS avanza_funds;
+-- DROP TABLE IF EXISTS nordnet_funds;
+-- DROP TABLE IF EXISTS nordnet_fund_details;

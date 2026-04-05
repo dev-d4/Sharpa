@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
         const nordnetSlugMap = new Map<string, string>();
         if (supabase) {
           const { data } = await supabase
-            .from("nordnet_funds")
+            .from("nordnet_offerings")
             .select("isin, display_slug")
             .in("isin", needsDetail);
           for (const row of data ?? []) {

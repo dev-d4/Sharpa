@@ -78,6 +78,7 @@ const NN_HEADERS = {
 // ── Normalize Nordnet English Morningstar categories → Avanza Swedish format ──
 // Ensures Nordnet-exclusive funds share the same category vocabulary as Avanza
 // funds, so peer comparison and swap suggestions work across both brokers.
+// Static map takes priority over the dynamic cross-reference (explicit > inferred).
 
 const NN_CATEGORY_TO_AVANZA: Record<string, string> = {
   // Global equity
@@ -153,6 +154,20 @@ const NN_CATEGORY_TO_AVANZA: Record<string, string> = {
   "US Money Market":                       "Penningmarknadsfond",
   "Money Market Miscellaneous":            "Penningmarknadsfond",
 
+  // Nordic countries — both English Morningstar names and Nordnet's own Swedish API strings
+  "Norway Equity":                         "Norge",
+  "Norwegian Equity":                      "Norge",
+  "Sverige (Norge)":                       "Norge",
+  "Sweden Equity":                         "Sverige, Mix bolag",
+  "Swedish Equity":                        "Sverige, Mix bolag",
+  "Sverige":                               "Sverige, Mix bolag",
+  "Denmark Equity":                        "Danmark",
+  "Sverige (Danmark)":                     "Danmark",
+  "Finnish Equity":                        "Finland",
+  "Sverige (Finland)":                     "Finland",
+  "Nordic Equity":                         "Norden",
+  "Scandinavia Equity":                    "Norden",
+
   // Other
   "Convertibles":                          "Konvertibler - global",
   "Commodities Broad Basket":              "Råvaror - Blandade",
@@ -185,7 +200,7 @@ function mapNordnetListToFund(f: NordnetListFund, index: number): Fund {
     investment_type: null,
     std_dev_3yr: null,
     std_dev_1yr: null,
-    sharpe_3yr: null, // filled in by detail fetch
+    sharpe_3yr: null,
     alpha_3yr: null,
     beta_3yr: null,
     sri_value: null,
@@ -240,7 +255,7 @@ export async function fetchNordnetFunds(): Promise<Fund[]> {
 
   if (supabase) {
     const { data: sample } = await supabase
-      .from("nordnet_funds")
+      .from("nordnet_offerings")
       .select("fetched_at")
       .limit(1)
       .single();
@@ -249,13 +264,13 @@ export async function fetchNordnetFunds(): Promise<Fund[]> {
       const all: Fund[] = [];
       const PAGE = 1000;
       for (let from = 0; ; from += PAGE) {
-        const { data } = await supabase.from("nordnet_funds").select("*").range(from, from + PAGE - 1);
+        const { data } = await supabase.from("nordnet_fund_data").select("*").range(from, from + PAGE - 1);
         if (!data || data.length === 0) break;
         all.push(...(data as Fund[]));
         if (data.length < PAGE) break;
       }
       if (all.length > 0) {
-        console.log(`[nordnet] serving ${all.length} funds from Supabase cache`);
+        console.log(`[nordnet] serving ${all.length} funds from cache`);
         return all;
       }
     }
@@ -265,15 +280,16 @@ export async function fetchNordnetFunds(): Promise<Fund[]> {
   let funds = entries.map((e) => e.fund);
 
   // ── Normalize categories: cross-reference with Avanza funds ──────────────────
-  // Build a map of nordnet English category → avanza Swedish category by finding
-  // funds that exist on both platforms (same ISIN). Nordnet-exclusive funds get
-  // the correct Swedish category via a bridge fund in the same Nordnet category.
+  // Build a map of nordnet raw category → avanza Swedish category by finding
+  // funds that exist on both platforms (same ISIN). Uses majority vote so one
+  // outlier fund doesn't corrupt the mapping for an entire Nordnet category.
+  // Static map (NN_CATEGORY_TO_AVANZA) takes priority over the dynamic result.
   if (supabase) {
     const avanzaCats: { isin: string; category: string | null }[] = [];
     const PAGE = 1000;
     for (let from = 0; ; from += PAGE) {
       const { data } = await supabase
-        .from("avanza_funds")
+        .from("avanza_fund_data")
         .select("isin, category")
         .range(from, from + PAGE - 1);
       if (!data || data.length === 0) break;
@@ -285,69 +301,84 @@ export async function fetchNordnetFunds(): Promise<Fund[]> {
       avanzaCats.filter((f) => f.category).map((f) => [f.isin, f.category as string])
     );
 
-    // For each Nordnet English category, find the Avanza Swedish equivalent via shared ISIN
-    const dynamicCatMap = new Map<string, string>();
+    // For each Nordnet raw category, count how many shared-ISIN funds map to each Avanza category.
+    const catVotes = new Map<string, Map<string, number>>();
     for (const fund of funds) {
       if (!fund.category) continue;
       const avanzaCategory = avanzaByIsin.get(fund.isin);
-      if (avanzaCategory && !dynamicCatMap.has(fund.category)) {
-        dynamicCatMap.set(fund.category, avanzaCategory);
+      if (!avanzaCategory) continue;
+      if (!catVotes.has(fund.category)) catVotes.set(fund.category, new Map());
+      const votes = catVotes.get(fund.category)!;
+      votes.set(avanzaCategory, (votes.get(avanzaCategory) ?? 0) + 1);
+    }
+
+    const dynamicCatMap = new Map<string, string>();
+    for (const [nordnetCat, votes] of catVotes) {
+      let bestCat = "";
+      let bestCount = 0;
+      for (const [avanzaCat, count] of votes) {
+        if (count > bestCount) { bestCount = count; bestCat = avanzaCat; }
       }
+      if (bestCat) dynamicCatMap.set(nordnetCat, bestCat);
     }
 
     console.log(`[nordnet] dynamic category mappings built: ${dynamicCatMap.size}`);
 
-    // Apply: dynamic map first, static fallback second, raw category last
+    // Apply: static map first (curated, trusted), dynamic map second, raw category last
     funds = funds.map((f) => ({
       ...f,
       category: f.category
-        ? dynamicCatMap.get(f.category) ?? NN_CATEGORY_TO_AVANZA[f.category] ?? f.category
+        ? NN_CATEGORY_TO_AVANZA[f.category] ?? dynamicCatMap.get(f.category) ?? f.category
         : null,
     }));
   }
 
   if (supabase && funds.length > 0) {
     const now = new Date().toISOString();
-    // Upsert fund data first (no display_slug — avoids failure if column not yet added)
-    const fundRows = funds.map((f) => ({ ...f, fetched_at: now }));
     const BATCH = 500;
+
+    // Upsert fund data into unified funds table
+    const fundRows = funds.map((f) => ({ ...f, source: "nordnet", fetched_at: now }));
     for (let i = 0; i < fundRows.length; i += BATCH) {
       const { error } = await supabase
-        .from("nordnet_funds")
+        .from("funds")
         .upsert(fundRows.slice(i, i + BATCH), { onConflict: "isin" });
-      if (error) console.error(`[nordnet] upsert batch ${i} failed:`, error.message);
+      if (error) console.error(`[nordnet] funds upsert batch ${i} failed:`, error.message);
     }
-    console.log(`[nordnet] cached ${funds.length} funds in Supabase`);
 
-    // Separately update display_slug (requires ALTER TABLE nordnet_funds ADD COLUMN display_slug TEXT)
-    const slugRows = entries
-      .filter((e) => e.slug)
-      .map((e) => ({ isin: e.fund.isin, display_slug: e.slug }));
-    if (slugRows.length > 0) {
-      for (let i = 0; i < slugRows.length; i += BATCH) {
-        const { error } = await supabase
-          .from("nordnet_funds")
-          .upsert(slugRows.slice(i, i + BATCH), { onConflict: "isin" });
-        if (error) console.error(`[nordnet] slug upsert batch ${i} failed:`, error.message);
-      }
+    // Upsert nordnet_offerings (isin + name + display_slug)
+    const offeringRows = entries.map((e) => ({
+      isin: e.fund.isin,
+      name: e.fund.name,
+      display_slug: e.slug || null,
+      fetched_at: now,
+    }));
+    for (let i = 0; i < offeringRows.length; i += BATCH) {
+      const { error } = await supabase
+        .from("nordnet_offerings")
+        .upsert(offeringRows.slice(i, i + BATCH), { onConflict: "isin" });
+      if (error) console.error(`[nordnet] offerings upsert batch ${i} failed:`, error.message);
     }
+
+    console.log(`[nordnet] cached ${funds.length} funds`);
   }
 
   return funds;
 }
 
 // ── Fetch Nordnet fund detail (Sharpe, alpha, beta, fees) ─────────────────────
-// Called on-demand for ISINs not in Avanza. Results cached in Supabase.
+// Called on-demand for ISINs not in Avanza. Results cached directly in funds table.
 
 export async function fetchNordnetDetail(isin: string, displaySlug: string): Promise<Partial<Fund>> {
-  // 1. Check Supabase cache first
+  // 1. Check funds table — if sharpe_3yr is already set, detail was previously fetched
   const supabase = getSupabase();
   if (supabase) {
     const { data } = await supabase
-      .from("nordnet_fund_details")
-      .select("*")
+      .from("funds")
+      .select("sharpe_3yr, std_dev_3yr, std_dev_1yr, alpha_3yr, beta_3yr, ongoing_cost_actual, ongoing_cost_estimated")
       .eq("isin", isin)
-      .single();
+      .not("sharpe_3yr", "is", null)
+      .maybeSingle();
     if (data) {
       return {
         sharpe_3yr: data.sharpe_3yr,
@@ -356,6 +387,7 @@ export async function fetchNordnetDetail(isin: string, displaySlug: string): Pro
         alpha_3yr: data.alpha_3yr,
         beta_3yr: data.beta_3yr,
         ongoing_cost_actual: data.ongoing_cost_actual,
+        ongoing_cost_estimated: data.ongoing_cost_estimated,
       };
     }
   }
@@ -385,20 +417,21 @@ export async function fetchNordnetDetail(isin: string, displaySlug: string): Pro
     ongoing_cost_estimated: data.fees?.managementFee ?? null,
   };
 
-  // 3. Cache in Supabase
-  if (supabase) {
-    const { error } = await supabase.from("nordnet_fund_details").upsert({
-      isin,
-      sharpe_3yr: detail.sharpe_3yr,
-      std_dev_3yr: detail.std_dev_3yr,
-      std_dev_1yr: detail.std_dev_1yr,
-      alpha_3yr: detail.alpha_3yr,
-      beta_3yr: detail.beta_3yr,
-      ongoing_cost_actual: detail.ongoing_cost_actual,
-      ongoing_cost_estimated: detail.ongoing_cost_estimated,
-      fetched_at: new Date().toISOString(),
-    });
-    if (error) console.error(`[nordnet] detail upsert failed for ${isin}:`, error.message);
+  // 3. Update the funds table row with the fetched detail
+  if (supabase && detail.sharpe_3yr !== null) {
+    const { error } = await supabase
+      .from("funds")
+      .update({
+        sharpe_3yr: detail.sharpe_3yr,
+        std_dev_3yr: detail.std_dev_3yr,
+        std_dev_1yr: detail.std_dev_1yr,
+        alpha_3yr: detail.alpha_3yr,
+        beta_3yr: detail.beta_3yr,
+        ongoing_cost_actual: detail.ongoing_cost_actual,
+        ongoing_cost_estimated: detail.ongoing_cost_estimated,
+      })
+      .eq("isin", isin);
+    if (error) console.error(`[nordnet] detail update failed for ${isin}:`, error.message);
   }
 
   return detail;
