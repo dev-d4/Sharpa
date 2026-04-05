@@ -185,7 +185,7 @@ export async function fetchAvanzaFunds(): Promise<Fund[]> {
       .single();
 
     if (sample && Date.now() - new Date(sample.fetched_at).getTime() < CACHE_TTL_MS) {
-      const { data } = await supabase.from("avanza_funds").select("*");
+      const { data } = await supabase.from("avanza_funds").select("*").limit(5000);
       if (data && data.length > 0) {
         console.log(`[avanza] serving ${data.length} funds from Supabase cache`);
         return data as Fund[];

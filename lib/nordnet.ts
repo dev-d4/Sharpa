@@ -162,7 +162,7 @@ export async function fetchNordnetFunds(): Promise<Fund[]> {
       .single();
 
     if (sample && Date.now() - new Date(sample.fetched_at).getTime() < CACHE_TTL_MS) {
-      const { data } = await supabase.from("nordnet_funds").select("*");
+      const { data } = await supabase.from("nordnet_funds").select("*").limit(5000);
       if (data && data.length > 0) {
         console.log(`[nordnet] serving ${data.length} funds from Supabase cache`);
         return data as Fund[];
