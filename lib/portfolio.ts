@@ -1,6 +1,6 @@
 import type { PortfolioAnalysis } from "./analysis";
 
-export type PortfolioHolding = { isin: string; name: string; weight: string };
+export type PortfolioHolding = { isin: string; name: string; weight: string; amount?: string };
 
 export type SavedPortfolio = {
   id: string;

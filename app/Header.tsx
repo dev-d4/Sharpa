@@ -34,8 +34,9 @@ export default function Header() {
         </Link>
 
         <nav className="flex items-center gap-4 sm:gap-6">
-          <Link href="/analyze" className={navClass("/analyze")}>Analysera</Link>
           <Link href="/risk-profile" className={navClass("/risk-profile")}>Riskprofil</Link>
+          <Link href="/analyze" className={navClass("/analyze")}>Analysera</Link>
+          {user && <Link href="/portfolios" className={navClass("/portfolios")}>Portföljer</Link>}
           {user ? (
             <Link href="/account" className={navClass("/account")}>Mitt konto</Link>
           ) : (

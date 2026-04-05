@@ -12,7 +12,7 @@ import type { SavedPortfolio } from "@/lib/portfolio"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Entry = { isin: string; name: string; weight: string };
+type Entry = { isin: string; name: string; weight: string; amount?: string };
 type FundSuggestion = { name: string; isin: string };
 
 const CUSTODIANS = [
@@ -247,13 +247,18 @@ function saveSession(custodian: string | null, entries: Entry[], analysis: Portf
 
 export default function AnalyzeClient() {
   const router = useRouter();
+  const resultsRef = useRef<HTMLDivElement>(null);
 
   const [user, setUser] = useState<User | null>(null);
   const [custodian, setCustodian] = useState<string | null>(null);
   const [entries, setEntries] = useState<Entry[]>([{ isin: "", name: "", weight: "" }]);
   const [loading, setLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
   const [analysis, setAnalysis] = useState<PortfolioAnalysis | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [riskProfile, setRiskProfile] = useState<object | null | undefined>(undefined);
+  const [nudgeDismissed, setNudgeDismissed] = useState(false);
+  const [inputMode, setInputMode] = useState<"weight" | "amount">("weight");
 
   // Portfolio saving state
   const [portfolioId, setPortfolioId] = useState<string | null>(null);
@@ -318,6 +323,12 @@ export default function AnalyzeClient() {
           .then((r) => r.ok ? r.json() : [])
           .then(setSavedPortfolios)
           .catch(() => {});
+        fetch("/api/risk-profile")
+          .then((r) => r.ok ? r.json() : null)
+          .then((p) => setRiskProfile(p ?? null))
+          .catch(() => setRiskProfile(null));
+      } else {
+        setRiskProfile(null);
       }
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
@@ -332,9 +343,34 @@ export default function AnalyzeClient() {
     setAnalysis(p.analysis);
     setPortfolioId(p.id);
     setError(null);
+    setInputMode(p.holdings.some((h) => h.amount) ? "amount" : "weight");
   }
 
-  function addRow() { setEntries((p) => [...p, { isin: "", name: "", weight: "" }]); }
+  // Distributes the difference between 100 and the current total evenly across funds.
+  // Returns the new entries array (synchronously) so analyze() can use them immediately.
+  function distributeWeights(src: Entry[] = entries): Entry[] {
+    const withWeights = src.filter((e) => e.isin.trim() && e.weight.trim());
+    if (withWeights.length === 0) return src;
+    const n = withWeights.length;
+    const currentTotal = withWeights.reduce((s, e) => s + (parseFloat(e.weight) || 0), 0);
+    const diffTenths = Math.round((100 - currentTotal) * 10); // work in 0.1% units
+    if (diffTenths === 0) return src;
+    // Distribute: base adjustment + remainder to first fund
+    const baseTenths = Math.trunc(diffTenths / n);
+    const remainderTenths = diffTenths - baseTenths * n;
+    let idx = 0;
+    const newEntries = src.map((e) => {
+      if (!e.isin.trim() || !e.weight.trim()) return e;
+      const curTenths = Math.round((parseFloat(e.weight) || 0) * 10);
+      const adjTenths = idx === 0 ? baseTenths + remainderTenths : baseTenths;
+      idx++;
+      return { ...e, weight: (Math.max(0, curTenths + adjTenths) / 10).toFixed(1) };
+    });
+    setEntries(newEntries);
+    return newEntries;
+  }
+
+  function addRow() { setEntries((p) => [...p, { isin: "", name: "", weight: "", amount: "" }]); }
   function removeRow(i: number) { setEntries((p) => p.filter((_, idx) => idx !== i)); }
   function selectFund(i: number, isin: string, name: string) {
     setEntries((p) => p.map((e, idx) => idx === i ? { ...e, isin, name } : e));
@@ -345,22 +381,70 @@ export default function AnalyzeClient() {
   function updateWeight(i: number, value: string) {
     setEntries((p) => p.map((e, idx) => idx === i ? { ...e, weight: value } : e));
   }
+  function updateAmount(i: number, value: string) {
+    setEntries((p) => p.map((e, idx) => idx === i ? { ...e, amount: value } : e));
+  }
+
+  const LOADING_STEPS = [
+    "Hämtar fonddata…",
+    "Beräknar avkastning och risk…",
+    "Genererar bytesförslag…",
+    "Sammanställer analys…",
+  ];
 
   async function analyze() {
     setError(null);
     setAnalysis(null);
-    const valid = entries.filter((e) => e.isin.trim() && e.weight.trim());
+
+    let workingEntries = entries;
+
+    if (inputMode === "amount") {
+      // Compute weights from amounts
+      const validAmt = entries.filter((e) => e.isin.trim() && (e.amount ?? "").trim());
+      if (validAmt.length === 0) { setError("Lägg till minst en fond med belopp."); return; }
+      const totalAmt = validAmt.reduce((s, e) => s + (parseFloat(e.amount || "0") || 0), 0);
+      if (totalAmt === 0) { setError("Ange belopp för dina fonder."); return; }
+      workingEntries = entries.map((e) => {
+        if (!e.isin.trim() || !(e.amount ?? "").trim()) return e;
+        const w = ((parseFloat(e.amount || "0") / totalAmt) * 100).toFixed(1);
+        return { ...e, weight: w };
+      });
+      setEntries(workingEntries);
+    } else {
+      // Auto-distribute if weights don't sum to 100
+      const currentTotal = entries.reduce((s, e) => s + (parseFloat(e.weight) || 0), 0);
+      if (Math.abs(currentTotal - 100) > 0.1) {
+        workingEntries = distributeWeights(entries);
+      }
+    }
+
+    const valid = workingEntries.filter((e) => e.isin.trim() && e.weight.trim());
     if (valid.length === 0) { setError("Lägg till minst en fond med vikt."); return; }
     setLoading(true);
+    setLoadingStep(0);
+    const stepInterval = setInterval(() => {
+      setLoadingStep((s) => Math.min(s + 1, LOADING_STEPS.length - 1));
+    }, 500);
+    const minDelay = new Promise((r) => setTimeout(r, 1800));
     try {
-      const res = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ custodian, entries: valid.map((e) => ({ isin: e.isin.trim().toUpperCase(), weight: parseFloat(e.weight) })) }),
-      });
+      const [res] = await Promise.all([
+        fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ custodian, entries: valid.map((e) => ({ isin: e.isin.trim().toUpperCase(), weight: parseFloat(e.weight) })) }),
+        }),
+        minDelay,
+      ]);
+      clearInterval(stepInterval);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Okänt fel");
       setAnalysis(data);
+      setTimeout(() => {
+        if (resultsRef.current) {
+          const top = resultsRef.current.getBoundingClientRect().top + window.scrollY - 88;
+          window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+        }
+      }, 150);
 
       // Auto-save if editing an existing portfolio
       if (portfolioId) {
@@ -375,6 +459,7 @@ export default function AnalyzeClient() {
           .finally(() => setTimeout(() => setSaveStatus("idle"), 3000));
       }
     } catch (err: unknown) {
+      clearInterval(stepInterval);
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
@@ -404,6 +489,8 @@ export default function AnalyzeClient() {
   }
 
   const totalWeight = entries.reduce((s, e) => s + (parseFloat(e.weight) || 0), 0);
+  const totalAmount = entries.reduce((s, e) => s + (parseFloat(e.amount || "0") || 0), 0);
+  const portfolioValue = inputMode === "amount" && totalAmount > 0 ? totalAmount : null;
 
   if (portfolioLoading) {
     return (
@@ -495,28 +582,72 @@ export default function AnalyzeClient() {
     );
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-6 max-w-xs mx-auto px-6">
+          <div className="w-10 h-10 rounded-full border-2 border-blue-500 border-t-transparent animate-spin mx-auto" />
+          <p className="text-base font-medium text-slate-700">{LOADING_STEPS[loadingStep]}</p>
+          <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-blue-500 rounded-full transition-all duration-500"
+              style={{ width: `${((loadingStep + 1) / LOADING_STEPS.length) * 100}%` }}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen">
       <div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
+      {/* Risk profile nudge — shown when logged in with no risk profile */}
+      {user && riskProfile === null && !nudgeDismissed && (
+        <div className="flex items-center gap-3 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+          <span className="text-amber-500 shrink-0">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z" />
+            </svg>
+          </span>
+          <p className="text-sm text-amber-800 flex-1">
+            Du har ingen riskprofil ännu — analysen blir mer träffsäker med en.{" "}
+            <a href="/risk-profile" className="font-medium underline hover:text-amber-900">Ta fram din riskprofil →</a>
+          </p>
+          <button onClick={() => setNudgeDismissed(true)} className="text-amber-400 hover:text-amber-600 shrink-0">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       {/* Saved portfolios switcher — only shown when logged in with saved portfolios */}
       {savedPortfolios.length > 0 && (
         <div className="flex items-center gap-3 flex-wrap">
           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Mina portföljer</span>
           <div className="flex items-center gap-2 flex-wrap">
-            {savedPortfolios.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => loadPortfolio(p)}
-                className={cn(
-                  "text-sm px-3 py-1.5 rounded-lg border transition-all",
-                  portfolioId === p.id
-                    ? "bg-blue-50 border-blue-200 text-blue-700 font-medium"
-                    : "bg-white border-slate-200 text-slate-600 hover:border-blue-200 hover:text-blue-600"
-                )}
-              >
-                {p.name}
-              </button>
-            ))}
+            {savedPortfolios.map((p) => {
+              const differentCustodian = custodian && p.custodian !== custodian;
+              const custodianLabel = p.custodian === "nordnet" ? "Nordnet" : p.custodian === "övrigt" ? "Övrigt" : "Avanza";
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => loadPortfolio(p)}
+                  className={cn(
+                    "text-sm px-3 py-1.5 rounded-lg border transition-all flex items-baseline gap-1.5",
+                    portfolioId === p.id
+                      ? "bg-blue-50 border-blue-200 text-blue-700 font-medium"
+                      : "bg-white border-slate-200 text-slate-600 hover:border-blue-200 hover:text-blue-600"
+                  )}
+                >
+                  {p.name}
+                  <span className="text-xs opacity-70">
+                    {custodianLabel}
+                  </span>
+                </button>
+              );
+            })}
             <button
               onClick={() => { setPortfolioId(null); setCustodian(null); setEntries([{ isin: "", name: "", weight: "" }]); setAnalysis(null); setError(null); }}
               className={cn(
@@ -542,28 +673,53 @@ export default function AnalyzeClient() {
       <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-900">Din portfölj</h2>
-          <button
-            onClick={() => { setCustodian(null); setAnalysis(null); setError(null); setPortfolioId(null); }}
-            className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
-          >
-            {CUSTODIANS.find((c) => c.value === custodian)?.label} · <span className="underline">Byt</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setInputMode(inputMode === "weight" ? "amount" : "weight")}
+              className="text-xs text-slate-400 hover:text-slate-600 underline transition-colors"
+            >
+              {inputMode === "weight" ? "Ange belopp (kr)" : "Ange vikter (%)"}
+            </button>
+            <button
+              onClick={() => { setCustodian(null); setAnalysis(null); setError(null); setPortfolioId(null); }}
+              className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              {CUSTODIANS.find((c) => c.value === custodian)?.label} · <span className="underline">Byt</span>
+            </button>
+          </div>
         </div>
-        <p className="text-sm text-slate-500">Sök på fondnamn eller ISIN och ange vikt (%) för varje fond.</p>
+        <p className="text-sm text-slate-500">
+          {inputMode === "weight"
+            ? "Sök på fondnamn eller ISIN och ange vikt (%) för varje fond."
+            : "Sök på fondnamn eller ISIN och ange hur mycket du har investerat i varje fond (kr)."}
+        </p>
 
         <div className="space-y-2">
           <div className="hidden sm:grid grid-cols-[1fr_100px_36px] gap-2 text-xs font-semibold text-slate-500 px-1">
-            <span>Fond</span><span>Vikt (%)</span><span />
+            <span>Fond</span>
+            <span>{inputMode === "weight" ? "Vikt (%)" : "Belopp (kr)"}</span>
+            <span />
           </div>
           {entries.map((entry, i) => (
             <div key={i} className="flex flex-col gap-2 sm:grid sm:grid-cols-[1fr_100px_36px]">
               <FundSearchInput isin={entry.isin} name={entry.name} custodian={custodian} excludeIsins={entries.filter((_, idx) => idx !== i).map((e) => e.isin).filter(Boolean)} onSelect={(isin, name) => selectFund(i, isin, name)} onClear={() => clearFund(i)} />
               <div className="flex gap-2 sm:contents">
-                <input
-                  type="number" placeholder="Vikt %" min={0} max={100}
-                  value={entry.weight} onChange={(e) => updateWeight(i, e.target.value)}
-                  className="flex-1 sm:flex-none border border-slate-300 rounded-lg px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                {inputMode === "weight" ? (
+                  <input
+                    type="number" placeholder="Vikt %" min={0} max={100}
+                    value={entry.weight} onChange={(e) => updateWeight(i, e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRow(); } }}
+                    className="flex-1 sm:flex-none border border-slate-300 rounded-lg px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                ) : (
+                  <input
+                    type="number" placeholder="Belopp kr" min={0}
+                    value={entry.amount ?? ""} onChange={(e) => updateAmount(i, e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRow(); } }}
+                    className="flex-1 sm:flex-none border border-slate-300 rounded-lg px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                )}
                 <button
                   onClick={() => removeRow(i)} disabled={entries.length === 1}
                   className="h-12 w-12 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-200 disabled:opacity-30 transition-colors shrink-0"
@@ -575,9 +731,19 @@ export default function AnalyzeClient() {
 
         <div className="flex items-center justify-between pt-1">
           <button onClick={addRow} className="text-sm text-blue-600 hover:underline py-2">+ Lägg till fond</button>
-          <span className={`text-sm font-semibold ${Math.abs(totalWeight - 100) < 0.1 ? "text-green-600" : "text-slate-600"}`}>
-            Summa: {totalWeight.toFixed(1)}%
-          </span>
+          {inputMode === "amount" ? (
+            <span className="text-sm text-slate-500">
+              Totalt: <span className="font-semibold text-slate-900">
+                {totalAmount > 0 ? totalAmount.toLocaleString("sv-SE") + " kr" : "–"}
+              </span>
+            </span>
+          ) : Math.abs(totalWeight - 100) < 0.1 ? (
+            <span className="text-sm font-semibold text-green-600">Summa: {totalWeight.toFixed(1)}%</span>
+          ) : (
+            <button onClick={() => distributeWeights()} className="text-sm font-semibold text-slate-500 hover:text-blue-600 transition-colors" title="Fördela jämnt">
+              Summa: {totalWeight.toFixed(1)}% <span className="text-xs font-normal underline">fördela jämnt</span>
+            </button>
+          )}
         </div>
 
         {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl p-3">{error}</p>}
@@ -590,7 +756,8 @@ export default function AnalyzeClient() {
         </button>
       </section>
 
-      {analysis && <AnalysisResult analysis={analysis} user={user} onLoginClick={() => { saveSession(custodian, entries, analysis); router.push("/login"); }} />}
+      <div ref={resultsRef} />
+      {analysis && <AnalysisResult analysis={analysis} user={user} portfolioValue={portfolioValue} onLoginClick={() => { saveSession(custodian, entries, analysis); router.push("/login"); }} />}
 
       {analysis && user && !portfolioId && (
         <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
@@ -649,9 +816,10 @@ export default function AnalyzeClient() {
 
 // ── Results ───────────────────────────────────────────────────────────────────
 
-function AnalysisResult({ analysis, user, onLoginClick }: { analysis: PortfolioAnalysis; user: User | null; onLoginClick: () => void }) {
+function AnalysisResult({ analysis, user, portfolioValue, onLoginClick }: { analysis: PortfolioAnalysis; user: User | null; portfolioValue: number | null; onLoginClick: () => void }) {
   const unlocked = !!user;
   const ctaText = buildLoginCTA(analysis);
+  const [deepMode, setDeepMode] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -670,6 +838,20 @@ function AnalysisResult({ analysis, user, onLoginClick }: { analysis: PortfolioA
           <Metric label="Avkastning 3 år" value={analysis.weightedReturn3yr !== null ? `${analysis.weightedReturn3yr.toFixed(1)}%` : "–"} sub="annualiserad" info="Genomsnittlig årlig avkastning de senaste 3 åren." />
           <Metric label="Sharpe 3 år" value={analysis.weightedSharpe !== null ? analysis.weightedSharpe.toFixed(2) : "–"} sub="riskjusterad" info="Avkastning i förhållande till risk. Högre är bättre." />
         </div>
+        {deepMode && (
+          <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
+            <div className="grid grid-cols-2 gap-4">
+              <Metric label="Volatilitet" value={analysis.weightedStdDev != null ? `${analysis.weightedStdDev.toFixed(1)}%` : "–"} sub="std. avv. 3 år" info="Standardavvikelse — hur mycket portföljen svänger." />
+              <Metric label="Avkastning 5 år" value={analysis.weightedReturn5yr != null ? `${analysis.weightedReturn5yr.toFixed(1)}%` : "–"} sub="annualiserad" info="Genomsnittlig årlig avkastning de senaste 5 åren." />
+            </div>
+          </div>
+        )}
+        <button
+          onClick={() => setDeepMode((v) => !v)}
+          className="mt-4 text-xs text-slate-400 hover:text-slate-600 transition-colors"
+        >
+          {deepMode ? "Dölj fördjupad analys ↑" : "Fördjupad analys ↓"}
+        </button>
       </section>
 
       {/* Category breakdown — always visible */}
@@ -690,80 +872,140 @@ function AnalysisResult({ analysis, user, onLoginClick }: { analysis: PortfolioA
         </div>
       </section>
 
-      {/* Swap suggestions — blurred if not logged in */}
-      {analysis.swapSuggestions.length > 0 && (
+      {/* Swap suggestions + best in category — blurred if not logged in */}
+      {((analysis.swapSuggestions?.length ?? 0) > 0 || (analysis.bestInCategory?.length ?? 0) > 0) && (
         <BlurGate unlocked={unlocked} ctaText={ctaText} onLoginClick={onLoginClick}>
-          <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-bold text-slate-900 mb-1">Fondbytesförslag</h2>
-            <p className="text-sm text-slate-500 mb-4">Fonder i samma kategori med bättre nyckeltal.</p>
-            <div className="space-y-4">
-              {analysis.swapSuggestions.map((s, i) => (
-                <div key={i} className="border border-slate-200 rounded-xl p-4 space-y-2 bg-slate-50">
-                  {s.consolidate ? (
-                    <>
-                      <div className="flex items-start gap-4">
-                        <div className="flex-1">
-                          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Överväg att sälja</p>
-                          <p className="font-semibold text-sm text-slate-900">{s.currentFund.name}</p>
-                          <p className="text-xs text-slate-400">{s.currentFund.isin}</p>
-                        </div>
-                        <span className="text-slate-400 text-lg mt-3">→</span>
-                        <div className="flex-1">
-                          <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Öka i befintlig fond</p>
-                          <p className="font-semibold text-sm text-slate-900">{s.suggestedFund.name}</p>
-                          <p className="text-xs text-slate-400">{s.suggestedFund.isin}</p>
-                        </div>
-                      </div>
-                      <p className="text-sm text-slate-600">
-                        <span className="font-semibold text-blue-600">Konsolidera: </span>
-                        Du har redan {s.suggestedFund.name} i portföljen och den är den bästa fonden i kategorin. Flytta kapitalet från {s.currentFund.name} dit istället.{s.reason && ` (${s.reason})`}
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex items-start gap-4">
-                        <div className="flex-1">
-                          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Nuvarande fond</p>
-                          <p className="font-semibold text-sm text-slate-900">{s.currentFund.name}</p>
-                          <p className="text-xs text-slate-400">{s.currentFund.isin}</p>
-                        </div>
-                        <span className="text-slate-400 text-lg mt-3">→</span>
-                        <div className="flex-1">
-                          <p className="text-xs font-semibold text-green-600 uppercase tracking-wide">Föreslagen fond</p>
-                          <p className="font-semibold text-sm text-slate-900">{s.suggestedFund.name}</p>
-                          <p className="text-xs text-slate-400">{s.suggestedFund.isin}</p>
-                        </div>
-                      </div>
-                      <p className="text-sm text-slate-600">
-                        <span className="font-semibold text-green-600">Förbättring: </span>{s.reason}
-                      </p>
-                    </>
-                  )}
-                </div>
-              ))}
+          <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 mb-1">Fondbytesförslag</h2>
+              <p className="text-sm text-slate-500">Fonder i samma kategori med bättre nyckeltal.</p>
             </div>
+            {(analysis.swapSuggestions?.length ?? 0) > 0 && (() => {
+              const swaps = analysis.swapSuggestions ?? [];
+              // Group by suggested fund isin, sort largest groups first
+              const groupMap = new Map<string, typeof swaps>();
+              for (const s of swaps) {
+                const key = s.suggestedFund.isin;
+                if (!groupMap.has(key)) groupMap.set(key, []);
+                groupMap.get(key)!.push(s);
+              }
+              const groups = Array.from(groupMap.values()).sort((a, b) => b.length - a.length);
+
+              return (
+                <div className="space-y-4">
+                  {groups.map((group, gi) => {
+                    const suggested = group[0].suggestedFund;
+                    const isConsolidate = group[0].consolidate;
+
+                    if (group.length >= 2) {
+                      // ── Group card (topval / konsolidera) ──────────────────
+                      return (
+                        <div key={gi} className={`rounded-xl p-4 space-y-3 border-2 ${isConsolidate ? "border-blue-200 bg-blue-50/30" : "border-amber-200 bg-amber-50/30"}`}>
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <span className={`text-xs font-bold px-2.5 py-1 rounded-full border uppercase tracking-wide ${isConsolidate ? "text-blue-700 bg-blue-100 border-blue-200" : "text-amber-700 bg-amber-100 border-amber-200"}`}>
+                              {isConsolidate ? `Konsolidera ${group.length} fonder hit` : `Topval — bättre än ${group.length} fonder`}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-0.5">
+                              {isConsolidate ? "Redan i din portfölj" : "Föreslagen fond"}
+                            </p>
+                            <p className="font-bold text-slate-900">{suggested.name}</p>
+                            <p className="text-xs text-slate-400">{suggested.isin}</p>
+                          </div>
+                          {group[0].similarityNote && (
+                            <p className="text-xs text-slate-500 italic">{group[0].similarityNote}</p>
+                          )}
+                          <div className="pt-2 border-t border-slate-200/60 space-y-2">
+                            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Ersätter</p>
+                            {group.map((s, si) => (
+                              <div key={si} className="flex items-start justify-between gap-3 text-sm">
+                                <div className="min-w-0">
+                                  <span className="font-medium text-slate-800">{s.currentFund.name}</span>
+                                  <span className="text-xs text-slate-400 ml-2">{s.currentFund.isin}</span>
+                                </div>
+                                {s.reason && (
+                                  <span className="text-xs text-green-600 shrink-0 text-right max-w-[45%]">{s.reason}</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // ── Single swap card ────────────────────────────────────
+                    const s = group[0];
+                    return (
+                      <div key={gi} className="border border-slate-200 rounded-xl p-4 space-y-2 bg-slate-50">
+                        {s.consolidate ? (
+                          <>
+                            <div className="flex items-start gap-4">
+                              <div className="flex-1">
+                                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Överväg att sälja</p>
+                                <p className="font-semibold text-sm text-slate-900">{s.currentFund.name}</p>
+                                <p className="text-xs text-slate-400">{s.currentFund.isin}</p>
+                              </div>
+                              <span className="text-slate-400 text-lg mt-3">→</span>
+                              <div className="flex-1">
+                                <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Öka i befintlig fond</p>
+                                <p className="font-semibold text-sm text-slate-900">{s.suggestedFund.name}</p>
+                                <p className="text-xs text-slate-400">{s.suggestedFund.isin}</p>
+                              </div>
+                            </div>
+                            {s.similarityNote && <p className="text-xs text-slate-400 italic">{s.similarityNote}</p>}
+                            <p className="text-sm text-slate-600">
+                              <span className="font-semibold text-blue-600">Konsolidera: </span>
+                              Du har redan {s.suggestedFund.name} i portföljen och den är den bästa fonden i kategorin. Flytta kapitalet från {s.currentFund.name} dit istället.{s.reason && ` (${s.reason})`}
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex items-start gap-4">
+                              <div className="flex-1">
+                                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Nuvarande fond</p>
+                                <p className="font-semibold text-sm text-slate-900">{s.currentFund.name}</p>
+                                <p className="text-xs text-slate-400">{s.currentFund.isin}</p>
+                              </div>
+                              <span className="text-slate-400 text-lg mt-3">→</span>
+                              <div className="flex-1">
+                                <p className="text-xs font-semibold text-green-600 uppercase tracking-wide">Föreslagen fond</p>
+                                <p className="font-semibold text-sm text-slate-900">{s.suggestedFund.name}</p>
+                                <p className="text-xs text-slate-400">{s.suggestedFund.isin}</p>
+                              </div>
+                            </div>
+                            {s.similarityNote && <p className="text-xs text-slate-400 italic">{s.similarityNote}</p>}
+                            <p className="text-sm text-slate-600">
+                              <span className="font-semibold text-green-600">Förbättring: </span>{s.reason}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+            {(analysis.bestInCategory?.length ?? 0) > 0 && (
+              <div className="pt-2 border-t border-slate-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <svg className="w-4 h-4 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
+                  </svg>
+                  <p className="text-sm font-bold text-green-900">Redan bäst i sin kategori</p>
+                </div>
+                <div className="space-y-1">
+                  {(analysis.bestInCategory ?? []).map((f) => (
+                    <div key={f.isin} className="flex items-baseline justify-between text-sm">
+                      <span className="font-medium text-green-900">{f.fundName}</span>
+                      <span className="text-xs text-green-600 ml-3 shrink-0">{f.category}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </section>
         </BlurGate>
-      )}
-
-      {/* Best in category */}
-      {analysis.bestInCategory.length > 0 && (
-        <section className="bg-green-50 border border-green-100 rounded-2xl p-6">
-          <div className="flex items-center gap-2 mb-3">
-            <svg className="w-4 h-4 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
-            </svg>
-            <h2 className="text-sm font-bold text-green-900">Redan bäst i sin kategori</h2>
-          </div>
-          <div className="space-y-1.5">
-            {analysis.bestInCategory.map((f) => (
-              <div key={f.isin} className="flex items-baseline justify-between text-sm">
-                <span className="font-medium text-green-900">{f.fundName}</span>
-                <span className="text-xs text-green-600 ml-3 shrink-0">{f.category}</span>
-              </div>
-            ))}
-          </div>
-        </section>
       )}
 
       {/* Suggested portfolio — only visible when logged in */}
@@ -771,6 +1013,7 @@ function AnalysisResult({ analysis, user, onLoginClick }: { analysis: PortfolioA
         <SuggestedPortfolio
           current={{ avgCost: analysis.avgCost, weightedReturn1yr: analysis.weightedReturn1yr, weightedReturn3yr: analysis.weightedReturn3yr, weightedSharpe: analysis.weightedSharpe }}
           suggested={analysis.suggestedMetrics}
+          portfolioValue={portfolioValue}
         />
       )}
 
@@ -827,7 +1070,15 @@ function fmt(v: number | null, decimals = 2) {
   return v !== null ? `${v.toFixed(decimals)}%` : "–";
 }
 
-function SuggestedPortfolio({ current, suggested }: { current: CurrentMetrics; suggested: SuggestedMetrics }) {
+function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: CurrentMetrics; suggested: SuggestedMetrics; portfolioValue: number | null }) {
+  const assumed = portfolioValue === null;
+  const pv = portfolioValue ?? 100_000;
+  const feeSavingsKr = current.avgCost !== null && suggested.avgCost !== null
+    ? (current.avgCost - suggested.avgCost) / 100 * pv : null;
+  const returnGainKr = current.weightedReturn1yr !== null && suggested.weightedReturn1yr !== null
+    ? (suggested.weightedReturn1yr - current.weightedReturn1yr) / 100 * pv : null;
+  const totalGainKr = feeSavingsKr !== null && returnGainKr !== null ? feeSavingsKr + returnGainKr : null;
+
   const rows = [
     { label: "Snittavgift", sub: "per år", currentVal: current.avgCost, suggestedVal: suggested.avgCost, lowerIsBetter: true },
     { label: "Avkastning 1 år", sub: "viktad", currentVal: current.weightedReturn1yr, suggestedVal: suggested.weightedReturn1yr },
@@ -887,6 +1138,73 @@ function SuggestedPortfolio({ current, suggested }: { current: CurrentMetrics; s
               <span className="font-semibold text-slate-600">{f.weight.toFixed(1)}%</span>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* SEK profit estimate */}
+      <div className="bg-green-50 border border-green-100 rounded-xl p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-bold text-green-900">Uppskattad vinst per år</p>
+          {!assumed && (
+            <span className="text-xs text-slate-500 italic">
+              Beräknat på din investering av {pv.toLocaleString("sv-SE")} kr
+            </span>
+          )}
+          {assumed && (
+            <span className="text-xs text-slate-500 italic">Beräknat på en investering av 100 000 kr</span>
+          )}
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+        <div>
+          <p className="text-xs text-slate-500 mb-0.5">Avgiftsskillnad</p>
+          <p
+            className={`font-bold text-sm ${
+              feeSavingsKr !== null
+                ? feeSavingsKr >= 0
+                  ? "text-green-700"
+                  : "text-red-600"
+                : "text-slate-400"
+            }`}
+          >
+            {feeSavingsKr !== null
+              ? `${feeSavingsKr >= 0 ? "+" : ""}${Math.round(feeSavingsKr).toLocaleString("sv-SE")} kr`
+              : "–"}
+          </p>
+        </div>
+
+        <div>
+          <p className="text-xs text-slate-500 mb-0.5">Avkastningsskillnad</p>
+          <p
+            className={`font-bold text-sm ${
+              returnGainKr !== null
+                ? returnGainKr >= 0
+                  ? "text-green-700"
+                  : "text-red-600"
+                : "text-slate-400"
+            }`}
+          >
+            {returnGainKr !== null
+              ? `${returnGainKr >= 0 ? "+" : ""}${Math.round(returnGainKr).toLocaleString("sv-SE")} kr`
+              : "–"}
+          </p>
+        </div>
+
+        <div>
+          <p className="text-xs text-slate-500 mb-0.5">Totalt</p>
+          <p
+            className={`font-bold text-base ${
+              totalGainKr !== null
+                ? totalGainKr >= 0
+                  ? "text-green-700"
+                  : "text-red-600"
+                : "text-slate-400"
+            }`}
+          >
+            {totalGainKr !== null
+              ? `${totalGainKr >= 0 ? "+" : ""}${Math.round(totalGainKr).toLocaleString("sv-SE")} kr`
+              : "–"}
+          </p>
+        </div>
         </div>
       </div>
     </section>

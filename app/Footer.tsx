@@ -1,13 +1,23 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import NavAuth from "./NavAuth";
-
-// Update this each month when fund data is refreshed
-const FUND_DATA_UPDATED = "april 2026";
+import { createClient } from "@/lib/supabase-browser";
 
 export default function Footer() {
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data }) => setLoggedIn(!!data.session?.user));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setLoggedIn(!!session?.user);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
   return (
     <footer className="bg-slate-50 border-t border-slate-200 mt-24">
       <div className="max-w-5xl mx-auto px-6 py-8 space-y-4">
@@ -17,15 +27,16 @@ export default function Footer() {
             <span className="text-sm font-semibold text-slate-700">Fondanalys</span>
           </div>
           <nav className="flex items-center gap-6 text-xs text-slate-400">
-            <Link href="/analyze" className="hover:text-slate-600 transition-colors">Analysera</Link>
             <Link href="/risk-profile" className="hover:text-slate-600 transition-colors">Riskprofil</Link>
+            <Link href="/analyze" className="hover:text-slate-600 transition-colors">Analysera</Link>
+            {loggedIn && <Link href="/portfolios" className="hover:text-slate-600 transition-colors">Portföljer</Link>}
             <NavAuth variant="footer" />
           </nav>
         </div>
         <p className="text-xs text-slate-400 leading-relaxed">
           Fondanalys tillhandahåller inte finansiell rådgivning. All information är endast i informationssyfte och ska inte ses som råd om köp eller försäljning av finansiella instrument.
         </p>
-        <p className="text-xs text-slate-300">© 2026 Fondanalys · Fonddata senast uppdaterad: {FUND_DATA_UPDATED}</p>
+        <p className="text-xs text-slate-300">© 2026 Fondanalys</p>
       </div>
     </footer>
   );

@@ -17,6 +17,7 @@ export type SwapSuggestion = {
   currentFund: Fund;
   suggestedFund: Fund;
   reason: string;
+  similarityNote: string;
   improvement: {
     sharpe?: number;
     cost?: number;
@@ -47,6 +48,10 @@ export type PortfolioAnalysis = {
   weightedReturn1yr: number | null;
   weightedReturn3yr: number | null;
   weightedSharpe: number | null;
+  weightedAlpha: number | null;
+  weightedBeta: number | null;
+  weightedStdDev: number | null;
+  weightedReturn5yr: number | null;
   swapSuggestions: SwapSuggestion[];
   bestInCategory: BestInCategory[];
   summaryText: string;
@@ -96,6 +101,62 @@ function absoluteScore(f: Fund): number {
   const cost = f.ongoing_cost_actual ?? f.ongoing_cost_estimated ?? 0;
   score -= cost * 1.5;
   return score;
+}
+
+// ── Category similarity description ──────────────────────────────────────────
+
+function categoryToSwedish(category: string | null): string {
+  if (!category) return "samma kategori";
+  const c = category.toLowerCase();
+
+  const parts: string[] = [];
+
+  // Geography
+  if (c.includes("global")) parts.push("Globala");
+  else if (c.includes("sweden") || c.includes("swedish")) parts.push("svenska");
+  else if (c.includes("europe")) parts.push("europeiska");
+  else if (c.includes("north america") || c.includes("united states") || /\bus\b/.test(c)) parts.push("nordamerikanska");
+  else if (c.includes("emerging market")) parts.push("tillväxtmarknads");
+  else if (c.includes("nordic")) parts.push("nordiska");
+  else if (c.includes("asia") || c.includes("pacific")) parts.push("asiatiska");
+  else if (c.includes("latin america")) parts.push("latinamerikanska");
+  else if (c.includes("japan")) parts.push("japanska");
+  else if (c.includes("china")) parts.push("kinesiska");
+
+  // Size
+  if (c.includes("large-cap") || c.includes("large cap")) parts.push("Large Cap");
+  else if (c.includes("small-cap") || c.includes("small cap")) parts.push("Small Cap");
+  else if (c.includes("mid-cap") || c.includes("mid cap")) parts.push("Mid Cap");
+
+  // Style
+  if (c.includes("growth")) parts.push("tillväxt");
+  else if (c.includes("value")) parts.push("värde");
+
+  // Asset class / sector
+  if (c.includes("money market")) return "penningmarknadsfonder";
+  if (c.includes("short-term bond") || c.includes("short term bond")) return "korträntefonder";
+  if (c.includes("long-term bond") || c.includes("long term bond")) return "långräntefonder";
+  if (c.includes("bond") || c.includes("fixed income")) return `${parts.join(" ")} räntefonder`.trim();
+  if (c.includes("allocation") || c.includes("balanced")) return "blandfonder";
+  if (c.includes("real estate") || c.includes("property")) return `${parts.join(" ")} fastighetsfonder`.trim();
+  if (c.includes("technology") || c.includes("tech")) return "teknikfonder";
+  if (c.includes("health") || c.includes("biotech") || c.includes("pharma")) return "hälsovårdsfonder";
+  if (c.includes("energy")) return `${parts.join(" ")} energifonder`.trim();
+  if (c.includes("financial") || c.includes("bank")) return "finansfonder";
+  if (c.includes("consumer")) return `${parts.join(" ")} konsumentfonder`.trim();
+  if (c.includes("commodit")) return "råvarufonder";
+  if (c.includes("equity") || c.includes("stock")) return `${parts.join(" ")} aktiefonder`.trim();
+
+  return parts.length > 0 ? `${parts.join(" ")} fonder` : category;
+}
+
+function buildSimilarityNote(current: Fund, suggested: Fund): string {
+  const cat = categoryToSwedish(current.category);
+  const styleMatch =
+    current.equity_style_box && suggested.equity_style_box &&
+    current.equity_style_box === suggested.equity_style_box;
+  const base = `${cat}`;
+  return styleMatch ? `${base} (${current.equity_style_box}).` : `${base}.`;
 }
 
 // ── Swap suggestions ──────────────────────────────────────────────────────────
@@ -163,6 +224,7 @@ function generateSwaps(
       currentFund: current,
       suggestedFund: best,
       reason: parts.join(", "),
+      similarityNote: buildSimilarityNote(current, best),
       improvement,
       consolidate,
     });
@@ -289,6 +351,10 @@ export function analyzePortfolio(
   const weightedReturn1yr = weightedAvg(found, (f) => f.return_1yr);
   const weightedReturn3yr = weightedAvg(found, (f) => f.return_3yr);
   const weightedSharpe = weightedAvg(found, (f) => f.sharpe_3yr);
+  const weightedAlpha = weightedAvg(found, (f) => f.alpha_3yr);
+  const weightedBeta = weightedAvg(found, (f) => f.beta_3yr);
+  const weightedStdDev = weightedAvg(found, (f) => f.std_dev_3yr);
+  const weightedReturn5yr = weightedAvg(found, (f) => f.return_5yr);
 
   const { suggestions: swapSuggestions, bestInCategory } = generateSwaps(found, allFunds);
   const suggestedMetrics = buildSuggestedMetrics(found, swapSuggestions);
@@ -306,6 +372,10 @@ export function analyzePortfolio(
     weightedReturn1yr,
     weightedReturn3yr,
     weightedSharpe,
+    weightedAlpha,
+    weightedBeta,
+    weightedStdDev,
+    weightedReturn5yr,
     swapSuggestions,
     bestInCategory,
     summaryText,

@@ -41,9 +41,9 @@ export default function LoginPage() {
           <Link href="/">
             <Image src="/logo.svg" alt="Fondanalys" width={48} height={48} />
           </Link>
-          <h1 className="mt-3 text-2xl font-bold text-slate-900">Logga in</h1>
+          <h1 className="mt-3 text-2xl font-bold text-slate-900">Logga in eller skapa konto</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Få tillgång till personliga fondbytesförslag
+            Inget konto? Vi skapar ett åt dig automatiskt.
           </p>
         </div>
 
