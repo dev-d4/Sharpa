@@ -27,6 +27,9 @@ interface NordnetListFund {
     annual_growth_3y?: number;
     annual_growth_5y?: number;
   };
+  nnx_info?: {
+    display_slug?: string;
+  };
 }
 
 interface NordnetDetailResponse {
@@ -108,7 +111,7 @@ function mapNordnetListToFund(f: NordnetListFund, index: number): Fund {
 
 // ── Fetch all Nordnet funds (list endpoint, paginated) ────────────────────────
 
-async function fetchNordnetList(): Promise<Fund[]> {
+async function fetchNordnetList(): Promise<{ fund: Fund; slug: string }[]> {
   const all: NordnetListFund[] = [];
   let offset = 0;
   let total = 9999;
@@ -130,7 +133,10 @@ async function fetchNordnetList(): Promise<Fund[]> {
       seen.add(f.instrument_info.isin);
       return true;
     })
-    .map((f, i) => mapNordnetListToFund(f, i));
+    .map((f, i) => ({
+      fund: mapNordnetListToFund(f, i),
+      slug: f.nnx_info?.display_slug ?? "",
+    }));
 }
 
 // ── Supabase-backed cache ─────────────────────────────────────────────────────
@@ -163,11 +169,12 @@ export async function fetchNordnetFunds(): Promise<Fund[]> {
     }
   }
 
-  const funds = await fetchNordnetList();
+  const entries = await fetchNordnetList();
+  const funds = entries.map((e) => e.fund);
 
   if (supabase && funds.length > 0) {
     const now = new Date().toISOString();
-    const rows = funds.map((f) => ({ ...f, fetched_at: now }));
+    const rows = entries.map((e) => ({ ...e.fund, display_slug: e.slug, fetched_at: now }));
     const BATCH = 500;
     for (let i = 0; i < rows.length; i += BATCH) {
       await supabase

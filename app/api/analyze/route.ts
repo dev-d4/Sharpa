@@ -4,6 +4,14 @@ import { fetchNordnetDetail } from "@/lib/nordnet";
 import { analyzePortfolio, PortfolioEntry } from "@/lib/analysis";
 import { fetchAvanzaFunds } from "@/lib/avanza";
 import { Fund } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
+
+function getSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key);
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,14 +32,25 @@ export async function POST(req: NextRequest) {
     if (custodian === "nordnet") {
       const avanzaFunds = await fetchAvanzaFunds();
       const avanzaIsins = new Set(avanzaFunds.map((f) => f.isin));
-      const slugs = await fetchNordnetListWithSlugs();
-      const nordnetSlugMap = new Map(slugs.map((s) => [s.isin, s.slug]));
 
       const needsDetail = requestedIsins.filter(
         (isin) => !avanzaIsins.has(isin) && fundMap.has(isin)
       );
 
       if (needsDetail.length > 0) {
+        // Read slugs from Supabase (stored during fund list fetch)
+        const supabase = getSupabase();
+        const nordnetSlugMap = new Map<string, string>();
+        if (supabase) {
+          const { data } = await supabase
+            .from("nordnet_funds")
+            .select("isin, display_slug")
+            .in("isin", needsDetail);
+          for (const row of data ?? []) {
+            if (row.display_slug) nordnetSlugMap.set(row.isin, row.display_slug);
+          }
+        }
+
         const details = await Promise.all(
           needsDetail.map(async (isin) => {
             const slug = nordnetSlugMap.get(isin) ?? "";
@@ -69,39 +88,3 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// ── Fetch Nordnet list with display slugs (cached) ────────────────────────────
-
-import { unstable_cache } from "next/cache";
-
-const fetchNordnetListWithSlugs = unstable_cache(
-  async (): Promise<{ isin: string; slug: string }[]> => {
-    const headers = {
-      "client-id": "NEXT",
-      ntag: "NO_NTAG_RECEIVED_YET",
-      Accept: "application/json",
-      Referer: "https://www.nordnet.se/",
-    };
-
-    const results: { isin: string; slug: string }[] = [];
-    let offset = 0;
-    let total = 9999;
-
-    while (offset < total) {
-      const url = `https://www.nordnet.se/api/2/instrument_search/query/fundlist?sort_order=asc&sort_attribute=fund_yearly_fee&limit=100&offset=${offset}`;
-      const res = await fetch(url, { headers });
-      if (!res.ok) break;
-      const data = await res.json();
-      total = data.total_hits ?? 0;
-      for (const r of data.results ?? []) {
-        if (r.instrument_info?.isin && r.nnx_info?.display_slug) {
-          results.push({ isin: r.instrument_info.isin, slug: r.nnx_info.display_slug });
-        }
-      }
-      offset += 100;
-    }
-
-    return results;
-  },
-  ["nordnet-slugs"],
-  { revalidate: 30 * 24 * 60 * 60 }
-);

@@ -60,6 +60,8 @@ CREATE TABLE IF NOT EXISTS nordnet_funds (
   fetched_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+ALTER TABLE nordnet_funds ADD COLUMN IF NOT EXISTS display_slug TEXT;
+
 ALTER TABLE nordnet_funds ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "public read nordnet_funds" ON nordnet_funds FOR SELECT USING (true);
 CREATE POLICY "service write nordnet_funds" ON nordnet_funds FOR ALL USING (true) WITH CHECK (true);
