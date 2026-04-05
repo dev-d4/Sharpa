@@ -514,6 +514,28 @@ export default function AnalyzeClient() {
             </p>
           </div>
 
+          {/* Saved portfolios */}
+          {savedPortfolios.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide text-center">Mina portföljer</p>
+              <div className="flex items-center gap-2 flex-wrap justify-center">
+                {savedPortfolios.map((p) => {
+                  const custodianLabel = p.custodian === "nordnet" ? "Nordnet" : p.custodian === "övrigt" ? "Övrigt" : "Avanza";
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => loadPortfolio(p)}
+                      className="text-sm px-3 py-1.5 rounded-lg border bg-white border-slate-200 text-slate-600 hover:border-blue-200 hover:text-blue-600 transition-all flex items-baseline gap-1.5"
+                    >
+                      {p.name}
+                      <span className="text-xs opacity-70">{custodianLabel}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Cards */}
           <div className="grid sm:grid-cols-3 gap-5 w-full">
             {[
@@ -682,7 +704,7 @@ export default function AnalyzeClient() {
               {inputMode === "weight" ? "Ange belopp (kr)" : "Ange vikter (%)"}
             </button>
             <button
-              onClick={() => { setCustodian(null); setAnalysis(null); setError(null); setPortfolioId(null); }}
+              onClick={() => { setCustodian(null); setAnalysis(null); setError(null); setPortfolioId(null); setEntries([{ isin: "", name: "", weight: "" }]); }}
               className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
             >
               {CUSTODIANS.find((c) => c.value === custodian)?.label} · <span className="underline">Byt</span>
@@ -892,7 +914,7 @@ function AnalysisResult({ analysis, user, portfolioValue, onLoginClick }: { anal
         {analysis.managementBreakdown && analysis.managementBreakdown.unknown < 99.5 && (
           <div className="pt-3 border-t border-slate-100">
             <p className="text-sm font-semibold text-slate-700 mb-2">Aktiv vs. passiv förvaltning</p>
-            <div className="flex h-3 rounded-full overflow-hidden gap-px">
+            <div className="flex h-2 rounded-full overflow-hidden gap-px">
               {analysis.managementBreakdown.passive > 0 && (
                 <div className="bg-blue-500 h-full" style={{ width: `${analysis.managementBreakdown.passive}%` }} title={`Passiv ${analysis.managementBreakdown.passive.toFixed(1)}%`} />
               )}
