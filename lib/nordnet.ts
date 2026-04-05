@@ -228,8 +228,12 @@ export async function fetchNordnetDetail(isin: string, displaySlug: string): Pro
 
   // 2. Fetch from Nordnet detail API
   const url = `https://www.nordnet.se/api/2/instrument_search/query/slugdata?slug=${displaySlug}`;
+  console.log(`[nordnet] fetching detail for ${isin} slug=${displaySlug}`);
   const res = await fetch(url, { headers: NN_HEADERS });
-  if (!res.ok) return {};
+  if (!res.ok) {
+    console.error(`[nordnet] detail API failed for ${isin}: ${res.status}`);
+    return {};
+  }
   const data: NordnetDetailResponse = await res.json();
 
   const detail: Partial<Fund> = {
