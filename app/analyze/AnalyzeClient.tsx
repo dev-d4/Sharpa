@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { Building2, Landmark, Search } from "lucide-react"
+import { Building2, Landmark, Search, Sparkles, X } from "lucide-react"
 import type { SavedPortfolio } from "@/lib/portfolio"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -87,6 +87,165 @@ function BlurGate({
           Logga in kostnadsfritt
         </button>
       </div>
+    </div>
+  );
+}
+
+// ── AI fund search ────────────────────────────────────────────────────────────
+
+type AiFundResult = {
+  isin: string;
+  name: string;
+  category: string | null;
+  sharpe_3yr: number | null;
+  return_1yr: number | null;
+  return_3yr: number | null;
+  ongoing_cost_actual: number | null;
+  ongoing_cost_estimated: number | null;
+};
+
+function AiFundSearch({
+  custodian,
+  onAdd,
+  existingIsins,
+}: {
+  custodian: string;
+  onAdd: (isin: string, name: string) => void;
+  existingIsins: string[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<AiFundResult[]>([]);
+  const [filterPills, setFilterPills] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [searched, setSearched] = useState(false);
+
+  async function handleSearch() {
+    if (query.trim().length < 3) return;
+    setLoading(true);
+    setError(null);
+    setSearched(true);
+    setFilterPills([]);
+    try {
+      const res = await fetch("/api/fund-search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: query.trim(), custodian }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Okänt fel");
+      setResults(data.funds ?? []);
+      setFilterPills(data.filterPills ?? []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleClose() {
+    setOpen(false);
+    setQuery("");
+    setResults([]);
+    setSearched(false);
+    setError(null);
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
+      >
+        <Sparkles className="w-4 h-4" />
+        Hitta fonder med AI
+      </button>
+    );
+  }
+
+  return (
+    <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm font-semibold text-blue-800">
+          <Sparkles className="w-4 h-4" />
+          Hitta fonder med AI
+        </div>
+        <button type="button" onClick={handleClose} className="text-blue-400 hover:text-blue-600 transition-colors">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      <div className="flex gap-2">
+        <input
+          type="text"
+          autoFocus
+          placeholder='T.ex. "globala indexfonder med låg avgift" eller "teknikfonder USA"'
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); if (searched) { setResults([]); setFilterPills([]); setSearched(false); } }}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSearch(); } }}
+          className="flex-1 border border-blue-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <button
+          type="button"
+          onClick={handleSearch}
+          disabled={loading || query.trim().length < 3}
+          className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+        >
+          {loading ? "Söker…" : "Sök"}
+        </button>
+      </div>
+
+      {error && <p className="text-sm text-red-600">{error}</p>}
+
+      {filterPills.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-blue-600 font-medium">Filtrerat på:</span>
+          {filterPills.map((pill) => (
+            <span key={pill} className="text-xs bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full font-medium">
+              {pill}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {results.length > 0 && (
+        <div className="grid gap-2">
+          {results.map((f) => {
+            const cost = f.ongoing_cost_actual ?? f.ongoing_cost_estimated;
+            const alreadyAdded = existingIsins.includes(f.isin);
+            return (
+              <div
+                key={f.isin}
+                className="flex items-center justify-between gap-3 bg-white border border-blue-100 rounded-xl px-4 py-3"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-900 truncate">{f.name}</p>
+                  <div className="flex items-center gap-3 mt-0.5 text-xs text-slate-500">
+                    {f.category && <span>{f.category}</span>}
+                    {f.sharpe_3yr !== null && <span>Sharpe {f.sharpe_3yr.toFixed(2)}</span>}
+                    {f.return_1yr !== null && <span>{f.return_1yr.toFixed(1)}% 1 år</span>}
+                    {cost !== null && <span>{cost.toFixed(2)}% avgift</span>}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={alreadyAdded}
+                  onClick={() => onAdd(f.isin, f.name)}
+                  className="shrink-0 text-sm font-medium px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed border-blue-200 text-blue-600 hover:bg-blue-50 bg-white"
+                >
+                  {alreadyAdded ? "Tillagd" : "+ Lägg till"}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {searched && !loading && results.length === 0 && !error && (
+        <p className="text-sm text-blue-700">Inga fonder hittades. Försök med en annan beskrivning.</p>
+      )}
     </div>
   );
 }
@@ -711,10 +870,24 @@ export default function AnalyzeClient() {
             </button>
           </div>
         </div>
+        <AiFundSearch
+          custodian={custodian}
+          existingIsins={entries.map((e) => e.isin).filter(Boolean)}
+          onAdd={(isin, name) => {
+            setEntries((prev) => {
+              const empty = prev.findIndex((e) => !e.isin);
+              if (empty !== -1) {
+                return prev.map((e, idx) => idx === empty ? { ...e, isin, name } : e);
+              }
+              return [...prev, { isin, name, weight: "", amount: "" }];
+            });
+          }}
+        />
+
         <p className="text-sm text-slate-500">
           {inputMode === "weight"
-            ? "Sök på fondnamn eller ISIN och ange vikt (%) för varje fond."
-            : "Sök på fondnamn eller ISIN och ange hur mycket du har investerat i varje fond (kr)."}
+            ? "Eller sök på fondnamn eller ISIN och ange vikt (%) för varje fond."
+            : "Eller sök på fondnamn eller ISIN och ange hur mycket du har investerat i varje fond (kr)."}
         </p>
 
         <div className="space-y-2">
