@@ -23,16 +23,16 @@ export default function Hero() {
 
         <div className="animate-fade-in-up flex items-center justify-center gap-3 flex-wrap [animation-delay:350ms]">
           <Link
-            href="/risk-profile"
+            href="/analyze"
             className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 text-white font-semibold px-7 py-3.5 rounded-xl transition-all shadow-lg shadow-blue-200 text-sm"
           >
-            Ta fram din riskprofil →
+            Analysera din portfölj →
           </Link>
           <Link
-            href="/analyze"
+            href="/risk-profile"
             className="bg-white border border-slate-200 hover:border-slate-300 text-slate-700 font-semibold px-7 py-3.5 rounded-xl transition-all text-sm shadow-sm"
           >
-            Analysera portfölj
+            Ta fram din riskprofil
           </Link>
         </div>
         <p className="animate-fade-in-up text-xs text-slate-400 [animation-delay:450ms]">Gratis · Ingen registrering krävs</p>

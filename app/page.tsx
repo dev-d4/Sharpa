@@ -20,21 +20,21 @@ export default function LandingPage() {
               step={1}
               icon={
                 <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0 1 12 2.944a11.955 11.955 0 0 1-8.618 3.04A12.02 12.02 0 0 0 3 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
                 </svg>
               }
-              title="Ta fram din riskprofil"
-              description="Svara på 4 frågor om din tidshorisont och risktolerans. Tar under en minut."
+              title="Analysera din portfölj"
+              description="Lägg in dina fonder och vikter. Få direkt svar på avgifter, avkastning och risk — utan att skapa konto."
             />
             <FeatureCard
               step={2}
               icon={
                 <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0 1 12 2.944a11.955 11.955 0 0 1-8.618 3.04A12.02 12.02 0 0 0 3 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
               }
-              title="Lägg in dina fonder"
-              description="Sök på fondnamn ange vikten för varje fond i din portfölj."
+              title="Ta fram din riskprofil"
+              description="Svara på 4 frågor om din tidshorisont och risktolerans. Ser din portfölj matcha din risknivå?"
             />
             <FeatureCard
               step={3}
@@ -43,8 +43,8 @@ export default function LandingPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636-.707.707M21 12h-1M4 12H3m1.636-6.364-.707-.707M12 21v-1M7.05 7.05l-.707-.707M16.95 7.05l.707-.707M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" />
                 </svg>
               }
-              title="Få personliga förslag"
-              description="Se om din portfölj matchar din risknivå och få förslag på fonder som passar dig bättre."
+              title="Få personliga fondbytesförslag"
+              description="Se exakt vilka fonder du bör byta och hur det påverkar avgift, avkastning och risk."
             />
           </div>
         </section>

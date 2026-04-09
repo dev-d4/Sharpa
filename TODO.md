@@ -7,7 +7,7 @@
 - [ ] Kolla att all fonddata stämmer
 - [ ] Fixa bakgrund
 - [ ] Om man väljer övrigt så syns det inte så på Mitt konto
-- [ ]
-- [ ]
-- [ ]
-- [ ]
+- [ ] Analyser tar inte hänsyn till landsfördelning eller så
+- [ ] Uppdatera informationstexten
+- [ ] Användaren ska kunna skriva in vad den vill investera i. Då ska man ta fram en färdig portfölj eller fonder.
+- [ ] Alfred Berg får kategori Norge

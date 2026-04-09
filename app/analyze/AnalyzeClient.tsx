@@ -666,11 +666,12 @@ export default function AnalyzeClient() {
           {/* Header */}
           <div className="text-center space-y-3">
             <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-              Var förvaltar du dina fonder?
+              Analysera din portfölj
             </h1>
-            <p className="text-slate-600 text-sm">
-              Vi hämtar rätt fondutbud baserat på ditt val.
+            <p className="text-slate-600 text-base max-w-md mx-auto leading-relaxed">
+              Lägg in dina fonder och se om du betalar för mycket i avgifter, hur risken ser ut — och få förslag på bättre alternativ.
             </p>
+            <p className="text-slate-400 text-sm">Välj var du förvaltar dina fonder så hämtar vi rätt fondutbud.</p>
           </div>
 
           {/* Saved portfolios */}
@@ -870,19 +871,30 @@ export default function AnalyzeClient() {
             </button>
           </div>
         </div>
-        <AiFundSearch
-          custodian={custodian}
-          existingIsins={entries.map((e) => e.isin).filter(Boolean)}
-          onAdd={(isin, name) => {
-            setEntries((prev) => {
-              const empty = prev.findIndex((e) => !e.isin);
-              if (empty !== -1) {
-                return prev.map((e, idx) => idx === empty ? { ...e, isin, name } : e);
-              }
-              return [...prev, { isin, name, weight: "", amount: "" }];
-            });
-          }}
-        />
+        {user ? (
+          <AiFundSearch
+            custodian={custodian}
+            existingIsins={entries.map((e) => e.isin).filter(Boolean)}
+            onAdd={(isin, name) => {
+              setEntries((prev) => {
+                const empty = prev.findIndex((e) => !e.isin);
+                if (empty !== -1) {
+                  return prev.map((e, idx) => idx === empty ? { ...e, isin, name } : e);
+                }
+                return [...prev, { isin, name, weight: "", amount: "" }];
+              });
+            }}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => router.push("/login")}
+            className="flex items-center gap-2 text-sm text-slate-400 hover:text-blue-600 transition-colors group"
+          >
+            <Sparkles className="w-4 h-4 group-hover:text-blue-500" />
+            <span>Logga in för att hitta fonder med AI</span>
+          </button>
+        )}
 
         <p className="text-sm text-slate-500">
           {inputMode === "weight"

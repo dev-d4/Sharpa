@@ -34,18 +34,23 @@ export default function Header() {
         </Link>
 
         <nav className="flex items-center gap-4 sm:gap-6">
-          <Link href="/risk-profile" className={navClass("/risk-profile")}>Riskprofil</Link>
           <Link href="/analyze" className={navClass("/analyze")}>Analysera</Link>
           {user && <Link href="/portfolios" className={navClass("/portfolios")}>Portföljer</Link>}
           {user ? (
-            <Link href="/account" className={navClass("/account")}>Mitt konto</Link>
+            <>
+              <Link href="/risk-profile" className={navClass("/risk-profile")}>Riskprofil</Link>
+              <Link href="/account" className={navClass("/account")}>Mitt konto</Link>
+            </>
           ) : (
-            <Link
-              href="/login"
-              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-all shadow-sm shadow-blue-200"
-            >
-              Logga in
-            </Link>
+            <>
+              <Link href="/risk-profile" className={navClass("/risk-profile")}>Riskprofil</Link>
+              <Link
+                href="/login"
+                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-all shadow-sm shadow-blue-200"
+              >
+                Logga in
+              </Link>
+            </>
           )}
         </nav>
       </div>

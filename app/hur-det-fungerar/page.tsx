@@ -295,16 +295,16 @@ export default function HurDetFungerar() {
         <p className="text-slate-600">Redo att analysera din portfölj?</p>
         <div className="flex items-center justify-center gap-3 flex-wrap">
           <Link
-            href="/risk-profile"
+            href="/analyze"
             className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold px-6 py-3 rounded-xl transition-all shadow-md shadow-blue-200 text-sm"
           >
-            Ta fram din riskprofil →
+            Analysera din portfölj →
           </Link>
           <Link
-            href="/analyze"
+            href="/risk-profile"
             className="bg-white border border-slate-200 hover:border-slate-300 text-slate-700 font-semibold px-6 py-3 rounded-xl transition-all text-sm shadow-sm"
           >
-            Analysera portfölj
+            Ta fram din riskprofil
           </Link>
         </div>
       </div>
