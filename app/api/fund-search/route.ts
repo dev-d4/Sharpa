@@ -33,15 +33,15 @@ interface LLMFilter {
   categories: string[];
   category_group: string | null;
   max_cost: number | null;
-  prefer_index: boolean;
-  geography: string | null;
-  keywords: string[];
+  management_type: "active" | "passive" | null;
+  name_all: string[];      // ALL terms must appear in fund name (AND)
+  name_includes: string[]; // any term must appear in fund name (OR), fallback
+  name_excludes: string[]; // no term may appear in fund name
+  keywords: string[];      // fund company names to match
 }
 
 async function extractFilter(query: string, categories: string[]): Promise<LLMFilter> {
   const client = new Anthropic();
-
-  const categoryList = categories.slice(0, 200).join("\n");
 
   const message = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
@@ -49,43 +49,35 @@ async function extractFilter(query: string, categories: string[]): Promise<LLMFi
     messages: [
       {
         role: "user",
-        content: `Du är en fondexpert. En användare vill investera och har skrivit: "${query}"
+        content: `Du är en fondexpert. En användare söker fonder och har skrivit: "${query}"
 
-Din uppgift är att matcha användarens beskrivning mot dessa exakta fondkategorier (välj de som passar bäst):
-${categoryList}
-
-Exempel på mappningar:
-- "teknikfonder" → välj kategorier som innehåller "teknik" eller "Ny teknik"
-- "USA-fonder" → välj kategorier som innehåller "USA"
-- "globalfonder" eller "globala fonder" → välj kategorier som innehåller "Global"
-- "Sverige" eller "svenska fonder" → välj kategorier som innehåller "Sverige"
-- "räntefonder" eller "obligationer" → välj kategorier som innehåller "Ränte"
-- "blandfonder" → välj kategorier som innehåller "Blandfond"
-- "emerging markets" eller "tillväxtmarknader" → välj kategorier som innehåller "Tillväxt"
-- "Norden" eller "nordiska fonder" → välj kategorier som innehåller "Norden"
+Tillgängliga fondkategorier:
+${categories.join("\n")}
 
 Returnera ENBART ett JSON-objekt med dessa fält:
-- categories: array med exakta kategorinamn från listan ovan som matchar. Max 6. Välj hellre fler än färre.
-- category_group: en av "Equity", "Fixed Income", "Allocation", "Alternative", "Money Market", "Other", eller null
-- max_cost: maximal avgift i % om användaren nämner "låg avgift", "billig", "index" (sätt då 0.5), annars null
-- prefer_index: true om användaren nämner "index" eller "passiv", annars false
-- geography: null (används ej)
-- keywords: array med fondbolagsnamn om användaren nämner specifika bolag, annars []
 
-Svara BARA med JSON, inga förklaringar.`,
+- categories: exakta kategorinamn från listan ovan som matchar användarens intent. Max 6, hellre fler än färre. Tom array om ingen kategori passar.
+- category_group: en av "Equity", "Fixed Income", "Allocation", "Alternative", "Money Market", "Other", eller null
+- max_cost: maximal avgift i procent om användaren signalerar kostnadskänslighet (t.ex. "låg avgift", "billig"), annars null
+- management_type: "passive" om användaren vill ha indexfonder/passiva fonder, "active" om användaren vill ha aktivt förvaltade fonder, annars null
+- name_all: nyckelord från frågan som ALLA måste finnas i fondnamnet. T.ex. "sverige index" → ["sverige", "index"], "global index" → ["global", "index"], "teknik usa" → ["teknik", "usa"]. Annars [].
+- name_includes: ord där minst ett måste finnas i fondnamnet (OR). Normalt [].
+- name_excludes: ord som inte får finnas i fondnamnet. Normalt [].
+- keywords: specifika fondbolagsnamn om användaren nämner dem (t.ex. ["Länsförsäkringar"]), annars []
+
+Svara BARA med JSON.`,
       },
     ],
   });
 
   const raw = message.content[0].type === "text" ? message.content[0].text : "{}";
-  // Strip markdown code fences if present
   const text = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
   console.log("[fund-search] Claude raw response:", text);
   try {
     return JSON.parse(text) as LLMFilter;
   } catch {
     console.log("[fund-search] JSON parse failed");
-    return { categories: [], category_group: null, max_cost: null, prefer_index: false, geography: null, keywords: [] };
+    return { categories: [], category_group: null, max_cost: null, management_type: null, name_all: [], name_includes: [], name_excludes: [], keywords: [] };
   }
 }
 
@@ -116,36 +108,84 @@ export async function POST(req: NextRequest) {
       .select("isin, name, category, category_group, sharpe_3yr, return_1yr, return_3yr, ongoing_cost_actual, ongoing_cost_estimated, investment_type")
       .not("name", "is", null);
 
-    // Apply category_group filter
     if (filter.category_group) {
       dbQuery = dbQuery.eq("category_group", filter.category_group);
     }
 
-    // Apply cost filter
     if (filter.max_cost !== null) {
       dbQuery = dbQuery.lte("ongoing_cost_actual", filter.max_cost);
     }
 
-    // Apply index filter — prefer low cost instead of strict PASSIVE (Nordnet funds lack investment_type)
-    if (filter.prefer_index && filter.max_cost === null) {
-      dbQuery = dbQuery.lte("ongoing_cost_actual", 0.5);
+    // investment_type values: "ACTIVE", "INDEX", or null (Nordnet funds)
+    if (filter.management_type === "active") {
+      dbQuery = dbQuery.or("investment_type.eq.ACTIVE,investment_type.is.null");
+    } else if (filter.management_type === "passive") {
+      dbQuery = dbQuery.or("investment_type.eq.INDEX,investment_type.is.null");
     }
 
     const { data: funds, error } = await dbQuery.limit(2000);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    let results = funds ?? [];
+    const allFunds = funds ?? [];
 
-    // Filter by categories (OR match)
-    if (filter.categories.length > 0) {
-      results = results.filter((f) => f.category && filter.categories.includes(f.category));
+    function matchesManagementType(f: typeof allFunds[0]): boolean {
+      if (!filter.management_type) return true;
+      if (filter.management_type === "passive") {
+        if (f.investment_type === "INDEX") return true;
+        const n = f.name?.toLowerCase() ?? "";
+        return n.includes("index") || n.includes("msci") || n.includes("s&p");
+      }
+      if (filter.management_type === "active") {
+        if (f.investment_type === "ACTIVE") return true;
+        if (f.investment_type === "INDEX") return false;
+        const n = f.name?.toLowerCase() ?? "";
+        return !n.includes("index") && !n.includes("msci") && !n.includes("s&p") && !n.includes("etf");
+      }
+      return true;
     }
 
-    // Filter by geography keyword in name
-    if (filter.geography && filter.categories.length === 0) {
-      const geo = filter.geography.toLowerCase();
-      results = results.filter((f) => f.name?.toLowerCase().includes(geo));
+    function matchesNameAll(f: typeof allFunds[0]): boolean {
+      if (filter.name_all.length === 0) return true;
+      return filter.name_all.every((term) => f.name?.toLowerCase().includes(term.toLowerCase()));
     }
+
+    function matchesNameExcludes(f: typeof allFunds[0]): boolean {
+      if (filter.name_excludes.length === 0) return true;
+      return !filter.name_excludes.some((term) => f.name?.toLowerCase().includes(term.toLowerCase()));
+    }
+
+    // Primary: category + management_type match (most important, never narrowed by name)
+    const categoryMatched = allFunds.filter((f) => {
+      const catOk = filter.categories.length === 0 || (f.category != null && filter.categories.includes(f.category));
+      return catOk && matchesManagementType(f) && matchesNameExcludes(f);
+    });
+
+    // Additive: name_all catches funds with wrong/missing category (e.g. Nordnet funds)
+    // Only adds funds not already found via category match
+    const categoryMatchedIsins = new Set(categoryMatched.map((f) => f.isin));
+    const nameMatched = filter.name_all.length > 0
+      ? allFunds.filter((f) =>
+          !categoryMatchedIsins.has(f.isin) &&
+          matchesNameAll(f) &&
+          matchesManagementType(f) &&
+          matchesNameExcludes(f)
+        )
+      : [];
+
+    // If Claude extracted nothing meaningful, return empty — query was gibberish
+    const hasAnyFilter =
+      filter.categories.length > 0 ||
+      filter.category_group !== null ||
+      filter.management_type !== null ||
+      filter.max_cost !== null ||
+      filter.name_all.length > 0 ||
+      filter.keywords.length > 0;
+
+    if (!hasAnyFilter) {
+      return NextResponse.json({ funds: [], filterPills: [], filter });
+    }
+
+    let results = [...categoryMatched, ...nameMatched];
 
     // Filter by fund company keywords
     if (filter.keywords.length > 0) {
@@ -155,7 +195,7 @@ export async function POST(req: NextRequest) {
       if (filtered.length > 0) results = filtered;
     }
 
-    // Score and sort: sharpe (weight 3) + return_3yr (0.05) + return_1yr (0.02) - cost (1.5)
+    // Score and sort
     results.sort((a, b) => {
       const scoreA =
         (a.sharpe_3yr ?? 0) * 3 +
@@ -173,11 +213,12 @@ export async function POST(req: NextRequest) {
     // Build human-readable filter summary
     const filterPills: string[] = [];
     if (filter.categories.length > 0) filterPills.push(...filter.categories.slice(0, 3));
-    if (filter.prefer_index) filterPills.push("Indexfonder");
+    if (filter.management_type === "active") filterPills.push("Aktivt förvaltade");
+    if (filter.management_type === "passive") filterPills.push("Indexfonder");
     if (filter.max_cost !== null) filterPills.push(`Max ${filter.max_cost}% avgift`);
 
     return NextResponse.json({
-      funds: results.slice(0, 8),
+      funds: results, // all ranked results — UI paginates locally
       filterPills,
       filter,
     });

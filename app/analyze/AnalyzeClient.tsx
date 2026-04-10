@@ -113,13 +113,18 @@ function AiFundSearch({
   onAdd: (isin: string, name: string) => void;
   existingIsins: string[];
 }) {
+  const PAGE = 8;
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<AiFundResult[]>([]);
+  const [allResults, setAllResults] = useState<AiFundResult[]>([]);
+  const [visibleCount, setVisibleCount] = useState(PAGE);
   const [filterPills, setFilterPills] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
+
+  const results = allResults.slice(0, visibleCount);
+  const hasMore = visibleCount < allResults.length;
 
   async function handleSearch() {
     if (query.trim().length < 3) return;
@@ -127,6 +132,7 @@ function AiFundSearch({
     setError(null);
     setSearched(true);
     setFilterPills([]);
+    setVisibleCount(PAGE);
     try {
       const res = await fetch("/api/fund-search", {
         method: "POST",
@@ -135,7 +141,7 @@ function AiFundSearch({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Okänt fel");
-      setResults(data.funds ?? []);
+      setAllResults(data.funds ?? []);
       setFilterPills(data.filterPills ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -147,7 +153,7 @@ function AiFundSearch({
   function handleClose() {
     setOpen(false);
     setQuery("");
-    setResults([]);
+    setAllResults([]);
     setSearched(false);
     setError(null);
   }
@@ -183,7 +189,7 @@ function AiFundSearch({
           autoFocus
           placeholder='T.ex. "globala indexfonder med låg avgift" eller "teknikfonder USA"'
           value={query}
-          onChange={(e) => { setQuery(e.target.value); if (searched) { setResults([]); setFilterPills([]); setSearched(false); } }}
+          onChange={(e) => { setQuery(e.target.value); if (searched) { setAllResults([]); setFilterPills([]); setSearched(false); } }}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSearch(); } }}
           className="flex-1 border border-blue-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
@@ -243,7 +249,17 @@ function AiFundSearch({
         </div>
       )}
 
-      {searched && !loading && results.length === 0 && !error && (
+      {hasMore && (
+        <button
+          type="button"
+          onClick={() => setVisibleCount((c) => c + PAGE)}
+          className="w-full text-sm text-blue-600 hover:text-blue-700 font-medium py-2 border border-blue-100 rounded-lg hover:bg-blue-50 transition-colors"
+        >
+          Visa fler
+        </button>
+      )}
+
+      {searched && !loading && allResults.length === 0 && !error && (
         <p className="text-sm text-blue-700">Inga fonder hittades. Försök med en annan beskrivning.</p>
       )}
     </div>
