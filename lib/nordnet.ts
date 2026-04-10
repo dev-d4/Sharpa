@@ -337,14 +337,25 @@ export async function fetchNordnetFunds(): Promise<Fund[]> {
     const now = new Date().toISOString();
     const BATCH = 500;
 
-    // Upsert fund data into unified funds table
-    const fundRows = funds.map((f) => ({ ...f, source: "nordnet", fetched_at: now }));
+    // Only write Nordnet-exclusive funds to the funds table.
+    // Funds that exist on Avanza already have richer data there — don't overwrite.
+    const avanzaIsins = new Set<string>();
+    for (let from = 0; ; from += BATCH) {
+      const { data } = await supabase.from("avanza_offerings").select("isin").range(from, from + BATCH - 1);
+      if (!data || data.length === 0) break;
+      for (const r of data) avanzaIsins.add(r.isin);
+      if (data.length < BATCH) break;
+    }
+
+    const exclusiveFunds = funds.filter((f) => !avanzaIsins.has(f.isin));
+    const fundRows = exclusiveFunds.map((f) => ({ ...f, source: "nordnet", fetched_at: now }));
     for (let i = 0; i < fundRows.length; i += BATCH) {
       const { error } = await supabase
         .from("funds")
         .upsert(fundRows.slice(i, i + BATCH), { onConflict: "isin" });
       if (error) console.error(`[nordnet] funds upsert batch ${i} failed:`, error.message);
     }
+    console.log(`[nordnet] upserted ${fundRows.length} Nordnet-exclusive funds (skipped ${avanzaIsins.size > 0 ? funds.length - fundRows.length : 0} Avanza overlaps)`);
 
     // Upsert nordnet_offerings (isin + name + display_slug)
     const offeringRows = entries.map((e) => ({
