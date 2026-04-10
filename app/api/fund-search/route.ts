@@ -56,11 +56,20 @@ ${categories.join("\n")}
 
 Returnera ENBART ett JSON-objekt med dessa fält:
 
-- categories: exakta kategorinamn från listan ovan som matchar användarens intent. Max 6, hellre fler än färre. Tom array om ingen kategori passar.
+- categories: exakta kategorinamn från listan ovan som matchar användarens intent. Var PRECIS:
+  * Om användaren nämner ett fondbolag (t.ex. Länsförsäkringar, Avanza, SEB, AMF) men INGEN fondtyp eller geografi: sätt categories: []. Låt keywords-fältet hantera bolagsfiltreringen.
+  * Om användaren nämner ett fondbolag + geografi/typ (t.ex. "SEB sverigefond", "LF teknikfond"): sätt rätt kategorier OCH keywords.
+  * Om användaren anger en fondtyp (teknik, hälsa, fastighet, råvaror osv): välj ENDAST kategorier som innehåller den fondtypen (t.ex. "Branschfond, Ny teknik"). Välj ALDRIG breda mix/blend-kategorier som "USA, Mix bolag", "Global, Mix bolag", "Europa, Mix bolag" när fondtyp är angiven.
+  * Om användaren bara anger geografi utan fondtyp (t.ex. "usa-fonder", "globalfonder"): välj breda geografikategorier.
+  * Exempel: "länsförsäkringar passiv" → RÄTT: categories: [], keywords: ["Länsförsäkringar"] FEL: categories: ["Blandfond..."]
+  * Exempel: "SEB sverigefond aktiv" → RÄTT: categories: ["Sverige", "Sverige, Små-/medelstora bolag"], keywords: ["SEB"], management_type: "active"
+  * Exempel: "teknikfonder usa" → RÄTT: ["Branschfond, Ny teknik"] FEL: ["USA, Mix bolag", "USA, Tillväxtbolag"]
+  * Exempel: "usa-fonder" → RÄTT: ["USA, Mix bolag", "USA, Tillväxtbolag", "USA, Småbolag"]
+  * Exempel: "teknikfonder sverige" → RÄTT categories: ["Branschfond, Ny teknik"], name_all: ["sverige"] — lägg ALDRIG till "Sverige, Mix bolag" som kategori när fondtyp är angiven
 - category_group: en av "Equity", "Fixed Income", "Allocation", "Alternative", "Money Market", "Other", eller null
-- max_cost: maximal avgift i procent om användaren signalerar kostnadskänslighet (t.ex. "låg avgift", "billig"), annars null
-- management_type: "passive" om användaren vill ha indexfonder/passiva fonder, "active" om användaren vill ha aktivt förvaltade fonder, annars null
-- name_all: nyckelord från frågan som ALLA måste finnas i fondnamnet. T.ex. "sverige index" → ["sverige", "index"], "global index" → ["global", "index"], "teknik usa" → ["teknik", "usa"]. Annars [].
+- max_cost: maximal avgift i procent om användaren signalerar kostnadskänslighet (t.ex. "låg avgift", "billig", "billiga"). Sätt 0.5 för generell kostnadskänslighet, eller det explicita värdet om användaren nämner ett specifikt tal. Annars null.
+- management_type: "passive" om användaren vill ha indexfonder/passiva fonder. Sätt "passive" när frågan innehåller "index", "indexfond", "passiv", "ETF". Sätt "active" om användaren vill ha aktivt förvaltade fonder. Annars null. Exempel: "usa index" → passive, "sverigefonder index" → passive, "global ETF" → passive
+- name_all: nyckelord som används additivt för att fånga fonder som saknar rätt kategori men matchar på namn. Används INTE för att filtrera bort korrekt kategoriserade fonder. Geografiska modifierare (t.ex. "sverige", "usa", "norden") ska läggas här när fondtyp är angiven. Exempel: "teknikfonder usa" → ["teknik", "usa"], "teknikfonder sverige" → ["teknik", "sverige"]. Annars [].
 - name_includes: ord där minst ett måste finnas i fondnamnet (OR). Normalt [].
 - name_excludes: ord som inte får finnas i fondnamnet. Normalt [].
 - keywords: specifika fondbolagsnamn om användaren nämner dem (t.ex. ["Länsförsäkringar"]), annars []
@@ -123,10 +132,17 @@ export async function POST(req: NextRequest) {
       dbQuery = dbQuery.or("investment_type.eq.INDEX,investment_type.is.null");
     }
 
-    const { data: funds, error } = await dbQuery.limit(2000);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-    const allFunds = funds ?? [];
+    const FETCH_PAGE = 1000;
+    const allFunds: { isin: string | null; name: string | null; category: string | null; category_group: string | null; sharpe_3yr: number | null; return_1yr: number | null; return_3yr: number | null; ongoing_cost_actual: number | null; ongoing_cost_estimated: number | null; investment_type: string | null }[] = [];
+    const orderedQuery = dbQuery.order("isin");
+    for (let from = 0; ; from += FETCH_PAGE) {
+      const { data, error } = await orderedQuery.range(from, from + FETCH_PAGE - 1);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (!data || data.length === 0) break;
+      allFunds.push(...data);
+      if (data.length < FETCH_PAGE) break;
+    }
+    console.log(`[fund-search] fetched ${allFunds.length} funds from ${view}`);
 
     function matchesManagementType(f: typeof allFunds[0]): boolean {
       if (!filter.management_type) return true;
@@ -146,12 +162,14 @@ export async function POST(req: NextRequest) {
 
     function matchesNameAll(f: typeof allFunds[0]): boolean {
       if (filter.name_all.length === 0) return true;
-      return filter.name_all.every((term) => f.name?.toLowerCase().includes(term.toLowerCase()));
+      const name = f.name?.normalize("NFC").toLowerCase() ?? "";
+      return filter.name_all.every((term) => name.includes(term.normalize("NFC").toLowerCase()));
     }
 
     function matchesNameExcludes(f: typeof allFunds[0]): boolean {
       if (filter.name_excludes.length === 0) return true;
-      return !filter.name_excludes.some((term) => f.name?.toLowerCase().includes(term.toLowerCase()));
+      const name = f.name?.normalize("NFC").toLowerCase() ?? "";
+      return !filter.name_excludes.some((term) => name.includes(term.normalize("NFC").toLowerCase()));
     }
 
     // Primary: category + management_type match (most important, never narrowed by name)
@@ -187,12 +205,14 @@ export async function POST(req: NextRequest) {
 
     let results = [...categoryMatched, ...nameMatched];
 
-    // Filter by fund company keywords
+    // Filter by fund company keywords — always apply, no fallback
+    // Normalize to NFC before compare to handle Unicode decomposition differences
     if (filter.keywords.length > 0) {
-      const filtered = results.filter((f) =>
-        filter.keywords.some((kw) => f.name?.toLowerCase().includes(kw.toLowerCase()))
+      results = results.filter((f) =>
+        filter.keywords.some((kw) =>
+          f.name?.normalize("NFC").toLowerCase().includes(kw.normalize("NFC").toLowerCase())
+        )
       );
-      if (filtered.length > 0) results = filtered;
     }
 
     // Score and sort
