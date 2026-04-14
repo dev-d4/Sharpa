@@ -264,7 +264,7 @@ export async function fetchNordnetFunds(): Promise<Fund[]> {
       const all: Fund[] = [];
       const PAGE = 1000;
       for (let from = 0; ; from += PAGE) {
-        const { data } = await supabase.from("nordnet_fund_data").select("*").range(from, from + PAGE - 1);
+        const { data } = await supabase.from("nordnet_fund_data").select("*").order("isin").range(from, from + PAGE - 1);
         if (!data || data.length === 0) break;
         all.push(...(data as Fund[]));
         if (data.length < PAGE) break;
