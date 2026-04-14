@@ -120,47 +120,17 @@ function absoluteScore(f: Fund): number {
 
 function categoryToSwedish(category: string | null): string {
   if (!category) return "samma kategori";
+  // Avanza categories are already in readable Swedish — return as-is.
+  // Only map the few English/Morningstar strings that can appear.
   const c = category.toLowerCase();
-
-  const parts: string[] = [];
-
-  // Geography
-  if (c.includes("global")) parts.push("Globala");
-  else if (c.includes("sweden") || c.includes("swedish")) parts.push("svenska");
-  else if (c.includes("europe")) parts.push("europeiska");
-  else if (c.includes("north america") || c.includes("united states") || /\bus\b/.test(c)) parts.push("nordamerikanska");
-  else if (c.includes("emerging market")) parts.push("tillväxtmarknads");
-  else if (c.includes("nordic")) parts.push("nordiska");
-  else if (c.includes("asia") || c.includes("pacific")) parts.push("asiatiska");
-  else if (c.includes("latin america")) parts.push("latinamerikanska");
-  else if (c.includes("japan")) parts.push("japanska");
-  else if (c.includes("china")) parts.push("kinesiska");
-
-  // Size
-  if (c.includes("large-cap") || c.includes("large cap")) parts.push("Large Cap");
-  else if (c.includes("small-cap") || c.includes("small cap")) parts.push("Small Cap");
-  else if (c.includes("mid-cap") || c.includes("mid cap")) parts.push("Mid Cap");
-
-  // Style
-  if (c.includes("growth")) parts.push("tillväxt");
-  else if (c.includes("value")) parts.push("värde");
-
-  // Asset class / sector
-  if (c.includes("money market")) return "penningmarknadsfonder";
-  if (c.includes("short-term bond") || c.includes("short term bond")) return "korträntefonder";
-  if (c.includes("long-term bond") || c.includes("long term bond")) return "långräntefonder";
-  if (c.includes("bond") || c.includes("fixed income")) return `${parts.join(" ")} räntefonder`.trim();
-  if (c.includes("allocation") || c.includes("balanced")) return "blandfonder";
-  if (c.includes("real estate") || c.includes("property")) return `${parts.join(" ")} fastighetsfonder`.trim();
-  if (c.includes("technology") || c.includes("tech")) return "teknikfonder";
-  if (c.includes("health") || c.includes("biotech") || c.includes("pharma")) return "hälsovårdsfonder";
-  if (c.includes("energy")) return `${parts.join(" ")} energifonder`.trim();
-  if (c.includes("financial") || c.includes("bank")) return "finansfonder";
-  if (c.includes("consumer")) return `${parts.join(" ")} konsumentfonder`.trim();
-  if (c.includes("commodit")) return "råvarufonder";
-  if (c.includes("equity") || c.includes("stock")) return `${parts.join(" ")} aktiefonder`.trim();
-
-  return parts.length > 0 ? `${parts.join(" ")} fonder` : category;
+  if (c.includes("money market")) return "Penningmarknadsfonder";
+  if (c.includes("short-term bond") || c.includes("short term bond")) return "Korträntefonder";
+  if (c.includes("long-term bond") || c.includes("long term bond")) return "Långräntefonder";
+  if (c.includes("allocation") || c.includes("balanced")) return "Blandfonder";
+  if (c.includes("technology") || c.includes("tech")) return "Teknikfonder";
+  if (c.includes("health") || c.includes("biotech") || c.includes("pharma")) return "Hälsovårdsfonder";
+  if (c.includes("real estate") || c.includes("property")) return "Fastighetsfonder";
+  return category;
 }
 
 // ── Geographic focus extracted from fund name ─────────────────────────────────
