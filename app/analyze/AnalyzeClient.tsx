@@ -447,7 +447,8 @@ export default function AnalyzeClient() {
 
   // Warm up fund cache as soon as page loads so search is instant
   useEffect(() => {
-    fetch("/api/funds/search?q=__warmup__").catch(() => {});
+    fetch("/api/funds/search?q=__warmup__&custodian=avanza").catch(() => {});
+    fetch("/api/funds/search?q=__warmup__&custodian=nordnet").catch(() => {});
   }, []);
 
   // Restore state from sessionStorage on mount, or load portfolio from URL param
