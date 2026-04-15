@@ -42,7 +42,7 @@ function MetricCard({
       <p className="font-bold text-slate-900">{label}</p>
       <p className="text-xs text-slate-400 font-mono">{formula}</p>
       <p className="text-sm text-slate-600 leading-relaxed">{interpretation}</p>
-      <div className="flex gap-4 pt-1">
+      <div className="flex gap-2 pt-1 flex-wrap">
         <span className="text-xs text-green-700 bg-green-50 border border-green-100 px-2 py-0.5 rounded-full">Bra: {good}</span>
         <span className="text-xs text-red-600 bg-red-50 border border-red-100 px-2 py-0.5 rounded-full">Se upp: {bad}</span>
       </div>
@@ -73,11 +73,11 @@ const TOC = [
 
 export default function HurDetFungerar() {
   return (
-    <div className="max-w-3xl mx-auto px-6 py-12 space-y-8">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-8">
 
       {/* Header */}
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold text-slate-900">Hur det fungerar</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Hur det fungerar</h1>
         <p className="text-slate-500 leading-relaxed">
           En genomgång av hur Fondanalys analyserar din portfölj, hur riskprofilen räknas ut och vad varje nyckeltal egentligen mäter.
         </p>

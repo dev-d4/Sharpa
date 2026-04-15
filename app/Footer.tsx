@@ -20,13 +20,13 @@ export default function Footer() {
 
   return (
     <footer className="bg-slate-50 border-t border-slate-200 mt-24">
-      <div className="max-w-5xl mx-auto px-6 py-8 space-y-4">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-1">
             <Image src="/logo.svg" alt="Fondanalys" width={24} height={24} />
             <span className="text-sm font-semibold text-slate-700">Fondanalys</span>
           </div>
-          <nav className="flex items-center gap-6 text-xs text-slate-400">
+          <nav className="flex items-center flex-wrap gap-x-5 gap-y-2 text-xs text-slate-400">
             <Link href="/risk-profile" className="hover:text-slate-600 transition-colors">Riskprofil</Link>
             <Link href="/analyze" className="hover:text-slate-600 transition-colors">Analysera</Link>
             {loggedIn && <Link href="/portfolios" className="hover:text-slate-600 transition-colors">Portföljer</Link>}

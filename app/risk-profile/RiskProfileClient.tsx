@@ -119,7 +119,7 @@ export default function RiskProfileClient() {
   if (existing && !editing) {
     const score = existing.score as RiskLevel;
     return (
-      <div className="max-w-xl mx-auto px-6 py-10 space-y-6">
+      <div className="max-w-xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Din riskprofil</h1>
           <p className="text-sm text-slate-500 mt-1">Baserat på dina svar</p>
@@ -142,12 +142,13 @@ export default function RiskProfileClient() {
             {([1, 2, 3, 4, 5] as RiskLevel[]).map((lvl) => (
               <div key={lvl} className="flex-1 space-y-1">
                 <div className={`h-2 rounded-full ${lvl <= score ? "bg-blue-500" : "bg-slate-100"}`} />
-                <p className={`text-xs text-center ${lvl === score ? "text-blue-600 font-semibold" : "text-slate-400"}`}>
+                <p className={`hidden sm:block text-xs text-center ${lvl === score ? "text-blue-600 font-semibold" : "text-slate-400"}`}>
                   {RISK_LABELS[lvl]}
                 </p>
               </div>
             ))}
           </div>
+          <p className="text-xs text-blue-600 font-semibold sm:hidden">{RISK_LABELS[score]}</p>
         </section>
 
         <div className="flex gap-3">
@@ -171,7 +172,7 @@ export default function RiskProfileClient() {
   // Questionnaire
   const allAnswered = QUESTIONS.every((q) => answers[q.key]);
   return (
-    <div className="max-w-xl mx-auto px-6 py-10 space-y-8">
+    <div className="max-w-xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Ta fram din riskprofil</h1>
         <p className="text-sm text-slate-500 mt-1">Svara på 4 frågor — tar under en minut.</p>

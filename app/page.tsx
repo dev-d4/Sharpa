@@ -7,15 +7,15 @@ export default function LandingPage() {
 
 
       <Hero />
-      <div className="relative z-10 max-w-5xl mx-auto px-6 space-y-24 py-16">
+      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 space-y-14 sm:space-y-24 py-10 sm:py-16">
 
         {/* ── Features ── */}
         <section className="pb-4">
           <div className="text-center mb-10">
             <h2 className="text-2xl font-bold text-slate-900">Hur det fungerar</h2>
-            <p className="text-slate-500 mt-2">Tre steg för att förbättra din portfölj</p>
+            <p className="text-slate-500 mt-2">AI och data från Avanza &amp; Nordnet — gratis</p>
           </div>
-          <div className="grid sm:grid-cols-3 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <FeatureCard
               step={1}
               icon={
@@ -45,6 +45,16 @@ export default function LandingPage() {
               }
               title="Få personliga fondbytesförslag"
               description="Se exakt vilka fonder du bör byta och hur det påverkar avgift, avkastning och risk."
+            />
+            <FeatureCard
+              step={4}
+              icon={
+                <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.46 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3zM14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.46 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3z" />
+                </svg>
+              }
+              title="Hitta fonder med AI"
+              description="Svara på några frågor — AI:n matchar dig med rätt fonder baserat på marknad, risk och kostnad."
             />
           </div>
         </section>

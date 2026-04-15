@@ -2,15 +2,15 @@ import Link from "next/link";
 
 export default function Hero() {
   return (
-    <section className="relative w-full min-h-[90vh] flex flex-col items-center justify-center px-6 py-24">
+    <section className="relative w-full min-h-[70vh] sm:min-h-[90vh] flex flex-col items-center justify-center px-6 py-12 sm:py-24">
       <div className="relative z-10 text-center max-w-2xl space-y-6">
 
         <div className="animate-fade-in-down inline-flex items-center gap-2 bg-blue-50 border border-blue-100 text-blue-700 text-xs font-semibold px-4 py-1.5 rounded-full">
           <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-          Baserat på data från Avanza &amp; Nordnet
+          AI-driven fondanalys &amp; portföljoptimering
         </div>
 
-        <h1 className="animate-fade-in-up text-4xl md:text-6xl font-bold leading-tight tracking-tight text-slate-900 [animation-delay:100ms]">
+        <h1 className="animate-fade-in-up text-3xl sm:text-4xl md:text-6xl font-bold leading-tight tracking-tight text-slate-900 [animation-delay:100ms]">
           Optimera din{" "}
           <span className="bg-gradient-to-r from-blue-400 via-blue-300 to-indigo-400 bg-clip-text text-transparent">
             fondportfölj

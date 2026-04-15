@@ -79,7 +79,7 @@ const [riskProfile, setRiskProfile] = useState<{ score: RiskLevel; label: string
   );
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-10"><div className="max-w-lg space-y-6">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10"><div className="max-w-lg space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Mitt konto</h1>
         <p className="text-sm text-slate-500 mt-1">Hantera dina inställningar</p>
@@ -90,9 +90,9 @@ const [riskProfile, setRiskProfile] = useState<{ score: RiskLevel; label: string
         <div className="px-6 py-4">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Kontoinformation</p>
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-500">E-post</span>
-              <span className="text-sm font-medium text-slate-900">{user.email}</span>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm text-slate-500 shrink-0">E-post</span>
+              <span className="text-sm font-medium text-slate-900 truncate text-right">{user.email}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-slate-500">Inloggningsmetod</span>
@@ -109,7 +109,7 @@ const [riskProfile, setRiskProfile] = useState<{ score: RiskLevel; label: string
       <section className="bg-white rounded-2xl border border-slate-200 shadow-sm">
         <div className="px-6 py-4">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Inställningar</p>
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <p className="text-sm font-medium text-slate-900">Föredraget depåinstitut</p>
               <p className="text-xs text-slate-400 mt-0.5">Förvalts automatiskt vid analys</p>
@@ -117,7 +117,7 @@ const [riskProfile, setRiskProfile] = useState<{ score: RiskLevel; label: string
             <select
               value={preferredCustodian}
               onChange={(e) => handleCustodianChange(e.target.value)}
-              className="border border-slate-200 rounded-xl px-3 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-full sm:w-auto border border-slate-200 rounded-xl px-3 py-3 text-base sm:text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             >
               <option value="">Inget valt</option>
               {CUSTODIANS.map((c) => (
@@ -132,7 +132,7 @@ const [riskProfile, setRiskProfile] = useState<{ score: RiskLevel; label: string
       <section className="space-y-3">
         <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Din riskprofil</p>
         {riskProfile === undefined ? null : riskProfile === null ? (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-6 py-6 flex items-center justify-between gap-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-4 sm:px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <p className="font-semibold text-slate-900 text-sm">Du har ingen riskprofil ännu</p>
               <p className="text-xs text-slate-400 mt-0.5">Svara på 4 frågor för att se om dina portföljer matchar din risknivå.</p>
@@ -162,12 +162,13 @@ const [riskProfile, setRiskProfile] = useState<{ score: RiskLevel; label: string
               {([1, 2, 3, 4, 5] as RiskLevel[]).map((lvl) => (
                 <div key={lvl} className="flex-1 space-y-1">
                   <div className={`h-2 rounded-full ${lvl <= riskProfile.score ? "bg-blue-500" : "bg-slate-100"}`} />
-                  <p className={`text-xs text-center truncate ${lvl === riskProfile.score ? "text-blue-600 font-semibold" : "text-slate-400"}`}>
+                  <p className={`hidden sm:block text-xs text-center truncate ${lvl === riskProfile.score ? "text-blue-600 font-semibold" : "text-slate-400"}`}>
                     {RISK_LABELS[lvl]}
                   </p>
                 </div>
               ))}
             </div>
+            <p className="text-xs text-blue-600 font-semibold sm:hidden">{RISK_LABELS[riskProfile.score]}</p>
           </div>
         )}
       </section>
