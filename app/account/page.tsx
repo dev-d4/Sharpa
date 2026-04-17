@@ -19,7 +19,9 @@ export default function AccountPage() {
   const [loading, setLoading] = useState(true);
   const [preferredCustodian, setPreferredCustodian] = useState<string>("");
   const [portfolios, setPortfolios] = useState<SavedPortfolio[]>([]);
-const [riskProfile, setRiskProfile] = useState<{ score: RiskLevel; label: string } | null | undefined>(undefined);
+  const [riskProfile, setRiskProfile] = useState<{ score: RiskLevel; label: string } | null | undefined>(undefined);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -51,6 +53,20 @@ const [riskProfile, setRiskProfile] = useState<{ score: RiskLevel; label: string
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/");
+  }
+
+  async function handleDeleteAccount() {
+    setDeleting(true);
+    const res = await fetch("/api/account", { method: "DELETE" });
+    if (res.ok) {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      router.push("/");
+    } else {
+      setDeleting(false);
+      setDeleteConfirm(false);
+      alert("Något gick fel. Försök igen.");
+    }
   }
 
   if (loading) {
@@ -205,6 +221,47 @@ const [riskProfile, setRiskProfile] = useState<{ score: RiskLevel; label: string
             Logga ut
           </button>
         </div>
+      </section>
+
+      {/* Delete account */}
+      <section className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+        {!deleteConfirm ? (
+          <div className="px-6 py-4 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-900">Radera konto</p>
+              <p className="text-xs text-slate-400 mt-0.5">Raderar all din data permanent (GDPR)</p>
+            </div>
+            <button
+              onClick={() => setDeleteConfirm(true)}
+              className="text-sm font-medium text-red-600 hover:text-red-700 border border-red-200 hover:border-red-300 rounded-xl px-4 py-2 transition-colors"
+            >
+              Radera
+            </button>
+          </div>
+        ) : (
+          <div className="px-6 py-4 space-y-3">
+            <p className="text-sm font-semibold text-slate-900">Är du säker?</p>
+            <p className="text-xs text-slate-500">
+              Ditt konto, alla portföljer och din riskprofil raderas permanent. Det går inte att ångra.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleting}
+                className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
+              >
+                {deleting ? "Raderar…" : "Ja, radera mitt konto"}
+              </button>
+              <button
+                onClick={() => setDeleteConfirm(false)}
+                disabled={deleting}
+                className="flex-1 border border-slate-200 text-slate-600 text-sm font-medium px-4 py-2 rounded-xl hover:bg-slate-50 transition-colors"
+              >
+                Avbryt
+              </button>
+            </div>
+          </div>
+        )}
       </section>
     </div></div>
   );

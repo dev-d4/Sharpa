@@ -10,9 +10,38 @@ Lägre siffra = högre prioritet. När du ber Claude läsa igenom denna fil komm
 
 ---
 
+## Produktfärdighet (från session 2025-04)
+
+[1] Rate limiting på API-routes
+    Skydda /api/analyze och /api/fund-quiz mot missbruk och AI-kostnadsbomber.
+    Enkel in-memory lösning räcker för start.
+
+[1] SEO-metadata per sida
+    Varje route behöver egen title, description och OG-taggar.
+    /analyze, /risk-profile, /portfolios, /account etc.
+
+[2] PDF-export av analysresultat
+    Största enskilda värdeökning för användare. Exportera portföljsammanfattning +
+    bytesförslag som PDF. Bibliotek: @react-pdf/renderer eller puppeteer via API-route.
+
+[2] Delbar analyslänk
+    Generera en kort URL efter analys som användaren kan dela med partner eller rådgivare.
+    Resultat lagras kortvarigt (eller enkodas i URL).
+
+[3] Stripe + freemium-gates
+    Betalmodell: gratis = 1 portfölj + grundanalys, premium = obegränsat + PDF + notiser.
+    Stripe Checkout + webhook som sätter is_premium-flagga i Supabase.
+
+[3] Portföljnotiser via e-post
+    Veckovis sammanfattning: avkastning, om bytesförslag fortfarande gäller.
+    Kräver cron-jobb + e-postleverantör (Resend eller Postmark).
+
+[4] Fondsidor (/fonder/[isin])
+    Klickbar fond → dedikerad sida med nyckeltal, kategori, historisk avkastning.
+    Bra för SEO — genererar hundratals indexerbara sidor.
+
 ## Funktioner
 
-[1] När man lägger till två av samma fonder i portföljen så blir det error. hur kan man förbättra detta på bästa sett? jag föreslår att den tas bort från utbudet för närvarande om man lagt till en fond.
 
 [3] Samlad riskmatchning för alla portföljer
     Visa hur alla portföljer tillsammans matchar mot riskprofilen. Kräver att man lagrar

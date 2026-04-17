@@ -25,3 +25,65 @@ body {
 .animate-fade-in-down {
   animation: fade-in-down 0.5s ease both;
 }
+
+@keyframes ai-shimmer {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+
+.ai-shimmer-text {
+  background: linear-gradient(
+    90deg,
+    #6366f1 0%,
+    #818cf8 20%,
+    #c4b5fd 40%,
+    #a5b4fc 50%,
+    #c4b5fd 60%,
+    #818cf8 80%,
+    #6366f1 100%
+  );
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: ai-shimmer 3s linear infinite;
+  text-decoration: none;
+}
+
+
+.ai-shimmer-btn {
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.ai-shimmer-btn:hover {
+  transform: scale(1.03);
+  opacity: 0.9;
+}
+
+/* ── Print / PDF export ──────────────────────────────────────────────────── */
+
+@media print {
+  header, footer, .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    background-image: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  /* Remove shadows and borders that don't render well */
+  section {
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+
+  /* Make sure links aren't underlined in print */
+  a {
+    text-decoration: none !important;
+  }
+}

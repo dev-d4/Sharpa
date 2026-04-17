@@ -284,10 +284,10 @@ function FundQuiz({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
+        className="ai-shimmer-btn flex items-center gap-2 text-sm font-medium"
       >
-        <Sparkles className="w-4 h-4" />
-        Hitta fonder med AI
+        <Sparkles className="w-4 h-4 text-indigo-400" />
+        <span className="ai-shimmer-text">Hitta fonder med AI</span>
       </button>
     );
   }
@@ -611,7 +611,7 @@ function FundSearchInput({
         className="w-full border border-slate-300 rounded-lg px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       {open && suggestions.length > 0 && (
-        <ul className="absolute z-10 top-full left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-lg mt-1 max-h-56 overflow-y-auto">
+        <ul className="absolute z-10 top-full left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-lg mt-1 max-h-72 overflow-y-auto">
           {suggestions.map((s, i) => (
             <li
               key={`${s.isin}-${i}`}
@@ -710,7 +710,7 @@ export default function AnalyzeClient() {
   const router = useRouter();
   const resultsRef = useRef<HTMLDivElement>(null);
 
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null | undefined>(undefined);
   const [custodian, setCustodian] = useState<string | null>(null);
   const [entries, setEntries] = useState<Entry[]>([{ isin: "", name: "", weight: "" }]);
   const [loading, setLoading] = useState(false);
@@ -808,16 +808,51 @@ export default function AnalyzeClient() {
     setInputMode(p.holdings.some((h) => h.amount) ? "amount" : "weight");
   }
 
-  // Distributes the difference between 100 and the current total evenly across funds.
+  // Distributes weights across funds. If no weights are entered, splits 100% evenly.
+  // If some weights exist, distributes the remaining % evenly across the rest.
   // Returns the new entries array (synchronously) so analyze() can use them immediately.
   function distributeWeights(src: Entry[] = entries): Entry[] {
-    const withWeights = src.filter((e) => e.isin.trim() && e.weight.trim());
-    if (withWeights.length === 0) return src;
+    const withIsins = src.filter((e) => e.isin.trim());
+    if (withIsins.length === 0) return src;
+
+    const currentTotal = withIsins.reduce((s, e) => s + (parseFloat(e.weight) || 0), 0);
+
+    // No weights at all — split 100% evenly across all funds with an ISIN
+    if (currentTotal === 0) {
+      const n = withIsins.length;
+      const baseTenths = Math.trunc(1000 / n); // work in 0.1% units
+      const remainderTenths = 1000 - baseTenths * n;
+      let idx = 0;
+      const newEntries = src.map((e) => {
+        if (!e.isin.trim()) return e;
+        const w = idx === 0 ? baseTenths + remainderTenths : baseTenths;
+        idx++;
+        return { ...e, weight: (w / 10).toFixed(1) };
+      });
+      setEntries(newEntries);
+      return newEntries;
+    }
+
+    // Some weights exist — distribute the remaining % evenly across unweighted funds,
+    // or adjust all weighted funds proportionally to reach 100%.
+    const unweighted = withIsins.filter((e) => !e.weight.trim());
+    if (unweighted.length > 0) {
+      // Give each unweighted fund an equal share of whatever remains
+      const remaining = 100 - currentTotal;
+      const sharePerFund = remaining / unweighted.length;
+      const newEntries = src.map((e) => {
+        if (!e.isin.trim() || e.weight.trim()) return e;
+        return { ...e, weight: Math.max(0, sharePerFund).toFixed(1) };
+      });
+      setEntries(newEntries);
+      return newEntries;
+    }
+
+    // All funds have weights — adjust them proportionally to sum to 100
+    const withWeights = withIsins.filter((e) => e.weight.trim());
     const n = withWeights.length;
-    const currentTotal = withWeights.reduce((s, e) => s + (parseFloat(e.weight) || 0), 0);
-    const diffTenths = Math.round((100 - currentTotal) * 10); // work in 0.1% units
+    const diffTenths = Math.round((100 - currentTotal) * 10);
     if (diffTenths === 0) return src;
-    // Distribute: base adjustment + remainder to first fund
     const baseTenths = Math.trunc(diffTenths / n);
     const remainderTenths = diffTenths - baseTenths * n;
     let idx = 0;
@@ -971,33 +1006,11 @@ export default function AnalyzeClient() {
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
               Analysera din portfölj
             </h1>
-            <p className="text-slate-600 text-base max-w-md mx-auto leading-relaxed">
+            <p className="text-slate-600 text-base leading-relaxed">
               Lägg in dina fonder och se om du betalar för mycket i avgifter, hur risken ser ut — och få förslag på bättre alternativ.
             </p>
             <p className="text-slate-400 text-sm">Välj var du förvaltar dina fonder så hämtar vi rätt fondutbud.</p>
           </div>
-
-          {/* Saved portfolios */}
-          {savedPortfolios.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide text-center">Mina portföljer</p>
-              <div className="flex items-center gap-2 flex-wrap justify-center">
-                {savedPortfolios.map((p) => {
-                  const custodianLabel = p.custodian === "nordnet" ? "Nordnet" : p.custodian === "övrigt" ? "Övrigt" : "Avanza";
-                  return (
-                    <button
-                      key={p.id}
-                      onClick={() => loadPortfolio(p)}
-                      className="text-sm px-3 py-1.5 rounded-lg border bg-white border-slate-200 text-slate-600 hover:border-blue-200 hover:text-blue-600 transition-all flex items-baseline gap-1.5"
-                    >
-                      {p.name}
-                      <span className="text-xs opacity-70">{custodianLabel}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
 
           {/* Cards */}
           <div className="grid sm:grid-cols-3 gap-5 w-full">
@@ -1039,29 +1052,46 @@ export default function AnalyzeClient() {
                     <c.icon className="w-5 h-5 text-blue-500" />
                     <p className="font-bold text-slate-900">{c.label}</p>
                   </div>
-
                   {"funds" in c && (
                     <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">
                       {c.funds} fonder
                     </span>
                   )}
                 </div>
-
                 {/* Description */}
                 <p className="text-sm text-slate-600 leading-relaxed">
                   {c.description}
                 </p>
-
                 {/* CTA */}
                 <div className="text-sm font-medium text-blue-600 flex items-center gap-1">
                   Välj {c.label}
-                  <span className="transition-transform group-hover:translate-x-1">
-                    →
-                  </span>
+                  <span className="transition-transform group-hover:translate-x-1">→</span>
                 </div>
               </button>
             ))}
           </div>
+
+          {/* Saved portfolios */}
+          {savedPortfolios.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide text-center">Mina portföljer</p>
+              <div className="flex items-center gap-2 flex-wrap justify-center">
+                {savedPortfolios.map((p) => {
+                  const custodianLabel = p.custodian === "nordnet" ? "Nordnet" : p.custodian === "övrigt" ? "Övrigt" : "Avanza";
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => loadPortfolio(p)}
+                      className="text-sm px-3 py-1.5 rounded-lg border bg-white border-slate-200 text-slate-600 hover:border-blue-200 hover:text-blue-600 transition-all flex items-baseline gap-1.5"
+                    >
+                      {p.name}
+                      <span className="text-xs opacity-70">{custodianLabel}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -1086,10 +1116,10 @@ export default function AnalyzeClient() {
 
   return (
     <div className="min-h-screen">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8">
       {/* Risk profile nudge — shown when logged in with no risk profile */}
       {user && riskProfile === null && !nudgeDismissed && (
-        <div className="flex items-start gap-3 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+        <div className="no-print flex items-start gap-3 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
           <span className="text-amber-500 shrink-0 mt-0.5">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z" />
@@ -1109,7 +1139,7 @@ export default function AnalyzeClient() {
 
       {/* Saved portfolios switcher — only shown when logged in with saved portfolios */}
       {savedPortfolios.length > 0 && (
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+        <div className="no-print flex items-center gap-2 sm:gap-3 flex-wrap">
           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide w-full sm:w-auto">Mina portföljer</span>
           <div className="flex items-center gap-2 flex-wrap">
             {savedPortfolios.map((p) => {
@@ -1155,7 +1185,7 @@ export default function AnalyzeClient() {
         </div>
       )}
 
-      <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 space-y-4">
+      <section className="no-print bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 space-y-4">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-lg font-bold text-slate-900 shrink-0">Din portfölj</h2>
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
@@ -1174,7 +1204,7 @@ export default function AnalyzeClient() {
             </button>
           </div>
         </div>
-        {user ? (
+        {user === undefined ? null : user ? (
           <FundQuiz
             custodian={custodian}
             existingIsins={entries.map((e) => e.isin).filter(Boolean)}
@@ -1192,10 +1222,10 @@ export default function AnalyzeClient() {
           <button
             type="button"
             onClick={() => router.push("/login")}
-            className="flex items-center gap-2 text-sm text-slate-400 hover:text-blue-600 transition-colors group"
+            className="ai-shimmer-btn flex items-center gap-2 text-sm"
           >
-            <Sparkles className="w-4 h-4 group-hover:text-blue-500" />
-            <span>Logga in för att hitta fonder med AI</span>
+            <Sparkles className="w-4 h-4 text-indigo-400" />
+            <span className="ai-shimmer-text">Logga in för att hitta fonder med AI</span>
           </button>
         )}
 
@@ -1267,10 +1297,10 @@ export default function AnalyzeClient() {
       </section>
 
       <div ref={resultsRef} />
-      {analysis && <AnalysisResult analysis={analysis} user={user} portfolioValue={portfolioValue} onLoginClick={() => { saveSession(custodian, entries, analysis); router.push("/login"); }} />}
+      {analysis && <AnalysisResult analysis={analysis} user={user ?? null} portfolioValue={portfolioValue} onLoginClick={() => { saveSession(custodian, entries, analysis); router.push("/login"); }} />}
 
       {analysis && user && !portfolioId && (
-        <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
+        <section className="no-print bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
           {!showSaveForm ? (
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -1333,6 +1363,29 @@ function AnalysisResult({ analysis, user, portfolioValue, onLoginClick }: { anal
 
   return (
     <div className="space-y-6">
+
+      {/* Print-only header */}
+      <div className="print-only hidden border-b border-slate-200 pb-4 mb-2">
+        <div className="flex items-center justify-between">
+          <p className="text-lg font-bold text-slate-900">Fondanalys</p>
+          <p className="text-sm text-slate-400">{new Date().toLocaleDateString("sv-SE")}</p>
+        </div>
+        <p className="text-sm text-slate-500 mt-1">Portföljanalys — fondanalys.se</p>
+      </div>
+
+      {/* Download button */}
+      <div className="no-print flex justify-end">
+        <button
+          onClick={() => window.print()}
+          className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-800 border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-2 transition-colors bg-white"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          Ladda ner som PDF
+        </button>
+      </div>
+
       {/* Summary */}
       <section className="bg-blue-50 border border-blue-100 rounded-2xl p-4 sm:p-6">
         <h2 className="text-lg font-bold text-blue-900 mb-2">Sammanfattning</h2>

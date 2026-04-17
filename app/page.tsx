@@ -1,4 +1,3 @@
-import Link from "next/link";
 import Hero from "@/components/ui/hero";
 
 export default function LandingPage() {
@@ -7,7 +6,7 @@ export default function LandingPage() {
 
 
       <Hero />
-      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 space-y-14 sm:space-y-24 py-10 sm:py-16">
+      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 space-y-14 sm:space-y-24 py-10 sm:py-16">
 
         {/* ── Features ── */}
         <section className="pb-4">

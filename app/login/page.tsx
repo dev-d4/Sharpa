@@ -103,7 +103,10 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-xs text-slate-400 mt-6">
-          Genom att logga in godkänner du våra villkor.
+          Genom att logga in godkänner du våra{" "}
+          <Link href="/villkor" className="underline hover:text-slate-600 transition-colors">användarvillkor</Link>
+          {" "}och{" "}
+          <Link href="/integritetspolicy" className="underline hover:text-slate-600 transition-colors">integritetspolicy</Link>.
         </p>
       </div>
     </div>

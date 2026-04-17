@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "./Header";
 import Footer from "./Footer";
 import { Prefetch } from "@/components/ui/prefetch";
+import CookieBanner from "@/components/ui/CookieBanner";
 
 const geist = Geist({ subsets: ["latin"] });
 
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="sv">
-      <body className={`${geist.className} min-h-screen text-slate-900`}>
+      <body className={`${geist.className} min-h-screen text-slate-900 leading-relaxed`}>
         <Header />
 
         {/* Blue glow top-left — fixed, behind all content */}
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main>{children}</main>
 
         <Footer />
+        <CookieBanner />
       </body>
     </html>
   );

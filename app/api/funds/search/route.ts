@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
 
   const results = funds
     .filter((f) => f.name.toLowerCase().includes(q) || f.isin.toLowerCase().startsWith(q))
-    .slice(0, 10);
+    .slice(0, 100);
 
   return NextResponse.json(results);
 }

@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
 
 export default function Header() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null | undefined>(undefined);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
 
@@ -38,7 +38,7 @@ export default function Header() {
 
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-1.5" onClick={() => setMobileOpen(false)}>
           <Image src="/logo.svg" alt="Fondanalys" width={40} height={40} className="sm:w-12 sm:h-12" />
@@ -48,21 +48,25 @@ export default function Header() {
         {/* Desktop nav */}
         <nav className="hidden sm:flex items-center gap-4 sm:gap-6">
           <Link href="/analyze" className={navClass("/analyze")}>Analysera</Link>
-          {user && <Link href="/portfolios" className={navClass("/portfolios")}>Portföljer</Link>}
-          {user ? (
+          {user !== undefined && (
             <>
-              <Link href="/risk-profile" className={navClass("/risk-profile")}>Riskprofil</Link>
-              <Link href="/account" className={navClass("/account")}>Mitt konto</Link>
-            </>
-          ) : (
-            <>
-              <Link href="/risk-profile" className={navClass("/risk-profile")}>Riskprofil</Link>
-              <Link
-                href="/login"
-                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-all shadow-sm shadow-blue-200"
-              >
-                Logga in
-              </Link>
+              {user && <Link href="/portfolios" className={navClass("/portfolios")}>Portföljer</Link>}
+              {user ? (
+                <>
+                  <Link href="/risk-profile" className={navClass("/risk-profile")}>Riskprofil</Link>
+                  <Link href="/account" className={navClass("/account")}>Mitt konto</Link>
+                </>
+              ) : (
+                <>
+                  <Link href="/risk-profile" className={navClass("/risk-profile")}>Riskprofil</Link>
+                  <Link
+                    href="/login"
+                    className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-all shadow-sm shadow-blue-200"
+                  >
+                    Logga in
+                  </Link>
+                </>
+              )}
             </>
           )}
         </nav>
@@ -91,26 +95,30 @@ export default function Header() {
           <Link href="/analyze" className={mobileNavClass("/analyze")} onClick={() => setMobileOpen(false)}>
             Analysera
           </Link>
-          {user && (
-            <Link href="/portfolios" className={mobileNavClass("/portfolios")} onClick={() => setMobileOpen(false)}>
-              Portföljer
-            </Link>
-          )}
-          <Link href="/risk-profile" className={mobileNavClass("/risk-profile")} onClick={() => setMobileOpen(false)}>
-            Riskprofil
-          </Link>
-          {user ? (
-            <Link href="/account" className={mobileNavClass("/account")} onClick={() => setMobileOpen(false)}>
-              Mitt konto
-            </Link>
-          ) : (
-            <Link
-              href="/login"
-              className="flex items-center px-4 py-3 rounded-xl text-sm font-semibold bg-blue-600 text-white mt-2 justify-center transition-colors hover:bg-blue-700"
-              onClick={() => setMobileOpen(false)}
-            >
-              Logga in
-            </Link>
+          {user !== undefined && (
+            <>
+              {user && (
+                <Link href="/portfolios" className={mobileNavClass("/portfolios")} onClick={() => setMobileOpen(false)}>
+                  Portföljer
+                </Link>
+              )}
+              <Link href="/risk-profile" className={mobileNavClass("/risk-profile")} onClick={() => setMobileOpen(false)}>
+                Riskprofil
+              </Link>
+              {user ? (
+                <Link href="/account" className={mobileNavClass("/account")} onClick={() => setMobileOpen(false)}>
+                  Mitt konto
+                </Link>
+              ) : (
+                <Link
+                  href="/login"
+                  className="flex items-center px-4 py-3 rounded-xl text-sm font-semibold bg-blue-600 text-white mt-2 justify-center transition-colors hover:bg-blue-700"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Logga in
+                </Link>
+              )}
+            </>
           )}
         </div>
       )}
