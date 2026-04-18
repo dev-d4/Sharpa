@@ -12,6 +12,14 @@ Lägre siffra = högre prioritet. När du ber Claude läsa igenom denna fil komm
 
 ## Produktfärdighet (från session 2025-04)
 
+[1] Scroll-driven "Hur det fungerar" — premium scrub-upplevelse
+    Nuvarande implementation använder wheel-event-interception (steg-för-steg).
+    Målet är en kontinuerlig scrub-animation driven av scroll-position (useScroll + useTransform):
+    varje px scroll = en liten animation-förändring. Känslan som eftersträvas: premium, flytande,
+    som att "kontrollera en timeline". Se designbeskrivning i konversation 2026-04-18.
+    Teknisk notering: Framer Motion v12 WAAPI kraschar på color-MotionValues — håll dig till
+    opacity, y, scale i style-props. Testa noga i Safari.
+
 [1] Rate limiting på API-routes
     Skydda /api/analyze och /api/fund-quiz mot missbruk och AI-kostnadsbomber.
     Enkel in-memory lösning räcker för start.

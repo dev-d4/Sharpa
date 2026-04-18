@@ -40,9 +40,11 @@ export default function Header() {
     <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-1.5" onClick={() => setMobileOpen(false)}>
-          <Image src="/logo.svg" alt="Fondanalys" width={40} height={40} className="sm:w-12 sm:h-12" />
-          <span className="font-bold text-slate-900">Fondanalys</span>
+        <Link href="/" className="flex items-center gap-2.5" onClick={() => setMobileOpen(false)}>
+          <Image src="/logo.svg" alt="Fondanalys" width={32} height={32} className="sm:w-9 sm:h-9" />
+          <span className="text-[15px] font-semibold tracking-tight text-slate-900">
+            Fond<span className="text-blue-500">analys</span>
+          </span>
         </Link>
 
         {/* Desktop nav */}

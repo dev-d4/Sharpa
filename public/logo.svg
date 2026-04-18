@@ -1,16 +1,25 @@
-<svg width="260" height="260" viewBox="0 0 260 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="lineGrad" x1="50" y1="170" x2="210" y2="70" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#93C5FD"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4F46E5"/>
       <stop offset="100%" stop-color="#3B82F6"/>
     </linearGradient>
   </defs>
-
-  <!-- Line -->
-  <path d="M 50 170 L 95 125 L 140 135 L 210 70"
-        stroke="url(#lineGrad)"
-        stroke-width="36"
+  <rect width="36" height="36" rx="10" fill="url(#bg)"/>
+  <path d="M 8 25 L 14 18 L 19 21 L 28 11"
+        stroke="white"
+        stroke-width="2.2"
         stroke-linecap="round"
         stroke-linejoin="round"
-        fill="none"/>
+        fill="none"
+        opacity="0.5"/>
+  <path d="M 8 25 L 14 18 L 19 21 L 28 11"
+        stroke="white"
+        stroke-width="2.2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        fill="none"
+        stroke-dasharray="4 0"
+        opacity="1"/>
+  <circle cx="28" cy="11" r="2.5" fill="white"/>
 </svg>
