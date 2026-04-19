@@ -41,7 +41,7 @@ export default function Header() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5" onClick={() => setMobileOpen(false)}>
-          <Image src="/logo.svg" alt="Fondanalys" width={32} height={32} className="sm:w-9 sm:h-9" />
+          <Image src="/logo.svg" alt="Fondanalys" width={28} height={28} className="sm:w-8 sm:h-8" />
           <span className="text-[15px] font-semibold tracking-tight text-slate-900">
             Fond<span className="text-blue-500">analys</span>
           </span>

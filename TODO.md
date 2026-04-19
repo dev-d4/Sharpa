@@ -11,3 +11,4 @@
 - [ ] Uppdatera informationstexten
 - [ ] Användaren ska kunna skriva in vad den vill investera i. Då ska man ta fram en färdig portfölj eller fonder.
 - [ ] Alfred Berg får kategori Norge
+- [ ] Gör om AI söken. Man vill inte bara kunna söka på "global" eller "tillväxtmarknader" osv. man vill kunna söka på fler.

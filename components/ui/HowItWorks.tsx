@@ -10,27 +10,22 @@ function PortfolioCard() {
     <div className="w-72 bg-white rounded-2xl border border-slate-200 shadow-md p-5 space-y-3">
       <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Din portfölj</p>
       {[
-        { name: "Avanza Global", weight: 50, color: "bg-blue-500" },
-        { name: "Länsf. Sverige", weight: 30, color: "bg-indigo-400" },
-        { name: "SPP Tillväxtmarknad", weight: 20, color: "bg-violet-400" },
+        { name: "Avanza Global", weight: "50%" },
+        { name: "Länsf. Sverige", weight: "30%" },
+        { name: "SPP Tillväxtmarknad", weight: "20%" },
       ].map((f) => (
-        <div key={f.name} className="space-y-1.5">
-          <div className="flex justify-between text-xs text-slate-600">
-            <span className="font-medium">{f.name}</span>
-            <span className="text-slate-400">{f.weight}%</span>
-          </div>
-          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-            <div className={`h-full ${f.color} rounded-full`} style={{ width: `${f.weight}%` }} />
-          </div>
+        <div key={f.name} className="flex justify-between items-center py-1.5 border-b border-slate-50 last:border-0">
+          <span className="text-sm font-medium text-slate-700">{f.name}</span>
+          <span className="text-sm text-slate-400 font-medium">{f.weight}</span>
         </div>
       ))}
-      <div className="pt-3 border-t border-slate-100 grid grid-cols-3 gap-2">
+      <div className="pt-2 grid grid-cols-3 gap-2">
         {[
           { label: "Avgift/år", value: "0.08%", color: "text-green-600" },
           { label: "Avk. 3 år", value: "+41%", color: "text-blue-600" },
           { label: "Sharpe", value: "1.32", color: "text-slate-700" },
         ].map((m) => (
-          <div key={m.label} className="text-center">
+          <div key={m.label} className="text-center bg-slate-50 rounded-xl py-2">
             <p className="text-[10px] text-slate-400">{m.label}</p>
             <p className={`text-sm font-bold ${m.color}`}>{m.value}</p>
           </div>
@@ -115,9 +110,9 @@ function AiCard() {
       </div>
       <div className="space-y-2 pt-1">
         {[
-          { name: "Avanza Global", fee: "0.05%", match: "98%" },
-          { name: "SPP Aktiefond Global", fee: "0.00%", match: "95%" },
-          { name: "Länsf. Global Indexnära", fee: "0.22%", match: "91%" },
+          { name: "Avanza Global", fee: "0.05%" },
+          { name: "SPP Aktiefond Global", fee: "0.00%" },
+          { name: "Länsf. Global Indexnära", fee: "0.22%" },
         ].map((f, i) => (
           <div key={i} className="flex items-center gap-3 p-2.5 bg-slate-50 rounded-xl">
             <div className="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
@@ -127,7 +122,6 @@ function AiCard() {
               <p className="text-xs font-semibold text-slate-800 truncate">{f.name}</p>
               <p className="text-[10px] text-slate-400">{f.fee}/år</p>
             </div>
-            <span className="text-[10px] font-bold text-green-600">{f.match}</span>
           </div>
         ))}
       </div>
@@ -147,17 +141,17 @@ const steps = [
   },
   {
     step: "02",
-    title: "Ta fram din riskprofil",
-    description:
-      "Svara på några frågor och se om din portfölj faktiskt matchar din risknivå.",
-    visual: <RiskCard />,
-  },
-  {
-    step: "03",
     title: "Få personliga fondbytesförslag",
     description:
       "Få konkreta förslag på vilka fonder du kan byta ut — och se vad det innebär för din portfölj.",
     visual: <SwapCard />,
+  },
+  {
+    step: "03",
+    title: "Ta fram din riskprofil",
+    description:
+      "Svara på några frågor och se om din portfölj faktiskt matchar din risknivå.",
+    visual: <RiskCard />,
   },
   {
     step: "04",
@@ -229,12 +223,12 @@ export default function HowItWorks() {
         viewport={{ once: true }}
         transition={{ duration: 0.5 }}
       >
-        <p className="text-xs font-bold text-blue-500 uppercase tracking-widest mb-2">
-          Hur det fungerar
-        </p>
-        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">
-          Från portfölj till bättre beslut
+        <h2 className="text-2xl sm:text-4xl font-bold text-slate-900 leading-tight">
+          Steg för steg
         </h2>
+        <p className="text-slate-400 mt-3 text-sm sm:text-base">
+          Smarta fondval börjar här
+        </p>
       </motion.div>
 
       {/* Desktop: full-height scroll-reveal steps */}
