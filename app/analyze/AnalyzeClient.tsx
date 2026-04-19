@@ -189,13 +189,15 @@ function FundQuiz({
   custodian,
   onAdd,
   existingIsins,
+  autoOpen = false,
 }: {
   custodian: string;
   onAdd: (isin: string, name: string) => void;
   existingIsins: string[];
+  autoOpen?: boolean;
 }) {
   const PAGE = 8;
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(autoOpen);
   const [screen, setScreen] = useState<QuizScreen>("asset");
   const [answers, setAnswers] = useState<QuizAnswers>({
     assetClass: null, market: null, sector: null, management: null, maxCost: null, sortBy: null,
@@ -721,6 +723,14 @@ export default function AnalyzeClient() {
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
   const [inputMode, setInputMode] = useState<"weight" | "amount">("weight");
 
+  // Input method: how the user wants to populate their portfolio
+  const [inputMethod, setInputMethod] = useState<"ai" | "manual" | null>(null);
+
+  // CSV import state
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ matched: number; unmatched: number } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Portfolio saving state
   const [portfolioId, setPortfolioId] = useState<string | null>(null);
   const [showSaveForm, setShowSaveForm] = useState(false);
@@ -751,6 +761,7 @@ export default function AnalyzeClient() {
             setEntries(p.holdings);
             setAnalysis(p.analysis);
             setPortfolioId(p.id);
+            setInputMethod("manual");
             sessionStorage.removeItem(SESSION_KEY);
           }
           router.replace("/analyze");
@@ -763,11 +774,10 @@ export default function AnalyzeClient() {
     const saved = loadSession();
     if (saved) {
       if (saved.custodian) setCustodian(saved.custodian);
-      if (saved.entries?.length) setEntries(saved.entries);
+      if (saved.entries?.length) { setEntries(saved.entries); setInputMethod("manual"); }
       if (saved.analysis) setAnalysis(saved.analysis);
-      sessionStorage.removeItem(SESSION_KEY); // one-time use — clear after restoring
+      sessionStorage.removeItem(SESSION_KEY);
     } else {
-      // Fall back to preferred custodian from account settings
       const preferred = localStorage.getItem("fondanalys_preferred_custodian");
       if (preferred) setCustodian(preferred);
     }
@@ -804,6 +814,7 @@ export default function AnalyzeClient() {
     setEntries(p.holdings);
     setAnalysis(p.analysis);
     setPortfolioId(p.id);
+    setInputMethod("manual");
     setError(null);
     setInputMode(p.holdings.some((h) => h.amount) ? "amount" : "weight");
   }
@@ -865,6 +876,86 @@ export default function AnalyzeClient() {
     });
     setEntries(newEntries);
     return newEntries;
+  }
+
+  // ── CSV import ────────────────────────────────────────────────────────────
+
+  async function handleFileImport(file: File) {
+    setImporting(true);
+    setImportResult(null);
+    try {
+      // Smart encoding detection: check BOM bytes
+      const buffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      let text: string;
+      if (bytes[0] === 0xFF && bytes[1] === 0xFE) {
+        text = new TextDecoder("utf-16le").decode(buffer);
+      } else if (bytes[0] === 0xFE && bytes[1] === 0xFF) {
+        text = new TextDecoder("utf-16be").decode(buffer);
+      } else {
+        text = new TextDecoder("utf-8").decode(buffer);
+      }
+      // Strip BOM character if present
+      text = text.replace(/^\uFEFF/, "");
+
+      // Detect separator (tab = Nordnet, semicolon = Avanza)
+      const firstLine = text.split(/\r?\n/)[0] ?? "";
+      const sep = firstLine.includes("\t") ? "\t" : ";";
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      if (lines.length < 2) { setImporting(false); return; }
+
+      const header = lines[0].split(sep).map(h => h.trim().toLowerCase().replace(/['"]/g, ""));
+      const nameIdx = header.findIndex(h => h === "namn" || h === "name");
+      // "Värde SEK" for Nordnet; "värde (sek)" or "andel (%)" for Avanza
+      const valueIdx = header.findIndex(h =>
+        (h.includes("värde") && h.includes("sek") && !h.includes("inköp") && !h.includes("belån")) ||
+        h === "andel (%)" || h === "andel"
+      );
+      if (nameIdx === -1 || valueIdx === -1) { setImporting(false); return; }
+
+      const rows = lines.slice(1).flatMap(line => {
+        const cells = line.split(sep).map(c => c.trim().replace(/^"|"$/g, ""));
+        const name = cells[nameIdx] ?? "";
+        const raw = (cells[valueIdx] ?? "").replace(/\s/g, "").replace(",", ".");
+        const value = parseFloat(raw.replace(/[^0-9.]/g, ""));
+        return name && value > 0 ? [{ name, value }] : [];
+      });
+      if (rows.length === 0) { setImporting(false); return; }
+
+      const total = rows.reduce((s, r) => s + r.value, 0);
+      // Round weights to 1 decimal, fix rounding error on first row
+      const weights = rows.map(r => Math.round((r.value / total) * 1000) / 10);
+      const diff = parseFloat((100 - weights.reduce((s, w) => s + w, 0)).toFixed(1));
+      if (diff !== 0) weights[0] = parseFloat((weights[0] + diff).toFixed(1));
+
+      // Search each fund name in parallel to resolve ISIN
+      const results = await Promise.all(
+        rows.map(async (r, i) => {
+          const q = encodeURIComponent(r.name.slice(0, 40));
+          try {
+            const res = await fetch(`/api/funds/search?q=${q}&custodian=${custodian}`);
+            const matches: { isin: string; name: string }[] = await res.json();
+            // Pick best match: prefer exact name match, otherwise first result
+            const exact = matches.find(m => m.name.toLowerCase() === r.name.toLowerCase());
+            const best = exact ?? matches[0] ?? null;
+            return best
+              ? { isin: best.isin, name: best.name, weight: String(weights[i]) }
+              : { isin: "", name: r.name, weight: String(weights[i]) };
+          } catch {
+            return { isin: "", name: r.name, weight: String(weights[i]) };
+          }
+        })
+      );
+
+      const matched = results.filter(r => r.isin).length;
+      setEntries(results);
+      setInputMode("weight");
+      setImportResult({ matched, unmatched: results.length - matched });
+    } finally {
+      setImporting(false);
+      // Reset file input so same file can be re-imported
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   }
 
   function addRow() { setEntries((p) => [...p, { isin: "", name: "", weight: "", amount: "" }]); }
@@ -1097,6 +1188,8 @@ export default function AnalyzeClient() {
     );
   }
 
+
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -1186,54 +1279,145 @@ export default function AnalyzeClient() {
       )}
 
       <section className="no-print bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 space-y-4">
+        {/* Header */}
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-lg font-bold text-slate-900 shrink-0">Din portfölj</h2>
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
+            {inputMethod !== null && (
+              <button
+                type="button"
+                onClick={() => setInputMode(inputMode === "weight" ? "amount" : "weight")}
+                className="text-xs text-slate-400 hover:text-slate-600 underline transition-colors whitespace-nowrap"
+              >
+                {inputMode === "weight" ? "Ange belopp" : "Ange vikter (%)"}
+              </button>
+            )}
             <button
-              type="button"
-              onClick={() => setInputMode(inputMode === "weight" ? "amount" : "weight")}
-              className="text-xs text-slate-400 hover:text-slate-600 underline transition-colors whitespace-nowrap"
-            >
-              {inputMode === "weight" ? "Ange belopp" : "Ange vikter (%)"}
-            </button>
-            <button
-              onClick={() => { setCustodian(null); setAnalysis(null); setError(null); setPortfolioId(null); setEntries([{ isin: "", name: "", weight: "" }]); }}
+              onClick={() => { setCustodian(null); setInputMethod(null); setAnalysis(null); setError(null); setPortfolioId(null); setEntries([{ isin: "", name: "", weight: "" }]); }}
               className="text-xs text-slate-400 hover:text-slate-600 transition-colors whitespace-nowrap"
             >
               {CUSTODIANS.find((c) => c.value === custodian)?.label} · <span className="underline">Byt</span>
             </button>
           </div>
         </div>
-        {user === undefined ? null : user ? (
+
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) { setInputMethod("manual"); handleFileImport(f); }
+          }}
+        />
+
+        {/* Method selector — three options */}
+        <div className="grid grid-cols-3 gap-2">
+          {/* AI */}
+          <button
+            type="button"
+            onClick={() => {
+              if (!user) { router.push("/login"); return; }
+              setInputMethod("ai");
+            }}
+            className={cn(
+              "flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition-all",
+              inputMethod === "ai"
+                ? "border-indigo-200 bg-indigo-50"
+                : "border-slate-200 bg-white hover:border-indigo-200 hover:bg-slate-50"
+            )}
+          >
+            <div className="flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="text-xs font-semibold ai-shimmer-text">
+                Sök med AI
+              </span>
+            </div>
+            <span className="text-[11px] text-slate-400 leading-tight hidden sm:block">
+              {user ? "Beskriv vad du letar efter" : "Kräver inloggning"}
+            </span>
+          </button>
+
+          {/* Import */}
+          <button
+            type="button"
+            onClick={() => { setImportResult(null); fileInputRef.current?.click(); }}
+            disabled={importing}
+            className={cn(
+              "flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition-all",
+              importing
+                ? "border-blue-200 bg-blue-50"
+                : "border-slate-200 bg-white hover:border-blue-200 hover:bg-slate-50"
+            )}
+          >
+            <div className="flex items-center gap-1.5">
+              {importing ? (
+                <span className="w-3.5 h-3.5 rounded-full border-2 border-blue-400 border-t-transparent animate-spin" />
+              ) : (
+                <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                </svg>
+              )}
+              <span className="text-xs font-semibold text-slate-700">
+                {importing ? "Importerar…" : "Importera fil"}
+              </span>
+            </div>
+            <span className="text-[11px] text-slate-400 leading-tight hidden sm:block">
+              Från Nordnet eller Avanza
+            </span>
+          </button>
+
+          {/* Manual */}
+          <button
+            type="button"
+            onClick={() => setInputMethod("manual")}
+            className={cn(
+              "flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition-all",
+              inputMethod === "manual"
+                ? "border-blue-200 bg-blue-50"
+                : "border-slate-200 bg-white hover:border-blue-200 hover:bg-slate-50"
+            )}
+          >
+            <div className="flex items-center gap-1.5">
+              <Search className={cn("w-3.5 h-3.5", inputMethod === "manual" ? "text-blue-500" : "text-slate-400")} />
+              <span className={cn("text-xs font-semibold", inputMethod === "manual" ? "text-blue-700" : "text-slate-700")}>
+                Sök manuellt
+              </span>
+            </div>
+            <span className="text-[11px] text-slate-400 leading-tight hidden sm:block">
+              Sök på fondnamn eller ISIN
+            </span>
+          </button>
+        </div>
+
+        {/* AI widget — shown when AI method selected */}
+        {inputMethod === "ai" && user && (
           <FundQuiz
             custodian={custodian}
+            autoOpen
             existingIsins={entries.map((e) => e.isin).filter(Boolean)}
             onAdd={(isin: string, name: string) => {
+              setInputMethod("ai");
               setEntries((prev) => {
                 const empty = prev.findIndex((e) => !e.isin);
-                if (empty !== -1) {
-                  return prev.map((e, idx) => idx === empty ? { ...e, isin, name } : e);
-                }
+                if (empty !== -1) return prev.map((e, idx) => idx === empty ? { ...e, isin, name } : e);
                 return [...prev, { isin, name, weight: "", amount: "" }];
               });
             }}
           />
-        ) : (
-          <button
-            type="button"
-            onClick={() => router.push("/login")}
-            className="ai-shimmer-btn flex items-center gap-2 text-sm"
-          >
-            <Sparkles className="w-4 h-4 text-indigo-400" />
-            <span className="ai-shimmer-text">Logga in för att hitta fonder med AI</span>
-          </button>
         )}
 
-        <p className="text-sm text-slate-500">
-          {inputMode === "weight"
-            ? "Eller sök på fondnamn eller ISIN och ange vikt (%) för varje fond."
-            : "Eller sök på fondnamn eller ISIN och ange hur mycket du har investerat i varje fond (kr)."}
-        </p>
+        {/* Fund rows — shown once a method is chosen */}
+        {inputMethod !== null && (<>
+
+        {importResult && (
+          <p className="text-xs text-slate-400">
+            {importResult.matched} av {importResult.matched + importResult.unmatched} fonder matchade
+            {importResult.unmatched > 0 && " — sök manuellt för de resterande"}
+          </p>
+        )}
 
         <div className="space-y-2">
           <div className="hidden sm:grid grid-cols-[1fr_100px_36px] gap-2 text-xs font-semibold text-slate-500 px-1">
@@ -1288,8 +1472,10 @@ export default function AnalyzeClient() {
 
         {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl p-3">{error}</p>}
 
+        </>)}
+
         <button
-          onClick={analyze} disabled={loading}
+          onClick={analyze} disabled={loading || inputMethod === null}
           className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:from-blue-300 disabled:to-blue-300 text-white font-medium rounded-xl py-3 transition-all shadow-md shadow-blue-200"
         >
           {loading ? "Analyserar…" : "Analysera portfölj"}

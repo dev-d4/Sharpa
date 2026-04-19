@@ -60,6 +60,15 @@ body {
   opacity: 0.9;
 }
 
+@keyframes ai-border-shimmer {
+  0%, 100% { border-color: #818cf8; box-shadow: 0 0 6px rgba(129,140,248,0.25); }
+  50%       { border-color: #c4b5fd; box-shadow: 0 0 10px rgba(196,181,253,0.35); }
+}
+
+.ai-border-shimmer {
+  animation: ai-border-shimmer 2s ease-in-out infinite;
+}
+
 /* ── Print / PDF export ──────────────────────────────────────────────────── */
 
 @media print {
