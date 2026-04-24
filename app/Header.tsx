@@ -50,17 +50,17 @@ export default function Header() {
         {/* Desktop nav */}
         <nav className="hidden sm:flex items-center gap-4 sm:gap-6">
           <Link href="/analyze" className={navClass("/analyze")}>Analysera</Link>
+          <Link href="/bygg-portfolj" className={navClass("/bygg-portfolj")}>Bygg portfölj</Link>
           {user !== undefined && (
             <>
               {user && <Link href="/portfolios" className={navClass("/portfolios")}>Portföljer</Link>}
+              {user && <Link href="/risk-profile" className={navClass("/risk-profile")}>Riskprofil</Link>}
               {user ? (
                 <>
-                  <Link href="/risk-profile" className={navClass("/risk-profile")}>Riskprofil</Link>
                   <Link href="/account" className={navClass("/account")}>Mitt konto</Link>
                 </>
               ) : (
                 <>
-                  <Link href="/risk-profile" className={navClass("/risk-profile")}>Riskprofil</Link>
                   <Link
                     href="/login"
                     className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-all shadow-sm shadow-blue-200"
@@ -97,6 +97,9 @@ export default function Header() {
           <Link href="/analyze" className={mobileNavClass("/analyze")} onClick={() => setMobileOpen(false)}>
             Analysera
           </Link>
+          <Link href="/bygg-portfolj" className={mobileNavClass("/bygg-portfolj")} onClick={() => setMobileOpen(false)}>
+            Bygg portfölj
+          </Link>
           {user !== undefined && (
             <>
               {user && (
@@ -104,9 +107,11 @@ export default function Header() {
                   Portföljer
                 </Link>
               )}
-              <Link href="/risk-profile" className={mobileNavClass("/risk-profile")} onClick={() => setMobileOpen(false)}>
-                Riskprofil
-              </Link>
+              {user && (
+                <Link href="/risk-profile" className={mobileNavClass("/risk-profile")} onClick={() => setMobileOpen(false)}>
+                  Riskprofil
+                </Link>
+              )}
               {user ? (
                 <Link href="/account" className={mobileNavClass("/account")} onClick={() => setMobileOpen(false)}>
                   Mitt konto

@@ -60,7 +60,7 @@ export default function PortfoliosClient() {
           <p className="text-sm text-slate-500 mt-1">{portfolios.length} sparade portföljer</p>
         </div>
         <Link
-          href="/analyze"
+          href="/bygg-portfolj"
           className="shrink-0 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-medium px-3 py-2.5 sm:px-4 rounded-xl transition-all shadow-sm shadow-blue-200"
         >
           + Ny
@@ -68,9 +68,17 @@ export default function PortfoliosClient() {
       </div>
 
       {portfolios.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-6 py-16 text-center">
-          <p className="text-slate-400 text-sm mb-3">Du har inga sparade portföljer än.</p>
-          <Link href="/analyze" className="text-sm text-blue-600 hover:underline">Analysera din första portfölj →</Link>
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-6 py-20 text-center space-y-5">
+          <p className="text-slate-900 font-semibold text-lg">Du har inga sparade portföljer än</p>
+          <p className="text-slate-400 text-sm max-w-xs mx-auto">Bygg din första portfölj på 2 minuter — vi ställer 6 frågor och sätter ihop en komplett portfölj åt dig.</p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link href="/bygg-portfolj" className="inline-block bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-semibold px-6 py-3 rounded-xl transition-all shadow-sm shadow-blue-200">
+              Bygg din första portfölj →
+            </Link>
+            <Link href="/analyze" className="inline-block border border-slate-200 hover:border-slate-300 text-slate-600 text-sm font-medium px-6 py-3 rounded-xl transition-colors">
+              Analysera befintlig portfölj
+            </Link>
+          </div>
         </div>
       ) : (
         <div className="space-y-6">

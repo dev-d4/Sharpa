@@ -178,12 +178,6 @@ function getNextScreen(current: QuizScreen, a: QuizAnswers): QuizScreen | "done"
   return steps[idx + 1];
 }
 
-function getPrevScreen(current: QuizScreen, a: QuizAnswers): QuizScreen {
-  const steps = getSteps(a);
-  const idx = steps.indexOf(current);
-  if (idx <= 0) return "asset";
-  return steps[idx - 1];
-}
 
 function FundQuiz({
   custodian,
@@ -257,6 +251,14 @@ function FundQuiz({
     setAnswers({ assetClass: null, market: null, sector: null, management: null, maxCost: null, sortBy: null });
     setAllResults([]);
     setError(null);
+  }
+
+  function resetQuiz() {
+    setScreen("asset");
+    setAnswers({ assetClass: null, market: null, sector: null, management: null, maxCost: null, sortBy: null });
+    setAllResults([]);
+    setError(null);
+    setVisibleCount(PAGE);
   }
 
   function getSummaryPills(a: QuizAnswers): string[] {
@@ -533,22 +535,23 @@ function FundQuiz({
                 Visa fler ({allResults.length - visibleCount} kvar)
               </button>
             )}
+
+            {/* Ny sökning — appears as soon as results are loaded */}
+            {!loading && allResults.length > 0 && (
+              <div className="pt-1 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={resetQuiz}
+                  className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold bg-indigo-600 text-white px-3 py-2.5 rounded-xl hover:bg-indigo-700 transition-colors"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Ny sökning
+                </button>
+              </div>
+            )}
           </>
         )}
 
-        {/* Back button */}
-        {screen !== "asset" && !(isResults && loading) && (
-          <button
-            type="button"
-            onClick={() => {
-              if (isResults) { setAllResults([]); setError(null); }
-              setScreen(getPrevScreen(screen, answers));
-            }}
-            className="text-xs text-slate-400 hover:text-slate-600 transition-colors pt-1"
-          >
-            ← Tillbaka
-          </button>
-        )}
       </div>
     </div>
   );
@@ -768,6 +771,18 @@ export default function AnalyzeClient() {
         })
         .catch(() => router.replace("/analyze"))
         .finally(() => setPortfolioLoading(false));
+      return;
+    }
+
+    // Portfolio builder hand-off (highest priority after URL param)
+    const builderRaw = sessionStorage.getItem("fondanalys_builder");
+    if (builderRaw) {
+      try {
+        const builder = JSON.parse(builderRaw) as { custodian?: string; entries: Entry[] };
+        if (builder.custodian) setCustodian(builder.custodian);
+        if (builder.entries?.length) { setEntries(builder.entries); setInputMethod("manual"); }
+      } catch { /* ignore */ }
+      sessionStorage.removeItem("fondanalys_builder");
       return;
     }
 
@@ -1160,6 +1175,18 @@ export default function AnalyzeClient() {
                 </div>
               </button>
             ))}
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="flex-1 h-px bg-slate-100" />
+            <p className="text-xs text-slate-400 shrink-0">eller</p>
+            <div className="flex-1 h-px bg-slate-100" />
+          </div>
+          <div className="text-center space-y-2">
+            <p className="text-sm text-slate-500">Har du ingen portfölj än?</p>
+            <Link href="/bygg-portfolj" className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors">
+              Bygg din portfölj på 2 minuter →
+            </Link>
           </div>
 
           {/* Saved portfolios */}
@@ -1750,7 +1777,7 @@ function AnalysisResult({ analysis, user, portfolioValue, onLoginClick }: { anal
                                 <p className="font-semibold text-sm text-slate-900 break-words">{s.currentFund.name}</p>
                                 <p className="text-xs text-slate-400">{s.currentFund.isin}</p>
                               </div>
-                              <span className="text-slate-400 text-lg sm:mt-3 self-start sm:self-auto">↓<span className="hidden sm:inline">→</span></span>
+                              <span className="text-slate-400 text-lg sm:mt-3 self-start sm:self-auto"><span className="sm:hidden">↓</span><span className="hidden sm:inline">→</span></span>
                               <div className="flex-1 min-w-0">
                                 <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Öka i befintlig fond</p>
                                 <p className="font-semibold text-sm text-slate-900 break-words">{s.suggestedFund.name}</p>
@@ -1771,7 +1798,7 @@ function AnalysisResult({ analysis, user, portfolioValue, onLoginClick }: { anal
                                 <p className="font-semibold text-sm text-slate-900 break-words">{s.currentFund.name}</p>
                                 <p className="text-xs text-slate-400">{s.currentFund.isin}</p>
                               </div>
-                              <span className="text-slate-400 text-lg sm:mt-3 self-start sm:self-auto">↓<span className="hidden sm:inline">→</span></span>
+                              <span className="text-slate-400 text-lg sm:mt-3 self-start sm:self-auto"><span className="sm:hidden">↓</span><span className="hidden sm:inline">→</span></span>
                               <div className="flex-1 min-w-0">
                                 <p className="text-xs font-semibold text-green-600 uppercase tracking-wide">Föreslagen fond</p>
                                 <p className="font-semibold text-sm text-slate-900 break-words">{s.suggestedFund.name}</p>

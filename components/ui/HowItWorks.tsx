@@ -97,31 +97,34 @@ function SwapCard() {
   );
 }
 
-function AiCard() {
+function BuilderCard() {
+  const questions = [
+    { q: "Vilken plattform?", a: "Avanza" },
+    { q: "Sparmål?", a: "Pension" },
+    { q: "Horisont?", a: "Mer än 15 år" },
+  ];
+  const funds = [
+    { name: "Avanza Global", weight: "50%" },
+    { name: "Länsf. Sverige", weight: "30%" },
+    { name: "SPP Tillväxtmarknad", weight: "20%" },
+  ];
   return (
-    <div className="w-72 bg-white rounded-2xl border border-slate-200 shadow-md p-5 space-y-3">
-      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">AI-matchning</p>
-      <div className="flex gap-2 flex-wrap">
-        {["Global", "Låg avgift", "Tillväxt"].map((tag) => (
-          <span key={tag} className="text-[10px] font-semibold bg-blue-50 text-blue-600 border border-blue-100 rounded-full px-2.5 py-1">
-            {tag}
-          </span>
+    <div className="w-72 bg-white rounded-2xl border border-slate-200 shadow-md p-5 space-y-4">
+      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Bygg din portfölj</p>
+      <div className="space-y-2">
+        {questions.map((item) => (
+          <div key={item.q} className="flex justify-between items-center text-xs">
+            <span className="text-slate-400">{item.q}</span>
+            <span className="font-semibold text-slate-700 bg-blue-50 border border-blue-100 px-2.5 py-0.5 rounded-full">{item.a}</span>
+          </div>
         ))}
       </div>
-      <div className="space-y-2 pt-1">
-        {[
-          { name: "Avanza Global", fee: "0.05%" },
-          { name: "SPP Aktiefond Global", fee: "0.00%" },
-          { name: "Länsf. Global Indexnära", fee: "0.22%" },
-        ].map((f, i) => (
-          <div key={i} className="flex items-center gap-3 p-2.5 bg-slate-50 rounded-xl">
-            <div className="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
-              <span className="text-[10px] font-bold text-blue-600">{i + 1}</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-slate-800 truncate">{f.name}</p>
-              <p className="text-[10px] text-slate-400">{f.fee}/år</p>
-            </div>
+      <div className="border-t border-slate-100 pt-3 space-y-1.5">
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Föreslagen portfölj</p>
+        {funds.map((f) => (
+          <div key={f.name} className="flex justify-between items-center">
+            <span className="text-xs font-medium text-slate-700">{f.name}</span>
+            <span className="text-xs font-bold text-indigo-600">{f.weight}</span>
           </div>
         ))}
       </div>
@@ -134,31 +137,31 @@ function AiCard() {
 const steps = [
   {
     step: "01",
-    title: "Analysera din portfölj",
+    title: "Bygg din portfölj på 2 minuter",
     description:
-      "Lägg in dina fonder och se direkt hur din portfölj presterar — utan att skapa konto.",
-    visual: <PortfolioCard />,
+      "Svara på 6 korta frågor om dina mål och risktolerans — vi sätter ihop en komplett fondportfölj anpassad just för dig.",
+    visual: <BuilderCard />,
   },
   {
     step: "02",
+    title: "Analysera din befintliga portfölj",
+    description:
+      "Har du redan fonder? Lägg in dem och se direkt hur portföljen presterar — avgifter, avkastning och risk.",
+    visual: <PortfolioCard />,
+  },
+  {
+    step: "03",
     title: "Få personliga fondbytesförslag",
     description:
       "Få konkreta förslag på vilka fonder du kan byta ut — och se vad det innebär för din portfölj.",
     visual: <SwapCard />,
   },
   {
-    step: "03",
+    step: "04",
     title: "Ta fram din riskprofil",
     description:
       "Svara på några frågor och se om din portfölj faktiskt matchar din risknivå.",
     visual: <RiskCard />,
-  },
-  {
-    step: "04",
-    title: "Hitta fonder med AI",
-    description:
-      "Beskriv vad du letar efter — AI:n hittar fonder som passar dig.",
-    visual: <AiCard />,
   },
 ];
 

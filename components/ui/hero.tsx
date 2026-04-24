@@ -18,21 +18,21 @@ export default function Hero() {
         </h1>
 
         <p className="animate-fade-in-up text-lg text-slate-500 leading-relaxed max-w-md mx-auto [animation-delay:200ms]">
-          Analysera dina fonder kostnadsfritt. Få nyckeltal om avgifter, avkastning och risk — och personliga fondbytesförslag.
+          Svara på 6 frågor och få en komplett fondportfölj anpassad till din risknivå, dina mål och din horisont.
         </p>
 
         <div className="animate-fade-in-up flex items-center justify-center gap-3 flex-wrap [animation-delay:350ms]">
           <Link
-            href="/analyze"
+            href="/bygg-portfolj"
             className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 text-white font-semibold px-7 py-3.5 rounded-xl transition-all shadow-lg shadow-blue-200 text-sm"
           >
-            Analysera din portfölj →
+            Bygg din portfölj gratis →
           </Link>
           <Link
-            href="/risk-profile"
+            href="/analyze"
             className="bg-white border border-slate-200 hover:border-slate-300 text-slate-700 font-semibold px-7 py-3.5 rounded-xl transition-all text-sm shadow-sm"
           >
-            Ta fram din riskprofil
+            Analysera befintlig portfölj
           </Link>
         </div>
         <p className="animate-fade-in-up text-xs text-slate-400 [animation-delay:450ms]">Gratis · Ingen registrering krävs</p>
