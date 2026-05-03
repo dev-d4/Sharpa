@@ -18,30 +18,15 @@ interface QuizAnswers {
   sortBy?: string;          // "sharpe" | "return" | "cost"
 }
 
-// Category prefixes for market filter (Avanza Swedish category names)
-const MARKET_PREFIXES: Record<string, string[]> = {
-  global: ["Global"],
-  sweden: ["Sverige"],
-  usa: ["USA"],
-  europe: ["Europa"],
-  nordic: ["Norden"],
-  emerging: ["Tillväxtmarknader", "Emerging"],
-  asia: ["Asien", "Japan", "Kina", "Indien"],
-};
-
-const SECTOR_KEYWORDS: Record<string, string[]> = {
-  tech: ["teknik", "tech", "teknologi"],
-  health: ["hälsa", "bioteknik", "biotech", "läkemedel", "medicin"],
-  "real-estate": ["fastighet"],
-  energy: ["energi", "råvaror", "commodities"],
-  "other-sector": [], // matches any "Branschfond" category
-};
+// All sector SelectionIds — used when the quiz asks for "any sector fund"
+const ALL_SECTOR_IDS = ["tech", "health", "real-estate", "energy", "finance", "consumer", "industry"] as const;
 
 type FundRow = {
   isin: string | null;
   name: string | null;
   category: string | null;
   category_group: string | null;
+  selection_id: string | null;   // pre-classified in DB
   sharpe_3yr: number | null;
   return_1yr: number | null;
   return_3yr: number | null;
@@ -65,7 +50,7 @@ export async function POST(req: NextRequest) {
 
     let dbQuery = supabase
       .from(view)
-      .select("isin, name, category, category_group, sharpe_3yr, return_1yr, return_3yr, ongoing_cost_actual, ongoing_cost_estimated, investment_type")
+      .select("isin, name, category, category_group, selection_id, sharpe_3yr, return_1yr, return_3yr, ongoing_cost_actual, ongoing_cost_estimated, investment_type")
       .not("name", "is", null);
 
     // Asset class filter (DB-level)
@@ -96,23 +81,23 @@ export async function POST(req: NextRequest) {
       if (data.length < FETCH_PAGE) break;
     }
 
+    // Market / sector filter — applied at DB level via selection_id.
+    // selection_id is pre-classified by scripts/classify-funds.ts and is
+    // authoritative: no string matching, no edge-case bugs.
     let results = allFunds;
 
-    // Market / sector filter (in-memory, for equity)
     if (assetClass === "equity" && market) {
       if (market === "sector") {
-        results = results.filter((f) => {
-          const cat = f.category?.toLowerCase() ?? "";
-          if (!cat.includes("branschfond")) return false;
-          if (!sector || sector === "other-sector") return true;
-          const kws = SECTOR_KEYWORDS[sector] ?? [];
-          return kws.some((kw) => cat.includes(kw));
-        });
+        if (sector && sector !== "other-sector") {
+          // Specific sector requested (tech, health, real-estate, energy, finance, consumer, industry)
+          results = results.filter((f) => f.selection_id === sector);
+        } else {
+          // "other-sector" or no sector specified — return all sector funds
+          results = results.filter((f) => (ALL_SECTOR_IDS as readonly string[]).includes(f.selection_id ?? ""));
+        }
       } else {
-        const prefixes = MARKET_PREFIXES[market] ?? [];
-        results = results.filter((f) =>
-          prefixes.some((prefix) => f.category?.startsWith(prefix))
-        );
+        // Geographic market (global, sweden, usa, europe, nordic, emerging, asia, etc.)
+        results = results.filter((f) => f.selection_id === market);
       }
     }
 

@@ -115,3 +115,23 @@ CREATE POLICY "update own" ON risk_profiles FOR UPDATE USING (auth.uid() = user_
 -- DROP TABLE IF EXISTS avanza_funds;
 -- DROP TABLE IF EXISTS nordnet_funds;
 -- DROP TABLE IF EXISTS nordnet_fund_details;
+
+-- ── Fund classification (run in Supabase SQL Editor) ─────────────────────────
+-- Step 1: Add the column
+ALTER TABLE funds ADD COLUMN IF NOT EXISTS selection_id TEXT;
+
+-- Step 2: Index for fast filtering in build-portfolio and fund-quiz
+CREATE INDEX IF NOT EXISTS idx_funds_selection_id ON funds(selection_id);
+
+-- Step 3: Recreate views so SELECT * picks up the new column.
+-- Postgres freezes the column list at view-creation time, so we must recreate.
+CREATE OR REPLACE VIEW avanza_fund_data AS
+SELECT f.* FROM funds f
+INNER JOIN avanza_offerings ao ON f.isin = ao.isin;
+
+CREATE OR REPLACE VIEW nordnet_fund_data AS
+SELECT f.* FROM funds f
+INNER JOIN nordnet_offerings no ON f.isin = no.isin;
+
+-- Step 4: After running the SQL above, run the classification script:
+--   NEXT_PUBLIC_SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... npx tsx scripts/classify-funds.ts

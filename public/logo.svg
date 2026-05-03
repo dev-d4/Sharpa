@@ -5,9 +5,10 @@
       <stop offset="100%" stop-color="#60A5FA"/>
     </linearGradient>
   </defs>
+
   <path d="M 4 28 L 13 18 L 20 22 L 32 8"
         stroke="url(#lineGrad)"
-        stroke-width="4"
+        stroke-width="7"
         stroke-linecap="round"
         stroke-linejoin="round"
         fill="none"/>

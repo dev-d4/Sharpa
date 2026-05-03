@@ -5,6 +5,7 @@ export type Fund = {
   isin: string;
   category_group: string | null;
   category: string | null;
+  selection_id: string | null;
   global_category: string | null;
   equity_style_box: string | null;
   return_ytd: number | null;

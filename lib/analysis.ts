@@ -55,6 +55,7 @@ export type PortfolioAnalysis = {
   totalWeight: number;
   notFound: string[];
   categoryBreakdown: CategoryBreakdown[];
+  detailedBreakdown: CategoryBreakdown[];
   managementBreakdown: ManagementBreakdown;
   concentrationWarnings: ConcentrationWarning[];
   avgCost: number | null;
@@ -72,6 +73,30 @@ export type PortfolioAnalysis = {
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+const SELECTION_ID_LABELS: Record<string, string> = {
+  global:           "Global",
+  sweden:           "Sverige",
+  usa:              "USA",
+  europe:           "Europa",
+  nordic:           "Norden",
+  emerging:         "Tillväxtmarknader",
+  asia:             "Asien",
+  japan:            "Japan",
+  china:            "Kina",
+  india:            "Indien",
+  latam:            "Latinamerika",
+  tech:             "Teknik",
+  health:           "Hälsovård",
+  "real-estate":    "Fastigheter",
+  energy:           "Energi",
+  finance:          "Finans",
+  consumer:         "Konsumentvaror",
+  industry:         "Industri",
+  "bond-sek":       "Svenska räntor",
+  "bond-global":    "Globala räntor",
+  "bond-highyield": "High yield",
+};
 
 const CATEGORY_LABELS: Record<string, string> = {
   Equity: "Aktiefonder",
@@ -393,6 +418,18 @@ export function analyzePortfolio(
     .map(([label, w]) => ({ label, weight: totalWeight ? (w / totalWeight) * 100 : 0 }))
     .sort((a, b) => b.weight - a.weight);
 
+  // Detailed breakdown using selection_id — same granularity as build-portfolio.
+  // Falls back to the broad category_group label if selection_id is null.
+  const detailedMap: Record<string, number> = {};
+  for (const e of found) {
+    const sid = e.fund!.selection_id;
+    const label = sid ? (SELECTION_ID_LABELS[sid] ?? sid) : categoryLabel(e.fund!.category_group);
+    detailedMap[label] = (detailedMap[label] ?? 0) + e.weight;
+  }
+  const detailedBreakdown: CategoryBreakdown[] = Object.entries(detailedMap)
+    .map(([label, w]) => ({ label, weight: totalWeight ? (w / totalWeight) * 100 : 0 }))
+    .sort((a, b) => b.weight - a.weight);
+
   const avgCost = weightedAvg(found, (f) => f.ongoing_cost_actual ?? f.ongoing_cost_estimated);
   const weightedReturn1yr = weightedAvg(found, (f) => f.return_1yr);
   const weightedReturn3yr = weightedAvg(found, (f) => f.return_3yr);
@@ -445,6 +482,7 @@ export function analyzePortfolio(
     totalWeight,
     notFound,
     categoryBreakdown,
+    detailedBreakdown,
     managementBreakdown,
     concentrationWarnings,
     avgCost,

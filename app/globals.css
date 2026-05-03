@@ -3,9 +3,11 @@
 body {
   color: #1a1a2e;
   background-color: #ffffff;
-  background-image: radial-gradient(circle, rgba(148, 163, 184, 0.25) 1px, transparent 1px);
-  background-size: 20px 20px;
-  background-attachment: fixed;
+}
+
+/* Safe-area bottom padding for mobile bottom nav on notched devices */
+.pb-safe {
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
 }
 
 @keyframes fade-in-up {
@@ -67,6 +69,31 @@ body {
 
 .ai-border-shimmer {
   animation: ai-border-shimmer 2s ease-in-out infinite;
+}
+
+/* ── Hero accent — slow shimmer on "2 minuter" ───────────────────────────── */
+
+@keyframes hero-shimmer {
+  0%   { background-position: 0% center; }
+  50%  { background-position: 100% center; }
+  100% { background-position: 0% center; }
+}
+
+.hero-accent {
+  background: linear-gradient(
+    90deg,
+    #1d4ed8 0%,
+    #3b82f6 25%,
+    #93c5fd 50%,
+    #3b82f6 75%,
+    #1d4ed8 100%
+  );
+  background-size: 250% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: hero-shimmer 5s ease-in-out infinite;
+  filter: drop-shadow(0 0 18px rgba(59,130,246,0.40));
 }
 
 /* ── Print / PDF export ──────────────────────────────────────────────────── */

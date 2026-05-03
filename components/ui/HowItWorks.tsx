@@ -1,263 +1,274 @@
 "use client";
 
-import { useRef } from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { useState } from "react";
+import { motion } from "framer-motion";
+import Link from "next/link";
+import DonutChart from "@/components/ui/DonutChart";
 
-// ── Visual mockup cards ─────────────────────────────────────────────────────
+// ── Feature cards ─────────────────────────────────────────────────────────────
 
-function PortfolioCard() {
+function BuildCard() {
   return (
-    <div className="w-72 bg-white rounded-2xl border border-slate-200 shadow-md p-5 space-y-3">
-      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Din portfölj</p>
-      {[
-        { name: "Avanza Global", weight: "50%" },
-        { name: "Länsf. Sverige", weight: "30%" },
-        { name: "SPP Tillväxtmarknad", weight: "20%" },
-      ].map((f) => (
-        <div key={f.name} className="flex justify-between items-center py-1.5 border-b border-slate-50 last:border-0">
-          <span className="text-sm font-medium text-slate-700">{f.name}</span>
-          <span className="text-sm text-slate-400 font-medium">{f.weight}</span>
+    <motion.div
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.5 }}
+      className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col"
+    >
+      <div className="h-1.5 bg-gradient-to-r from-blue-500 to-blue-400" />
+      <div className="p-7 flex flex-col flex-1 space-y-5">
+        <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
+          <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
         </div>
-      ))}
-      <div className="pt-2 grid grid-cols-3 gap-2">
-        {[
-          { label: "Avgift/år", value: "0.08%", color: "text-green-600" },
-          { label: "Avk. 3 år", value: "+41%", color: "text-blue-600" },
-          { label: "Sharpe", value: "1.32", color: "text-slate-700" },
-        ].map((m) => (
-          <div key={m.label} className="text-center bg-slate-50 rounded-xl py-2">
-            <p className="text-[10px] text-slate-400">{m.label}</p>
-            <p className={`text-sm font-bold ${m.color}`}>{m.value}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
-function RiskCard() {
-  const levels = ["Försiktig", "Defensiv", "Balanserad", "Tillväxt", "Offensiv"];
-  const active = 3; // Tillväxt
-  return (
-    <div className="w-72 bg-white rounded-2xl border border-slate-200 shadow-md p-5 space-y-4">
-      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Din riskprofil</p>
-      <div className="flex gap-1.5">
-        {levels.map((label, i) => (
-          <div
-            key={i}
-            className={`flex-1 rounded-lg py-2 flex items-center justify-center transition-colors ${
-              i === active
-                ? "bg-blue-500 text-white"
-                : i < active
-                ? "bg-blue-100 text-blue-400"
-                : "bg-slate-100 text-slate-300"
-            }`}
+        <div className="space-y-2">
+          <p className="text-xs font-bold text-blue-500 uppercase tracking-widest">Bygg portfölj</p>
+          <h3 className="text-xl font-bold text-slate-900">Din portfölj på 2 minuter</h3>
+          <p className="text-sm text-slate-500 leading-relaxed">
+            Svara på 6 frågor om dina mål och risktolerans. Vi sätter ihop en komplett fondportfölj anpassad just för dig.
+          </p>
+        </div>
+
+        <ul className="space-y-2.5">
+          {[
+            "Personliga fondförslag från 1 500+ fonder",
+            "Justerbara andelar med en slider",
+            "Spara och följ upp dina portföljer",
+          ].map((item) => (
+            <li key={item} className="flex items-start gap-2.5 text-sm text-slate-600">
+              <svg className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+              </svg>
+              {item}
+            </li>
+          ))}
+        </ul>
+
+        <div className="pt-2 mt-auto">
+          <Link
+            href="/bygg-portfolj"
+            className="items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all duration-200 shadow-md shadow-blue-500/25"
           >
-            <span className="text-[8px] font-bold text-center leading-tight px-0.5">{label}</span>
-          </div>
-        ))}
-      </div>
-      <div className="p-3 bg-green-50 border border-green-100 rounded-xl flex gap-2 items-start">
-        <svg className="w-4 h-4 text-green-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <div>
-          <p className="text-xs font-semibold text-green-700">Tillväxt · ~80% aktier</p>
-          <p className="text-xs text-green-600 mt-0.5">Din portfölj matchar din profil</p>
+            Bygg din portfölj gratis →
+          </Link>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
-function SwapCard() {
-  return (
-    <div className="w-72 bg-white rounded-2xl border border-slate-200 shadow-md p-5 space-y-4">
-      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Bytesförslag</p>
-      <div className="flex items-center gap-3">
-        <div className="flex-1 text-left">
-          <p className="text-[10px] text-slate-400 mb-0.5">Byt från</p>
-          <p className="text-xs font-semibold text-slate-800 leading-tight">Nordea Globalfond</p>
-          <p className="text-base font-bold text-red-500 mt-1">1.40% / år</p>
-        </div>
-        <svg className="w-5 h-5 text-slate-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-        </svg>
-        <div className="flex-1 text-right">
-          <p className="text-[10px] text-green-600 mb-0.5">Byt till</p>
-          <p className="text-xs font-semibold text-slate-800 leading-tight">Avanza Global</p>
-          <p className="text-base font-bold text-green-600 mt-1">0.05% / år</p>
-        </div>
-      </div>
-      <div className="pt-3 border-t border-slate-100 text-center">
-        <p className="text-[10px] text-slate-400">Avgiftsbesparing per år</p>
-        <p className="text-lg font-bold text-blue-600">−1.35 procentenheter</p>
-      </div>
-    </div>
-  );
-}
-
-function BuilderCard() {
-  const questions = [
-    { q: "Vilken plattform?", a: "Avanza" },
-    { q: "Sparmål?", a: "Pension" },
-    { q: "Horisont?", a: "Mer än 15 år" },
+function AnalyzeCard() {
+  const slices = [
+    { label: "Aktier",  weight: 72 },
+    { label: "Räntor",  weight: 18 },
+    { label: "Övrigt",  weight: 10 },
   ];
-  const funds = [
-    { name: "Avanza Global", weight: "50%" },
-    { name: "Länsf. Sverige", weight: "30%" },
-    { name: "SPP Tillväxtmarknad", weight: "20%" },
-  ];
+
   return (
-    <div className="w-72 bg-white rounded-2xl border border-slate-200 shadow-md p-5 space-y-4">
-      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Bygg din portfölj</p>
-      <div className="space-y-2">
-        {questions.map((item) => (
-          <div key={item.q} className="flex justify-between items-center text-xs">
-            <span className="text-slate-400">{item.q}</span>
-            <span className="font-semibold text-slate-700 bg-blue-50 border border-blue-100 px-2.5 py-0.5 rounded-full">{item.a}</span>
-          </div>
-        ))}
+    <motion.div
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.5, delay: 0.1 }}
+      className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col"
+    >
+      <div className="h-1.5 bg-gradient-to-r from-emerald-500 to-emerald-400" />
+      <div className="p-7 flex flex-col flex-1 space-y-5">
+        <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center">
+          <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+          </svg>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Analysera portfölj</p>
+          <h3 className="text-xl font-bold text-slate-900">Förbättra det du redan har</h3>
+          <p className="text-sm text-slate-500 leading-relaxed">
+            Lägg in dina befintliga fonder och se direkt hur de presterar — avgifter, risk och konkreta bytesförslag.
+          </p>
+        </div>
+
+        <div className="bg-slate-50 rounded-xl p-3 w-fit">
+          <DonutChart slices={slices} size={88} thickness={14} horizontal />
+        </div>
+
+        <ul className="space-y-2.5">
+          {[
+            "Avgiftsanalys och jämförelse",
+            "Riskbedömning och Sharpe-kvot",
+            "Konkreta fondbytesförslag",
+          ].map((item) => (
+            <li key={item} className="flex items-start gap-2.5 text-sm text-slate-600">
+              <svg className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+              </svg>
+              {item}
+            </li>
+          ))}
+        </ul>
+
+        <div className="pt-2 mt-auto">
+          <Link
+            href="/analyze"
+            className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors"
+          >
+            Analysera mina fonder →
+          </Link>
+        </div>
       </div>
-      <div className="border-t border-slate-100 pt-3 space-y-1.5">
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Föreslagen portfölj</p>
-        {funds.map((f) => (
-          <div key={f.name} className="flex justify-between items-center">
-            <span className="text-xs font-medium text-slate-700">{f.name}</span>
-            <span className="text-xs font-bold text-indigo-600">{f.weight}</span>
-          </div>
-        ))}
-      </div>
-    </div>
+    </motion.div>
   );
 }
 
-// ── Steps data ──────────────────────────────────────────────────────────────
+// ── Trust section ─────────────────────────────────────────────────────────────
 
-const steps = [
+const TRUST_ITEMS = [
   {
-    step: "01",
-    title: "Bygg din portfölj på 2 minuter",
-    description:
-      "Svara på 6 korta frågor om dina mål och risktolerans — vi sätter ihop en komplett fondportfölj anpassad just för dig.",
-    visual: <BuilderCard />,
+    icon: (
+      <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+      </svg>
+    ),
+    title: "Oberoende analys",
+    desc: "Vi tar inga provisioner från fondbolag. Våra rekommendationer är alltid neutrala.",
   },
   {
-    step: "02",
-    title: "Analysera din befintliga portfölj",
-    description:
-      "Har du redan fonder? Lägg in dem och se direkt hur portföljen presterar — avgifter, avkastning och risk.",
-    visual: <PortfolioCard />,
+    icon: (
+      <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+      </svg>
+    ),
+    title: "Datadrivna beslut",
+    desc: "1 500+ fonder analyserade med Sharpe-kvot, historisk avkastning och avgiftsstruktur.",
   },
   {
-    step: "03",
-    title: "Få personliga fondbytesförslag",
-    description:
-      "Få konkreta förslag på vilka fonder du kan byta ut — och se vad det innebär för din portfölj.",
-    visual: <SwapCard />,
+    icon: (
+      <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+      </svg>
+    ),
+    title: "Enkelt och begripligt",
+    desc: "Avancerad analys gjord enkel. Du behöver ingen ekonomiutbildning.",
   },
   {
-    step: "04",
-    title: "Ta fram din riskprofil",
-    description:
-      "Svara på några frågor och se om din portfölj faktiskt matchar din risknivå.",
-    visual: <RiskCard />,
+    icon: (
+      <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+      </svg>
+    ),
+    title: "Du behåller kontrollen",
+    desc: "Du bestämmer alltid. Vi ger verktygen och insikterna — inga råd mot din vilja.",
   },
 ];
 
-// ── Per-step section ────────────────────────────────────────────────────────
+// ── FAQ ───────────────────────────────────────────────────────────────────────
 
-function StepSection({
-  s,
-  index,
-}: {
-  s: (typeof steps)[0];
-  index: number;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start end", "center start"],
-  });
+const FAQS = [
+  { q: "Är Fondanalys verkligen gratis?", a: "Ja, helt gratis. Ingen avgift, inget kreditkort och inget konto krävs för grundfunktionerna." },
+  { q: "Hur skapar ni portföljförslagen?", a: "Vi beräknar din risknivå baserat på dina svar och matchar sedan bäst rankade fonder inom varje kategori — rangordnade på Sharpe-kvot, historisk avkastning och avgift." },
+  { q: "Behöver jag logga in?", a: "Nej. Du kan bygga och analysera portföljer utan konto. Du behöver ett konto bara om du vill spara dina portföljer." },
+  { q: "Kan jag ändra min portfölj efter att ha fått förslaget?", a: "Ja. På resultatsidan kan du justera aktie/ränte-fördelningen, generera om portföljen och bläddra bland alternativa fonder." },
+];
 
-  const reversed = index % 2 === 1;
-
-  const opacity  = useTransform(scrollYProgress, [0, 0.6], [0, 1]);
-  const xVisual  = useTransform(scrollYProgress, [0, 0.55], [reversed ? -80 : 80, 0]);
-
+function FAQItem({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false);
   return (
-    <div
-      ref={ref}
-      className={`py-28 flex items-center justify-center gap-16 lg:gap-28 px-8 ${
-        reversed ? "flex-row-reverse" : ""
-      }`}
-    >
-      {/* Text — fades in only, no slide */}
-      <motion.div className="max-w-sm w-full" style={{ opacity }}>
-        <span className="text-xs font-bold text-blue-400 uppercase tracking-widest">
-          {s.step}
-        </span>
-        <h3 className="text-3xl sm:text-4xl font-bold text-slate-900 mt-2 leading-tight">
-          {s.title}
-        </h3>
-        <p className="text-slate-500 mt-4 leading-relaxed text-base sm:text-lg">
-          {s.description}
-        </p>
-      </motion.div>
-
-      {/* Visual — slides in harder from the outer edge */}
-      <motion.div style={{ opacity, x: xVisual }}>
-        {s.visual}
-      </motion.div>
+    <div className="border-b border-slate-100 last:border-0">
+      <button type="button" onClick={() => setOpen((o) => !o)} className="w-full flex items-center justify-between py-4 text-left gap-4">
+        <span className="text-sm font-semibold text-slate-800">{q}</span>
+        <svg
+          className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {open && <p className="text-sm text-slate-500 leading-relaxed pb-4">{a}</p>}
     </div>
   );
 }
 
-// ── Main export ─────────────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function HowItWorks() {
   return (
-    <section>
-      {/* Header */}
+    <section className="space-y-24 sm:space-y-32">
+
+      {/* Section header */}
       <motion.div
-        className="text-center mb-4"
+        className="text-center"
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.5 }}
       >
-        <h2 className="text-2xl sm:text-4xl font-bold text-slate-900 leading-tight">
-          Steg för steg
+        <p className="text-xs font-bold text-blue-500 uppercase tracking-widest mb-3">Vad kan du göra?</p>
+        <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 leading-tight">
+          Allt du behöver för smartare fondsparande
         </h2>
-        <p className="text-slate-400 mt-3 text-sm sm:text-base">
-          Smarta fondval börjar här
+        <p className="text-slate-400 mt-3 text-base max-w-md mx-auto">
+          Från att bygga din första portfölj till att optimera en befintlig.
         </p>
       </motion.div>
 
-      {/* Desktop: full-height scroll-reveal steps */}
-      <div className="hidden sm:block">
-        {steps.map((s, i) => (
-          <StepSection key={i} s={s} index={i} />
-        ))}
+      {/* Two feature cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <BuildCard />
+        <AnalyzeCard />
       </div>
 
-      {/* Mobile: simple stacked cards */}
-      <div className="sm:hidden space-y-4 mt-10">
-        {steps.map((s, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.4, delay: i * 0.08 }}
-            className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3"
-          >
-            <span className="text-xs font-bold text-blue-400 uppercase tracking-widest">{s.step}</span>
-            <p className="font-bold text-slate-900">{s.title}</p>
-            <p className="text-sm text-slate-500 leading-relaxed">{s.description}</p>
-          </motion.div>
-        ))}
+      {/* Why trust us */}
+      <div>
+        <motion.div
+          className="text-center mb-12"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+        >
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Varför Fondanalys?</h2>
+        </motion.div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-16 gap-y-8 max-w-3xl mx-auto">
+          {TRUST_ITEMS.map((item, i) => (
+            <motion.div
+              key={item.title}
+              className="flex gap-4"
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: i * 0.06 }}
+            >
+              <div className="w-9 h-9 bg-blue-50 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
+                {item.icon}
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-900 mb-1">{item.title}</p>
+                <p className="text-sm text-slate-400 leading-relaxed">{item.desc}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
       </div>
+
+      {/* FAQ */}
+      <div className="max-w-2xl mx-auto w-full">
+        <motion.div
+          className="text-center mb-8"
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.4 }}
+        >
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Vanliga frågor</h2>
+        </motion.div>
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-6">
+          {FAQS.map((faq) => <FAQItem key={faq.q} q={faq.q} a={faq.a} />)}
+        </div>
+      </div>
+
     </section>
   );
 }
