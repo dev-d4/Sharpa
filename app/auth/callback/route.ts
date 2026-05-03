@@ -27,7 +27,12 @@ export async function GET(request: Request) {
     );
 
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) return NextResponse.redirect(`${origin}${next}`);
+    if (!error) {
+      const { data: { user } } = await supabase.auth.getUser();
+      const isFirstLogin = !user?.user_metadata?.onboarding_completed;
+      const destination = isFirstLogin ? "/valkomst" : next;
+      return NextResponse.redirect(`${origin}${destination}`);
+    }
   }
 
   return NextResponse.redirect(`${origin}/login?error=auth`);

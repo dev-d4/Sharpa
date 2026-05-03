@@ -10,7 +10,7 @@ import type { SwapSuggestion } from "@/lib/analysis";
 
 export default function PortfoliosClient() {
   const [portfolios, setPortfolios] = useState<SavedPortfolio[]>([]);
-  const [riskProfile, setRiskProfile] = useState<{ score: RiskLevel } | null>(null);
+  const [riskProfile, setRiskProfile] = useState<{ score: RiskLevel; label: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedSwaps, setExpandedSwaps] = useState<Set<string>>(new Set());
   const [expandedDetails, setExpandedDetails] = useState<Set<string>>(new Set());
@@ -25,7 +25,7 @@ export default function PortfoliosClient() {
         fetch("/api/risk-profile").then((r) => r.ok ? r.json() : null),
       ]).then(([p, rp]) => {
         setPortfolios(p);
-        setRiskProfile(rp ? { score: rp.score as RiskLevel } : null);
+        setRiskProfile(rp ? { score: rp.score as RiskLevel, label: rp.label as string } : null);
         setLoading(false);
       }).catch(() => setLoading(false));
     });
@@ -54,18 +54,60 @@ export default function PortfoliosClient() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Mina portföljer</h1>
           <p className="text-sm text-slate-500 mt-1">{portfolios.length} sparade portföljer</p>
         </div>
-        <Link
-          href="/bygg-portfolj"
-          className="shrink-0 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-medium px-3 py-2.5 sm:px-4 rounded-xl transition-all shadow-sm shadow-blue-200"
-        >
-          + Ny
-        </Link>
+        <div className="flex items-center gap-2 shrink-0">
+          <Link
+            href="/analyze"
+            className="text-sm font-medium text-slate-600 hover:text-slate-900 border border-slate-200 hover:border-slate-300 px-3 py-2.5 rounded-xl transition-colors hidden sm:block"
+          >
+            Analysera befintlig
+          </Link>
+          <Link
+            href="/bygg-portfolj"
+            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-medium px-3 py-2.5 sm:px-4 rounded-xl transition-all shadow-sm shadow-blue-200"
+          >
+            + Ny portfölj
+          </Link>
+        </div>
       </div>
+
+      {/* Risk profile widget */}
+      {riskProfile ? (
+        <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 flex items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Din risknivå</p>
+            <p className="font-semibold text-slate-900">{riskProfile.label}</p>
+          </div>
+          <div className="flex items-center gap-1.5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div
+                key={i}
+                className={`w-5 h-5 rounded-md ${i < riskProfile.score ? "bg-blue-500" : "bg-slate-100"}`}
+              />
+            ))}
+            <Link href="/risk-profile" className="ml-2 text-xs text-blue-500 hover:text-blue-700 font-medium transition-colors">
+              Uppdatera
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-amber-50 border border-amber-100 rounded-2xl px-5 py-4 flex items-center justify-between gap-4">
+          <div>
+            <p className="font-semibold text-slate-900 text-sm">Du saknar riskprofil</p>
+            <p className="text-xs text-slate-500 mt-0.5">Den hjälper oss matcha portföljer mot din risknivå</p>
+          </div>
+          <Link
+            href="/risk-profile"
+            className="shrink-0 text-sm font-medium text-amber-700 hover:text-amber-800 border border-amber-200 hover:border-amber-300 px-3 py-2 rounded-xl transition-colors bg-white"
+          >
+            Gör riskprofil
+          </Link>
+        </div>
+      )}
 
       {portfolios.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-6 py-20 text-center space-y-5">

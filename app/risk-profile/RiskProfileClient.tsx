@@ -78,7 +78,7 @@ export default function RiskProfileClient() {
         body: JSON.stringify(answers),
       });
       if (res.ok) {
-        router.push("/account");
+        router.push("/risk-profile/result");
       }
     } finally {
       setSaving(false);

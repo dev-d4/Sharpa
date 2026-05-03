@@ -9,6 +9,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Building2, Landmark, Search, Sparkles, X } from "lucide-react"
 import type { SavedPortfolio } from "@/lib/portfolio"
+import DonutChart from "@/components/ui/DonutChart"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -21,10 +22,12 @@ const CUSTODIANS = [
   { value: "övrigt", label: "Övrigt" },
 ];
 
-// ── Login CTA text ────────────────────────────────────────────────────────────
+// ── Login CTA data ────────────────────────────────────────────────────────────
 
-function buildLoginCTA(analysis: PortfolioAnalysis): string {
-  const benefits: string[] = [];
+type BlurBenefit = { value: string; label: string };
+
+function buildLoginBenefits(analysis: PortfolioAnalysis): BlurBenefit[] {
+  const benefits: BlurBenefit[] = [];
 
   if (
     analysis.suggestedMetrics &&
@@ -32,9 +35,8 @@ function buildLoginCTA(analysis: PortfolioAnalysis): string {
     analysis.suggestedMetrics.avgCost !== null
   ) {
     const saving = analysis.avgCost - analysis.suggestedMetrics.avgCost;
-    if (saving >= 0.05) {
-      benefits.push(`sänka din avgift med ${saving.toFixed(2)} procentenheter per år`);
-    }
+    if (saving >= 0.05)
+      benefits.push({ value: `−${saving.toFixed(2)}%`, label: "lägre avgift per år" });
   }
 
   if (
@@ -43,15 +45,11 @@ function buildLoginCTA(analysis: PortfolioAnalysis): string {
     analysis.suggestedMetrics.weightedReturn1yr !== null
   ) {
     const gain = analysis.suggestedMetrics.weightedReturn1yr - analysis.weightedReturn1yr;
-    if (gain >= 1) {
-      benefits.push(`öka din historiska avkastning med ${gain.toFixed(1)}%`);
-    }
+    if (gain >= 1)
+      benefits.push({ value: `+${gain.toFixed(1)}%`, label: "högre avkastning" });
   }
 
-  if (benefits.length === 0)
-    return "Logga in för att se personliga fondbytesförslag för din portfölj.";
-
-  return `Logga in för att se fondbytesförslagen — med optimerade fonder kan du potentiellt ${benefits.join(" och ")}.`;
+  return benefits;
 }
 
 // ── Blur gate ─────────────────────────────────────────────────────────────────
@@ -59,12 +57,12 @@ function buildLoginCTA(analysis: PortfolioAnalysis): string {
 function BlurGate({
   children,
   unlocked,
-  ctaText,
+  benefits,
   onLoginClick,
 }: {
   children: React.ReactNode;
   unlocked: boolean;
-  ctaText: string;
+  benefits: BlurBenefit[];
   onLoginClick: () => void;
 }) {
   if (unlocked) return <>{children}</>;
@@ -72,19 +70,41 @@ function BlurGate({
   return (
     <div className="relative">
       <div className="blur-sm pointer-events-none select-none">{children}</div>
-      <div className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl p-8 text-center bg-white/85 backdrop-blur-[2px]">
-        <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mb-3">
-          <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <div className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl p-6 text-center bg-white/85 backdrop-blur-[2px]">
+        <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center mb-4">
+          <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
           </svg>
         </div>
-        <h3 className="text-base font-bold text-slate-900 mb-1">Fondbytesförslag</h3>
-        <p className="text-sm text-slate-500 mb-5 max-w-xs leading-relaxed">{ctaText}</p>
+
+        {benefits.length > 0 ? (
+          <>
+            <div className="flex items-start justify-center gap-8 mb-4">
+              {benefits.map((b) => (
+                <div key={b.label} className="text-center">
+                  <p className="text-3xl font-bold text-blue-600 leading-none">{b.value}</p>
+                  <p className="text-xs text-slate-500 mt-1.5">{b.label}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-sm text-slate-500 mb-5 max-w-[220px] leading-relaxed">
+              Logga in för att se vilka fonder som ger dig detta.
+            </p>
+          </>
+        ) : (
+          <>
+            <h3 className="text-base font-bold text-slate-900 mb-1">Fondbytesförslag</h3>
+            <p className="text-sm text-slate-500 mb-5 max-w-xs leading-relaxed">
+              Logga in för att se personliga fondbytesförslag för din portfölj.
+            </p>
+          </>
+        )}
+
         <button
           onClick={onLoginClick}
           className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-xl text-sm transition-colors"
         >
-          Logga in kostnadsfritt
+          Logga in — det är gratis
         </button>
       </div>
     </div>
@@ -1571,8 +1591,7 @@ export default function AnalyzeClient() {
 
 function AnalysisResult({ analysis, user, portfolioValue, onLoginClick }: { analysis: PortfolioAnalysis; user: User | null; portfolioValue: number | null; onLoginClick: () => void }) {
   const unlocked = !!user;
-  const ctaText = buildLoginCTA(analysis);
-  const [deepMode, setDeepMode] = useState(false);
+  const loginBenefits = buildLoginBenefits(analysis);
 
   return (
     <div className="space-y-6">
@@ -1599,113 +1618,104 @@ function AnalysisResult({ analysis, user, portfolioValue, onLoginClick }: { anal
         </button>
       </div>
 
+      {/* Insight badges */}
+      {(() => {
+        const badges: { label: string; ok: boolean }[] = [];
+        if (analysis.avgCost !== null) {
+          badges.push(analysis.avgCost < 0.3
+            ? { label: "Låg avgift", ok: true }
+            : analysis.avgCost > 0.6
+              ? { label: "Hög avgift", ok: false }
+              : { label: "Rimlig avgift", ok: true });
+        }
+        if (analysis.weightedSharpe !== null) {
+          badges.push(analysis.weightedSharpe > 0.7
+            ? { label: "Stark riskjusterad avkastning", ok: true }
+            : analysis.weightedSharpe < 0.3
+              ? { label: "Svag riskjusterad avkastning", ok: false }
+              : { label: "Godkänd riskprofil", ok: true });
+        }
+        if (analysis.categoryBreakdown?.length) {
+          const numCats = analysis.categoryBreakdown.filter(c => c.weight > 5).length;
+          badges.push(numCats >= 3
+            ? { label: "Bra spridning", ok: true }
+            : { label: "Låg spridning", ok: false });
+        }
+        if (analysis.weightedReturn3yr !== null) {
+          badges.push(analysis.weightedReturn3yr > 10
+            ? { label: "Stark historisk avkastning", ok: true }
+            : analysis.weightedReturn3yr < 3
+              ? { label: "Låg historisk avkastning", ok: false }
+              : { label: "Godkänd avkastning", ok: true });
+        }
+        if (!badges.length) return null;
+        return (
+          <div className="no-print flex flex-wrap gap-2">
+            {badges.map((b) => (
+              <span key={b.label} className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border ${b.ok ? "bg-green-50 text-green-700 border-green-200" : "bg-amber-50 text-amber-700 border-amber-200"}`}>
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  {b.ok
+                    ? <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+                    : <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+                  }
+                </svg>
+                {b.label}
+              </span>
+            ))}
+          </div>
+        );
+      })()}
+
       {/* Summary */}
       <section className="bg-blue-50 border border-blue-100 rounded-2xl p-4 sm:p-6">
         <h2 className="text-lg font-bold text-blue-900 mb-2">Sammanfattning</h2>
         <p className="text-sm text-blue-900 leading-relaxed">{analysis.summaryText}</p>
       </section>
 
-      {/* Key metrics — always visible */}
+      {/* Key metrics + breakdown — side by side */}
       <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
-        <h2 className="text-lg font-bold text-slate-900 mb-4">Nyckeltal</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <Metric label="Snittavgift" value={analysis.avgCost !== null ? `${analysis.avgCost.toFixed(2)}%` : "–"} sub="per år" info="Den genomsnittliga årliga avgiften viktat efter din fördelning." />
-          <Metric label="Avkastning 1 år" value={analysis.weightedReturn1yr !== null ? `${analysis.weightedReturn1yr.toFixed(1)}%` : "–"} sub="viktad" info="Portföljens viktade avkastning de senaste 12 månaderna." />
-          <Metric label="Avkastning 3 år" value={analysis.weightedReturn3yr !== null ? `${analysis.weightedReturn3yr.toFixed(1)}%` : "–"} sub="annualiserad" info="Genomsnittlig årlig avkastning de senaste 3 åren." />
-          <Metric label="Sharpe 3 år" value={analysis.weightedSharpe !== null ? analysis.weightedSharpe.toFixed(2) : "–"} sub="riskjusterad" info="Avkastning i förhållande till risk. Högre är bättre." />
-        </div>
-        {deepMode && (
-          <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
-            <div className="grid grid-cols-2 gap-4">
-              <Metric label="Volatilitet" value={analysis.weightedStdDev != null ? `${analysis.weightedStdDev.toFixed(1)}%` : "–"} sub="std. avv. 3 år" info="Standardavvikelse — hur mycket portföljen svänger." />
-              <Metric label="Avkastning 5 år" value={analysis.weightedReturn5yr != null ? `${analysis.weightedReturn5yr.toFixed(1)}%` : "–"} sub="annualiserad" info="Genomsnittlig årlig avkastning de senaste 5 åren." />
-            </div>
-          </div>
-        )}
-        <button
-          onClick={() => setDeepMode((v) => !v)}
-          className="mt-4 text-xs text-slate-400 hover:text-slate-600 transition-colors"
-        >
-          {deepMode ? "Dölj fördjupad analys ↑" : "Fördjupad analys ↓"}
-        </button>
-      </section>
-
-      {/* Concentration warnings */}
-      {(analysis.concentrationWarnings?.length ?? 0) > 0 && (
-        <div className="flex items-start gap-3 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
-          <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-          </svg>
+        <div className="grid lg:grid-cols-[1fr_minmax(300px,auto)] gap-6 lg:gap-8 items-start">
           <div>
-            <p className="text-sm font-semibold text-amber-800">Koncentrationsrisk</p>
-            {(analysis.concentrationWarnings ?? []).map((w) => (
-              <p key={w.category} className="text-sm text-amber-700 mt-0.5">
-                {w.weight.toFixed(0)}% av portföljen är i {w.category.toLowerCase()} — överväg att sprida risken över fler kategorier.
-              </p>
-            ))}
+            <h2 className="text-lg font-bold text-slate-900 mb-4">Nyckeltal</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <Metric label="Snittavgift" value={analysis.avgCost !== null ? `${analysis.avgCost.toFixed(2)}%` : "–"} sub="per år" info="Den genomsnittliga årliga avgiften viktat efter din fördelning." />
+              <Metric label="Avkastning 1 år" value={analysis.weightedReturn1yr !== null ? `${analysis.weightedReturn1yr.toFixed(1)}%` : "–"} sub="viktad" info="Portföljens viktade avkastning de senaste 12 månaderna." />
+              <Metric label="Avkastning 3 år" value={analysis.weightedReturn3yr !== null ? `${analysis.weightedReturn3yr.toFixed(1)}%` : "–"} sub="annualiserad" info="Genomsnittlig årlig avkastning de senaste 3 åren." />
+              <Metric label="Sharpe 3 år" value={analysis.weightedSharpe !== null ? analysis.weightedSharpe.toFixed(2) : "–"} sub="riskjusterad" info="Avkastning i förhållande till risk. Högre är bättre." />
+            </div>
+            {(analysis.concentrationWarnings?.length ?? 0) > 0 && (
+              <div className="flex items-start gap-3 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5 mt-4">
+                <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+                <div>
+                  <p className="text-sm font-semibold text-amber-800">Koncentrationsrisk</p>
+                  {(analysis.concentrationWarnings ?? []).map((w) => (
+                    <p key={w.category} className="text-sm text-amber-700 mt-0.5">
+                      {w.weight.toFixed(0)}% i {w.category.toLowerCase()} — överväg att sprida risken.
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 mb-4">Fördelning</h2>
+            <DonutChart
+              slices={(analysis.detailedBreakdown ?? []).map((c) => ({ label: c.label, weight: c.weight }))}
+              centerLabel={`${(analysis.detailedBreakdown ?? [])[0]?.weight.toFixed(0)}%`}
+              centerSub={(analysis.detailedBreakdown ?? [])[0]?.label ?? ""}
+              size={180}
+              thickness={26}
+              horizontal
+            />
           </div>
         </div>
-      )}
-
-      {/* Category breakdown + active/passive — always visible */}
-      <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 space-y-5">
-        <h2 className="text-lg font-bold text-slate-900">Fördelning</h2>
-        <div className="space-y-3">
-          {analysis.categoryBreakdown.map((cat) => (
-            <div key={cat.label}>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="font-medium text-slate-800">{cat.label}</span>
-                <span className="font-semibold text-slate-900">{cat.weight.toFixed(1)}%</span>
-              </div>
-              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 rounded-full" style={{ width: `${cat.weight}%` }} />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Active / passive breakdown — only show if we have actual data (not all unknown) */}
-        {analysis.managementBreakdown && analysis.managementBreakdown.unknown < 99.5 && (
-          <div className="pt-3 border-t border-slate-100">
-            <p className="text-sm font-semibold text-slate-700 mb-2">Aktiv vs. passiv förvaltning</p>
-            <div className="flex h-2 rounded-full overflow-hidden gap-px">
-              {analysis.managementBreakdown.passive > 0 && (
-                <div className="bg-blue-500 h-full" style={{ width: `${analysis.managementBreakdown.passive}%` }} title={`Passiv ${analysis.managementBreakdown.passive.toFixed(1)}%`} />
-              )}
-              {analysis.managementBreakdown.active > 0 && (
-                <div className="bg-violet-400 h-full" style={{ width: `${analysis.managementBreakdown.active}%` }} title={`Aktiv ${analysis.managementBreakdown.active.toFixed(1)}%`} />
-              )}
-              {analysis.managementBreakdown.unknown > 0 && (
-                <div className="bg-slate-200 h-full" style={{ width: `${analysis.managementBreakdown.unknown}%` }} title={`Okänd ${analysis.managementBreakdown.unknown.toFixed(1)}%`} />
-              )}
-            </div>
-            <div className="flex items-center gap-4 mt-2 flex-wrap">
-              {analysis.managementBreakdown.passive > 0 && (
-                <span className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <span className="w-2.5 h-2.5 rounded-sm bg-blue-500 inline-block" />
-                  Passiv (index) {analysis.managementBreakdown.passive.toFixed(1)}%
-                </span>
-              )}
-              {analysis.managementBreakdown.active > 0 && (
-                <span className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <span className="w-2.5 h-2.5 rounded-sm bg-violet-400 inline-block" />
-                  Aktivt förvaltad {analysis.managementBreakdown.active.toFixed(1)}%
-                </span>
-              )}
-              {analysis.managementBreakdown.unknown > 0.5 && (
-                <span className="flex items-center gap-1.5 text-xs text-slate-400">
-                  <span className="w-2.5 h-2.5 rounded-sm bg-slate-200 inline-block" />
-                  Uppgift saknas {analysis.managementBreakdown.unknown.toFixed(1)}%
-                </span>
-              )}
-            </div>
-          </div>
-        )}
       </section>
 
       {/* Swap suggestions + best in category — blurred if not logged in */}
       {((analysis.swapSuggestions?.length ?? 0) > 0 || (analysis.bestInCategory?.length ?? 0) > 0) && (
-        <BlurGate unlocked={unlocked} ctaText={ctaText} onLoginClick={onLoginClick}>
+        <BlurGate unlocked={unlocked} benefits={loginBenefits} onLoginClick={onLoginClick}>
           <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 space-y-4">
             <div>
               <h2 className="text-lg font-bold text-slate-900 mb-1">Fondbytesförslag</h2>
