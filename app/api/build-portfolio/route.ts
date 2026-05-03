@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 type SelectionId =
   | "global" | "sweden" | "usa" | "europe" | "nordic" | "emerging" | "asia"
@@ -189,7 +189,7 @@ function getSupabase() {
   return createClient(url, key);
 }
 
-async function fetchAllFunds(supabase: ReturnType<typeof createClient>, view: string, group: string | string[]): Promise<FundRow[]> {
+async function fetchAllFunds(supabase: SupabaseClient<any, any, any>, view: string, group: string | string[]): Promise<FundRow[]> {
   const PAGE = 1000;
   const cols = "isin, name, category, category_group, selection_id, equity_style_box, sharpe_3yr, return_1yr, return_3yr, ongoing_cost_actual, ongoing_cost_estimated, investment_type";
   const all: FundRow[] = [];
