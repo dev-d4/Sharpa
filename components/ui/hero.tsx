@@ -8,55 +8,56 @@ const PORTFOLIO_SLICES = [
   { label: "Tillväxt", weight: 10 },
 ];
 
-// ── Brush stroke ──────────────────────────────────────────────────────────────
-// overflow: visible is critical — SVG default is hidden, which clips the
-// round stroke caps that extend beyond the viewBox edges.
+// ── Brush strokes ─────────────────────────────────────────────────────────────
+// Tre överlappande diagonala penseldrag med linjära fade-masker i ändarna.
+// overflow: visible krävs — SVG klipper annars bort rundade cap-ändar.
 
 function BrushStrokes() {
-  const d =
-    "M 15 400 C 60 355 110 255 175 195 C 220 150 245 215 270 248 C 295 278 320 242 370 172 C 408 118 436 82 450 65";
+  // Tre diagonala drag, lätt förskjutna mot varandra
+  const s1 = "M -30 480 C 60 380 160 260 260 160 C 330 95  390 55  490 10";
+  const s2 = "M  20 520 C 110 415 200 295 295 200 C 360 138 415 100 510 58";
+  const s3 = "M -60 440 C  30 345 130 235 225 145 C 295  82 360  42 460  0";
 
   return (
     <svg
       className="absolute pointer-events-none hidden lg:block"
-      style={{
-        right: -20,
-        top: -30,
-        width: 460,
-        height: 510,
-        zIndex: 0,
-        overflow: "visible",
-      }}
-      viewBox="0 0 460 510"
+      style={{ right: -40, top: -20, width: 540, height: 560, zIndex: 0, overflow: "visible" }}
+      viewBox="0 0 540 560"
       fill="none"
       aria-hidden
     >
       <defs>
-        {/* Centred at the actual cap tip (path endpoint + half-strokeWidth along tangent) */}
-        <radialGradient id="rStart" cx="-42" cy="457" r="105" gradientUnits="userSpaceOnUse">
-          <stop offset="0%"   stopColor="black" stopOpacity="1" />
-          <stop offset="100%" stopColor="black" stopOpacity="0" />
-        </radialGradient>
-        <radialGradient id="rEnd" cx="501" cy="3" r="105" gradientUnits="userSpaceOnUse">
-          <stop offset="0%"   stopColor="black" stopOpacity="1" />
-          <stop offset="100%" stopColor="black" stopOpacity="0" />
-        </radialGradient>
-        <mask id="endFade" maskUnits="userSpaceOnUse" x="-200" y="-200" width="860" height="860">
-          <rect x="-200" y="-200" width="860" height="860" fill="white" />
-          <circle cx="-42" cy="457" r="105" fill="url(#rStart)" />
-          <circle cx="501" cy="3"   r="105" fill="url(#rEnd)" />
+        {/* Gemensam linjär mask som tonar bort i båda ändarna */}
+        <linearGradient id="brushFade" x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%"   stopColor="white" stopOpacity="0" />
+          <stop offset="15%"  stopColor="white" stopOpacity="1" />
+          <stop offset="85%"  stopColor="white" stopOpacity="1" />
+          <stop offset="100%" stopColor="white" stopOpacity="0" />
+        </linearGradient>
+        <mask id="bm1" maskUnits="userSpaceOnUse" x="-100" y="-100" width="740" height="760">
+          <rect x="-100" y="-100" width="740" height="760" fill="url(#brushFade)" />
         </mask>
+
+        {/* Mjuk oskärpa för ett mer målat utseende */}
+        <filter id="soft">
+          <feGaussianBlur stdDeviation="6" />
+        </filter>
+        <filter id="softer">
+          <feGaussianBlur stdDeviation="10" />
+        </filter>
       </defs>
 
-      <path
-        d={d}
-        stroke="#2F6BFF"
-        strokeWidth="72"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity="0.28"
-        mask="url(#endFade)"
-      />
+      {/* Bakre, bred skugga — ger djup */}
+      <path d={s2} stroke="#93C5FD" strokeWidth="90"  strokeLinecap="round" opacity="0.18" mask="url(#bm1)" filter="url(#softer)" />
+
+      {/* Mellanskikt — huvuddraget */}
+      <path d={s1} stroke="#3B82F6" strokeWidth="56"  strokeLinecap="round" opacity="0.22" mask="url(#bm1)" filter="url(#soft)" />
+
+      {/* Övre tunt drag — ger "borste"-känsla */}
+      <path d={s3} stroke="#2563EB" strokeWidth="22"  strokeLinecap="round" opacity="0.30" mask="url(#bm1)" />
+
+      {/* Ljus högdager längs kanten av huvuddraget */}
+      <path d={s1} stroke="#BFDBFE" strokeWidth="8"   strokeLinecap="round" opacity="0.50" mask="url(#bm1)" />
     </svg>
   );
 }
