@@ -6,7 +6,7 @@ export default function LandingPage() {
   return (
     <div className="relative min-h-screen">
       <Hero />
-      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 pb-16 sm:pb-24">
+      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 pt-10 sm:pt-0 pb-16 sm:pb-24">
         <HowItWorks />
       </div>
       <StickyLandingBar />

@@ -132,83 +132,130 @@ function PortfolioCard() {
 
 export default function Hero() {
   return (
-    <section className="relative w-full flex items-center pt-8 pb-14 sm:pt-10 sm:pb-16 lg:pt-12 lg:pb-20 px-4 sm:px-6">
-      <div className="max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-20 items-center">
+    <section className="relative w-full px-4 sm:px-6 pt-8 pb-12 sm:pt-10 sm:pb-16 lg:pt-12 lg:pb-20">
+      <div className="max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-20 items-center">
 
-        {/* ── Left column ── */}
-        <div className="space-y-9">
+          {/* ── Content column ─────────────────────────────────────────────────
+              Mobil: centrerat.  Desktop (lg): vänsterjusterat.
+          ──────────────────────────────────────────────────────────────────── */}
+          <div className="flex flex-col items-center lg:items-start text-center lg:text-left space-y-8 lg:space-y-9 w-full">
 
-          {/* Trust badge */}
-          <div className="inline-flex items-center gap-2 text-xs font-medium text-slate-500 border border-slate-200 bg-white px-4 py-1.5 rounded-full">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-            Oberoende analys · För smartare sparande
-          </div>
-
-          {/* Headline */}
-          <div className="space-y-5">
-            <h1
-              className="text-[44px] sm:text-[54px] lg:text-[62px] leading-[1.06] tracking-[-0.02em] text-slate-900"
-              style={{ fontFamily: "var(--font-dm-serif), Georgia, serif" }}
-            >
-              Bygg en smartare<br />
-              fondportfölj på{" "}
-              <span className="hero-accent">2 minuter</span>
-            </h1>
-            <p className="text-lg text-slate-500 leading-relaxed max-w-[430px]">
-              Få personliga fondförslag baserat på dina mål, risk och tusentals timmars analys — helt gratis.
-            </p>
-          </div>
-
-          {/* CTA buttons */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Link
-              href="/bygg-portfolj"
-              className="inline-flex items-center justify-center gap-2.5 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-8 py-4 rounded-2xl text-sm transition-all duration-200 shadow-lg shadow-blue-500/25 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0"
-            >
-              Bygg din portfölj gratis
-              <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-              </svg>
-            </Link>
-            <Link
-              href="/analyze"
-              className="inline-flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-700 text-white font-semibold px-8 py-4 rounded-2xl text-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg active:translate-y-0"
-            >
-              Analysera mina fonder →
-            </Link>
-          </div>
-
-          {/* Trust stats */}
-          <div className="flex items-center gap-6 pt-1">
-            <div>
-              <p className="text-[17px] font-bold text-slate-900 leading-tight">1 500+</p>
-              <p className="text-xs text-slate-400 mt-0.5">fonder analyserade</p>
+            {/* Trust badge */}
+            <div className="inline-flex items-center gap-2 text-xs font-medium text-slate-500 border border-slate-200 bg-white px-4 py-1.5 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+              Oberoende analys · För smartare sparande
             </div>
-            <div className="w-px h-9 bg-slate-200" />
-            <div>
-              <p className="text-[17px] font-bold text-slate-900 leading-tight">Gratis</p>
-              <p className="text-xs text-slate-400 mt-0.5">ingen registrering</p>
+
+            {/* Headline */}
+            <div className="space-y-4">
+              <h1
+                className="text-[40px] sm:text-[52px] lg:text-[62px] leading-[1.06] tracking-[-0.02em] text-slate-900"
+                style={{ fontFamily: "var(--font-dm-serif), Georgia, serif" }}
+              >
+                Bygg en smartare<br />
+                fondportfölj på{" "}
+                <span className="hero-accent">2 minuter</span>
+              </h1>
+              <p className="text-base sm:text-lg text-slate-500 leading-relaxed max-w-[430px] mx-auto lg:mx-0">
+                Få personliga fondförslag baserat på dina mål, risk och tusentals timmars analys — helt gratis.
+              </p>
             </div>
-            <div className="w-px h-9 bg-slate-200" />
-            <div>
-              <p className="text-[17px] font-bold text-slate-900 leading-tight">&lt; 2 min</p>
-              <p className="text-xs text-slate-400 mt-0.5">att komma igång</p>
+
+            {/* Mobil: donut + legend (vänster) och knappar (höger) — dolt på desktop */}
+            <div className="lg:hidden flex items-center gap-6 w-full">
+
+              {/* Vänster: donut + legend under */}
+              <div className="shrink-0 flex flex-col items-center gap-2.5">
+                <DonutChart
+                  slices={PORTFOLIO_SLICES}
+                  centerLabel="70%"
+                  centerSub="Aktier"
+                  size={116}
+                  thickness={17}
+                  showLegend={false}
+                />
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                  {PORTFOLIO_SLICES.map((s, i) => {
+                    const colors = ["#3B82F6", "#F59E0B", "#10B981", "#8B5CF6"];
+                    return (
+                      <div key={s.label} className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: colors[i] }} />
+                        <span className="text-[10px] text-slate-500">{s.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Höger: knappar */}
+              <div className="flex flex-col gap-3 flex-1 min-w-0">
+                <Link
+                  href="/bygg-portfolj"
+                  className="inline-flex items-center justify-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-4 py-3 rounded-xl text-sm transition-all duration-200 shadow-md shadow-blue-500/25 active:scale-[0.98]"
+                >
+                  Bygg portfölj
+                  <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                  </svg>
+                </Link>
+                <Link
+                  href="/analyze"
+                  className="inline-flex items-center justify-center bg-slate-900 hover:bg-slate-700 text-white font-semibold px-4 py-3 rounded-xl text-sm transition-all duration-200 active:scale-[0.98]"
+                >
+                  Analysera fonder →
+                </Link>
+              </div>
+
+            </div>
+
+            {/* Desktop: CTA-knappar (rad) — dolt på mobil */}
+            <div className="hidden lg:flex flex-row gap-3">
+              <Link
+                href="/bygg-portfolj"
+                className="inline-flex items-center justify-center gap-2.5 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-8 py-4 rounded-2xl text-sm transition-all duration-200 shadow-lg shadow-blue-500/25 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0"
+              >
+                Bygg din portfölj gratis
+                <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                </svg>
+              </Link>
+              <Link
+                href="/analyze"
+                className="inline-flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-700 text-white font-semibold px-8 py-4 rounded-2xl text-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg active:translate-y-0"
+              >
+                Analysera mina fonder →
+              </Link>
+            </div>
+
+            {/* Trust stats */}
+            <div className="flex items-center gap-4 sm:gap-6">
+              <div>
+                <p className="text-[15px] sm:text-[17px] font-bold text-slate-900 leading-tight">1 500+</p>
+                <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">fonder analyserade</p>
+              </div>
+              <div className="w-px h-7 sm:h-9 bg-slate-200" />
+              <div>
+                <p className="text-[15px] sm:text-[17px] font-bold text-slate-900 leading-tight">Gratis</p>
+                <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">ingen registrering</p>
+              </div>
+              <div className="w-px h-7 sm:h-9 bg-slate-200" />
+              <div>
+                <p className="text-[15px] sm:text-[17px] font-bold text-slate-900 leading-tight">&lt; 2 min</p>
+                <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">att komma igång</p>
+              </div>
             </div>
           </div>
+
+          {/* ── Right column — dolt på mobil, synligt på desktop ───────────────
+              'relative' gör denna kolumn till containing block för BrushStrokes.
+          ──────────────────────────────────────────────────────────────────── */}
+          <div className="hidden lg:relative lg:flex lg:justify-end">
+            <BrushStrokes />
+            <PortfolioCard />
+          </div>
+
         </div>
-
-        {/* ── Right column ──────────────────────────────────────────────────────
-            'relative' here makes this the containing block for BrushStrokes.
-            The SVG is anchored from the right edge of this column so it tracks
-            the card position at every viewport width without any clipping math.
-        ──────────────────────────────────────────────────────────────────────── */}
-        <div className="relative flex justify-center lg:justify-end">
-
-          <BrushStrokes />
-
-          <PortfolioCard />
-        </div>
-
       </div>
     </section>
   );

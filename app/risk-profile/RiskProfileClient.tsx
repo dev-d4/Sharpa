@@ -178,15 +178,23 @@ export default function RiskProfileClient() {
         <p className="text-sm text-slate-500 mt-1">Svara på 4 frågor — tar under en minut.</p>
       </div>
 
+      {/* Progress bar */}
+      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-blue-500 rounded-full transition-all duration-300"
+          style={{ width: `${((currentStep + 1) / QUESTIONS.length) * 100}%` }}
+        />
+      </div>
+
       {(() => {
         const q = QUESTIONS[currentStep];
         const qi = currentStep;
         return (
-        <section key={q.key} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+        <section key={q.key} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 space-y-4">
           <div>
-            <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">Fråga {qi + 1} av 4</p>
-            <h2 className="font-bold text-slate-900">{q.question}</h2>
-            <p className="text-sm text-slate-500 mt-0.5">{q.description}</p>
+            <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">Fråga {qi + 1} av {QUESTIONS.length}</p>
+            <h2 className="font-bold text-slate-900 text-[17px] leading-snug">{q.question}</h2>
+            <p className="text-sm text-slate-500 mt-1">{q.description}</p>
           </div>
           <div className="space-y-2">
             {q.options.map((opt, i) => {
@@ -198,11 +206,15 @@ export default function RiskProfileClient() {
                   type="button"
                   onClick={() => {
                     setAnswers((prev) => ({ ...prev, [q.key]: value }));
-                  }}                  
-                    className={`w-full text-left px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                    // Auto-advance till nästa fråga efter 200ms
+                    if (currentStep < QUESTIONS.length - 1) {
+                      setTimeout(() => setCurrentStep((s) => s + 1), 200);
+                    }
+                  }}
+                  className={`w-full text-left px-4 py-4 rounded-xl border-2 text-[15px] font-medium transition-all active:scale-[0.99] ${
                     selected
                       ? "border-blue-500 bg-blue-50 text-blue-800"
-                      : "border-slate-200 text-slate-700 hover:border-slate-300"
+                      : "border-slate-200 text-slate-700 hover:border-blue-300 hover:bg-blue-50/30"
                   }`}
                 >
                   {opt}
@@ -223,19 +235,11 @@ export default function RiskProfileClient() {
         </div>
       )}
 
-    {currentStep < QUESTIONS.length - 1 ? (
-      <button
-        onClick={() => setCurrentStep((s) => s + 1)}
-        disabled={!answers[QUESTIONS[currentStep].key]}
-        className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium rounded-xl py-3 transition-colors"
-      >
-        Nästa fråga →
-      </button>
-    ) : (
+    {currentStep === QUESTIONS.length - 1 && (
       <button
         onClick={handleSubmit}
         disabled={!allAnswered || saving}
-        className="w-full bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 disabled:from-blue-300 disabled:to-blue-300 text-white font-medium rounded-xl py-3 transition-all shadow-md shadow-blue-200"
+        className="w-full bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 disabled:from-blue-300 disabled:to-blue-300 text-white font-medium rounded-xl py-4 text-[15px] transition-all shadow-md shadow-blue-200"
       >
         {saving ? "Sparar…" : "Spara riskprofil"}
       </button>

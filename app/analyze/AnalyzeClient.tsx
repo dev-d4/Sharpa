@@ -1466,34 +1466,41 @@ export default function AnalyzeClient() {
           </p>
         )}
 
-        <div className="space-y-2">
-          <div className="hidden sm:grid grid-cols-[1fr_100px_36px] gap-2 text-xs font-semibold text-slate-500 px-1">
+        <div className="space-y-3">
+          <div className="hidden sm:grid grid-cols-[1fr_100px_44px] gap-2 text-xs font-semibold text-slate-500 px-1">
             <span>Fond</span>
             <span>{inputMode === "weight" ? "Vikt (%)" : "Belopp (kr)"}</span>
             <span />
           </div>
           {entries.map((entry, i) => (
-            <div key={i} className="flex flex-col gap-2 sm:grid sm:grid-cols-[1fr_100px_44px]">
+            <div key={i} className="space-y-2 sm:space-y-0 sm:grid sm:grid-cols-[1fr_100px_44px] sm:gap-2 bg-slate-50 sm:bg-transparent rounded-xl sm:rounded-none p-3 sm:p-0 border border-slate-100 sm:border-0">
+              {/* Mobilrubrik */}
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide sm:hidden">Fond {i + 1}</p>
               <FundSearchInput isin={entry.isin} name={entry.name} custodian={custodian} excludeIsins={entries.filter((_, idx) => idx !== i).map((e) => e.isin).filter(Boolean)} onSelect={(isin, name) => selectFund(i, isin, name)} onClear={() => clearFund(i)} />
-              <div className="flex gap-2 sm:contents">
-                {inputMode === "weight" ? (
-                  <input
-                    type="number" placeholder="Vikt %" min={0} max={100}
-                    value={entry.weight} onChange={(e) => updateWeight(i, e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRow(); } }}
-                    className="w-24 sm:w-auto flex-1 sm:flex-none border border-slate-300 rounded-lg px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                ) : (
-                  <input
-                    type="number" placeholder="Belopp kr" min={0}
-                    value={entry.amount ?? ""} onChange={(e) => updateAmount(i, e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRow(); } }}
-                    className="flex-1 sm:flex-none border border-slate-300 rounded-lg px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                )}
+              <div className="flex items-center gap-2 sm:contents">
+                <div className="flex items-center gap-2 flex-1 sm:contents">
+                  <span className="text-xs text-slate-400 sm:hidden shrink-0">
+                    {inputMode === "weight" ? "Vikt:" : "Belopp:"}
+                  </span>
+                  {inputMode === "weight" ? (
+                    <input
+                      type="number" placeholder="%" min={0} max={100}
+                      value={entry.weight} onChange={(e) => updateWeight(i, e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRow(); } }}
+                      className="w-20 sm:w-auto flex-none border border-slate-300 rounded-lg px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  ) : (
+                    <input
+                      type="number" placeholder="kr" min={0}
+                      value={entry.amount ?? ""} onChange={(e) => updateAmount(i, e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRow(); } }}
+                      className="flex-1 sm:flex-none border border-slate-300 rounded-lg px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  )}
+                </div>
                 <button
                   onClick={() => removeRow(i)} disabled={entries.length === 1}
-                  className="h-12 w-12 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-200 disabled:opacity-30 transition-colors shrink-0"
+                  className="h-11 w-11 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-200 disabled:opacity-30 transition-colors shrink-0"
                 >✕</button>
               </div>
             </div>

@@ -171,13 +171,13 @@ export default function PortfoliosClient() {
                     <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                       <button
                         onClick={() => router.push(`/analyze?portfolio=${p.id}`)}
-                        className="text-xs font-medium text-blue-600 hover:text-blue-700 border border-blue-200 hover:border-blue-300 px-2.5 sm:px-3 py-2 rounded-lg transition-colors whitespace-nowrap"
+                        className="text-xs font-medium text-blue-600 hover:text-blue-700 border border-blue-200 hover:border-blue-300 px-3 py-2.5 rounded-lg transition-colors whitespace-nowrap"
                       >
                         Redigera
                       </button>
                       <button
                         onClick={() => handleDelete(p.id)}
-                        className="text-xs font-medium text-slate-400 hover:text-red-500 border border-slate-200 hover:border-red-200 px-2.5 sm:px-3 py-2 rounded-lg transition-colors whitespace-nowrap"
+                        className="text-xs font-medium text-slate-400 hover:text-red-500 border border-slate-200 hover:border-red-200 px-3 py-2.5 rounded-lg transition-colors whitespace-nowrap"
                       >
                         Ta bort
                       </button>
@@ -305,7 +305,7 @@ export default function PortfoliosClient() {
                                           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Överväg att sälja</p>
                                           <p className="font-semibold text-sm text-slate-900 break-words">{s.currentFund.name}</p>
                                         </div>
-                                        <span className="text-slate-400 text-lg sm:mt-3">↓<span className="hidden sm:inline">→</span></span>
+                                        <span className="text-slate-400 text-lg sm:mt-3">↓</span>
                                         <div className="flex-1 min-w-0">
                                           <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Öka i befintlig fond</p>
                                           <p className="font-semibold text-sm text-slate-900 break-words">{s.suggestedFund.name}</p>
@@ -324,7 +324,7 @@ export default function PortfoliosClient() {
                                           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Nuvarande fond</p>
                                           <p className="font-semibold text-sm text-slate-900 break-words">{s.currentFund.name}</p>
                                         </div>
-                                        <span className="text-slate-400 text-lg sm:mt-3">↓<span className="hidden sm:inline">→</span></span>
+                                        <span className="text-slate-400 text-lg sm:mt-3">↓</span>
                                         <div className="flex-1 min-w-0">
                                           <p className="text-xs font-semibold text-green-600 uppercase tracking-wide">Föreslagen fond</p>
                                           <p className="font-semibold text-sm text-slate-900 break-words">{s.suggestedFund.name}</p>

@@ -17,6 +17,7 @@ export default function DonutChart({
   size = 120,
   thickness = 20,
   horizontal = false,
+  showLegend = true,
 }: {
   slices:        DonutSlice[];
   centerLabel?:  string;
@@ -24,6 +25,7 @@ export default function DonutChart({
   size?:         number;
   thickness?:    number;
   horizontal?:   boolean;
+  showLegend?:   boolean;
 }) {
   const cx = size / 2;
   const cy = size / 2;
@@ -57,7 +59,7 @@ export default function DonutChart({
   });
 
   return (
-    <div className={horizontal ? "flex items-center gap-5" : "flex flex-col items-center gap-4 w-full max-w-xs mx-auto"}>
+    <div className={horizontal ? "flex items-center gap-5" : showLegend ? "flex flex-col items-center gap-4 w-full max-w-xs mx-auto" : "inline-flex"}>
       {/* SVG ring — proper anti-aliasing, no conic-gradient seams */}
       <div className="relative shrink-0" style={{ width: size, height: size }}>
         <svg width={size} height={size}>
@@ -102,18 +104,20 @@ export default function DonutChart({
       </div>
 
       {/* Legend */}
-      <div className={`space-y-1.5 ${horizontal ? "min-w-0" : "w-full"}`}>
-        {sorted.map((s, i) => (
-          <div key={s.label} className="flex items-center gap-1.5 min-w-0">
-            <div
-              className="w-2 h-2 rounded-full shrink-0"
-              style={{ backgroundColor: PALETTE[i % PALETTE.length] }}
-            />
-            <span className="text-sm text-slate-600 truncate">{s.label}</span>
-            <span className="text-sm font-semibold text-slate-900 shrink-0">{s.weight.toFixed(1)}%</span>
-          </div>
-        ))}
-      </div>
+      {showLegend && (
+        <div className={`space-y-1.5 ${horizontal ? "min-w-0" : "w-full"}`}>
+          {sorted.map((s, i) => (
+            <div key={s.label} className="flex items-center gap-1.5 min-w-0">
+              <div
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{ backgroundColor: PALETTE[i % PALETTE.length] }}
+              />
+              <span className="text-sm text-slate-600 truncate">{s.label}</span>
+              <span className="text-sm font-semibold text-slate-900 shrink-0">{s.weight.toFixed(1)}%</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

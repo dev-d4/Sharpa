@@ -263,10 +263,10 @@ function OptionCard({ label, desc, onClick }: {
     <button
       type="button"
       onClick={onClick}
-      className="w-full px-4 py-3.5 rounded-xl border-2 text-left transition-all border-slate-100 bg-slate-50 hover:border-blue-300 hover:bg-blue-50/50"
+      className="w-full px-4 py-4 rounded-xl border-2 text-left transition-all border-slate-100 bg-slate-50 hover:border-blue-300 hover:bg-blue-50/50 active:scale-[0.99]"
     >
-      <p className="text-sm font-semibold text-slate-800 hover:text-blue-700">{label}</p>
-      <p className="text-xs text-slate-400 mt-0.5">{desc}</p>
+      <p className="text-[15px] font-semibold text-slate-800">{label}</p>
+      <p className="text-sm text-slate-400 mt-0.5">{desc}</p>
     </button>
   );
 }
@@ -632,9 +632,10 @@ export default function BuilderClient() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-4 items-start">
+                {/* Mobil: 1-kolumn lista. Desktop: 2-kolumn med priority-panel */}
+                <div className="flex flex-col sm:grid sm:grid-cols-2 sm:gap-4 sm:items-start gap-0">
 
-                  {/* Left: option groups */}
+                  {/* Alternativlista */}
                   <div className="space-y-3">
                     {Object.entries(selectionGroups).map(([group, opts]) => {
                       const isAdvanced = group !== "Marknader";
@@ -649,14 +650,14 @@ export default function BuilderClient() {
                                 key={o.value}
                                 type="button"
                                 onClick={() => toggleSelection(o.value)}
-                                className={`w-full px-3 py-2.5 rounded-xl border-2 text-left transition-all ${
+                                className={`w-full px-4 py-3 rounded-xl border-2 text-left transition-all active:scale-[0.99] ${
                                   selected
                                     ? "border-blue-500 bg-blue-50"
                                     : "border-slate-100 bg-slate-50 hover:border-blue-300 hover:bg-blue-50/50"
                                 }`}
                               >
-                                <p className={`text-xs font-semibold leading-snug ${selected ? "text-blue-700" : "text-slate-800"}`}>{o.label}</p>
-                                <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">{o.desc}</p>
+                                <p className={`text-sm font-semibold leading-snug ${selected ? "text-blue-700" : "text-slate-800"}`}>{o.label}</p>
+                                <p className="text-xs text-slate-400 mt-0.5 leading-tight">{o.desc}</p>
                               </button>
                             );
                           })}
@@ -666,26 +667,22 @@ export default function BuilderClient() {
                     <button
                       type="button"
                       onClick={() => setShowAdvanced((v) => !v)}
-                      className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-slate-600 border border-dashed border-slate-200 rounded-xl py-2 transition-colors"
+                      className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-slate-600 border border-dashed border-slate-200 rounded-xl py-3 transition-colors"
                     >
                       <svg className={`w-3.5 h-3.5 transition-transform ${showAdvanced ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/></svg>
                       {showAdvanced ? "Dölj avancerade val" : "Branscher, stil & räntor"}
                     </button>
                   </div>
 
-                  {/* Right: priority panel — stays at top */}
-                  <div className="sticky top-4 space-y-2">
-                    <div className="mb-2">
-                      <p className="text-sm font-semibold text-slate-800">Vikta dina val</p>
-                      <p className="text-xs text-slate-400 mt-0.5">Hög prioritet får störst andel</p>
-                    </div>
-
-                    {pending.length === 0 ? (
-                      <div className="flex items-center justify-center h-24 rounded-xl border-2 border-dashed border-slate-100">
-                        <p className="text-xs text-slate-300">Välj alternativ till vänster</p>
+                  {/* Priority-panel — sticky på desktop, accordion på mobil */}
+                  {pending.length > 0 && (
+                    <div className="sm:sticky sm:top-4 space-y-2 mt-4 sm:mt-0 border-t border-slate-100 pt-4 sm:border-0 sm:pt-0">
+                      <div className="mb-2">
+                        <p className="text-sm font-semibold text-slate-800">Vikta dina val</p>
+                        <p className="text-xs text-slate-400 mt-0.5">Hög prioritet får störst andel</p>
                       </div>
-                    ) : (
-                      pending.map((id) => {
+
+                      {pending.map((id) => {
                         const opt  = SELECTION_OPTIONS.find((o) => o.value === id)!;
                         const prio = priorities[id] ?? 2;
                         return (
@@ -697,39 +694,38 @@ export default function BuilderClient() {
                                   type="button"
                                   onClick={() => adjustPriority(id, 1)}
                                   disabled={prio >= 3}
-                                  className="w-6 h-6 rounded-md bg-white border border-slate-200 text-slate-500 text-xs font-bold disabled:opacity-25 flex items-center justify-center hover:border-slate-300 transition-colors"
+                                  className="w-8 h-8 rounded-md bg-white border border-slate-200 text-slate-500 text-xs font-bold disabled:opacity-25 flex items-center justify-center hover:border-slate-300 transition-colors"
                                 >−</button>
-                                <span className="text-[10px] font-semibold text-slate-600 flex-1 text-center">
+                                <span className="text-xs font-semibold text-slate-600 flex-1 text-center">
                                   {TIER_LABELS[prio]}
                                 </span>
                                 <button
                                   type="button"
                                   onClick={() => adjustPriority(id, -1)}
                                   disabled={prio <= 1}
-                                  className="w-6 h-6 rounded-md bg-white border border-slate-200 text-slate-500 text-xs font-bold disabled:opacity-25 flex items-center justify-center hover:border-slate-300 transition-colors"
+                                  className="w-8 h-8 rounded-md bg-white border border-slate-200 text-slate-500 text-xs font-bold disabled:opacity-25 flex items-center justify-center hover:border-slate-300 transition-colors"
                                 >+</button>
                               </div>
                             ) : (
-                              <p className="text-[10px] text-slate-400">Enda valet — full vikt</p>
+                              <p className="text-xs text-slate-400">Enda valet — full vikt</p>
                             )}
                           </div>
                         );
-                      })
-                    )}
+                      })}
 
-                    {pending.length > 0 && (
                       <button
                         type="button"
                         onClick={() => { setPending([]); setPriorities({}); }}
-                        className="text-[10px] text-slate-400 hover:text-slate-600 transition-colors"
+                        className="text-xs text-slate-400 hover:text-slate-600 transition-colors py-1"
                       >
                         Rensa alla
                       </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
 
-                <div className="pt-3 flex items-center justify-between gap-3">
+                {/* Desktop-knapp — dold på mobil (sticky bar hanterar det) */}
+                <div className="hidden sm:flex pt-3 items-center justify-between gap-3">
                   <span className="text-xs text-slate-400">{pending.length > 0 ? `${pending.length} valda` : "Inga valda"}</span>
                   <button
                     type="button"
@@ -771,7 +767,7 @@ export default function BuilderClient() {
                 {!loading && !error && result && (
                   <div className="lg:grid lg:grid-cols-5 lg:gap-8 space-y-4 lg:space-y-0">
 
-                    {/* ── Left column ── */}
+                    {/* ── Fondlista — ALLTID FÖRST, både på mobil och desktop (vänster col) ── */}
                     <div className="lg:col-span-3 space-y-3">
 
                       {result.droppedSelections?.length > 0 && (
@@ -898,7 +894,7 @@ export default function BuilderClient() {
                       </button>
                     </div>
 
-                    {/* ── Right column (sticky) ── */}
+                    {/* ── Summary + Save (desktop: right col, mobil: efter fondlistan) ── */}
                     <div className="lg:col-span-2">
                       <div className="lg:sticky lg:top-20 space-y-3">
 
@@ -939,7 +935,7 @@ export default function BuilderClient() {
                                   try { sessionStorage.setItem("fondanalys_builder_quiz", JSON.stringify({ answers, result, priorities, localEquity })); } catch { /* ignore */ }
                                   router.push("/login?next=/bygg-portfolj");
                                 }}
-                                className="w-full bg-slate-900 hover:bg-slate-700 text-white text-sm font-semibold py-3 rounded-xl transition-colors"
+                                className="w-full bg-slate-900 hover:bg-slate-700 text-white text-sm font-semibold py-3.5 rounded-xl transition-colors"
                               >
                                 Logga in för att spara
                               </button>
@@ -950,15 +946,15 @@ export default function BuilderClient() {
                                 <p className="text-sm font-semibold text-slate-900">Spara din portfölj</p>
                                 <p className="text-xs text-slate-400 mt-0.5">Kom åt den när som helst från Mina portföljer.</p>
                               </div>
-                              <button onClick={() => setShowSaveForm(true)} className="w-full bg-slate-900 hover:bg-slate-700 text-white text-sm font-semibold py-3 rounded-xl transition-colors">
+                              <button onClick={() => setShowSaveForm(true)} className="w-full bg-slate-900 hover:bg-slate-700 text-white text-sm font-semibold py-3.5 rounded-xl transition-colors">
                                 Spara portfölj
                               </button>
                             </>
                           ) : (
                             <div className="space-y-2">
-                              <input autoFocus type="text" placeholder="t.ex. ISK, Pension, Barnspar…" value={savingName} onChange={(e) => setSavingName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSave()} className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                              <input autoFocus type="text" placeholder="t.ex. ISK, Pension, Barnspar…" value={savingName} onChange={(e) => setSavingName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSave()} className="w-full border border-slate-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                               <div className="flex gap-2">
-                                <button onClick={handleSave} disabled={!savingName.trim() || saveStatus === "saving"} className="flex-1 bg-slate-900 hover:bg-slate-700 disabled:opacity-40 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors">
+                                <button onClick={handleSave} disabled={!savingName.trim() || saveStatus === "saving"} className="flex-1 bg-slate-900 hover:bg-slate-700 disabled:opacity-40 text-white text-sm font-semibold py-3 rounded-xl transition-colors">
                                   {saveStatus === "saving" ? "Sparar…" : "Spara"}
                                 </button>
                                 <button onClick={() => { setShowSaveForm(false); setSavingName(""); setSaveStatus("idle"); }} className="text-sm text-slate-400 hover:text-slate-600 px-3 transition-colors">
@@ -971,7 +967,7 @@ export default function BuilderClient() {
                         </div>
 
                         {/* Analyze — secondary */}
-                        <button onClick={sendToAnalyze} className="w-full flex items-center justify-center gap-1.5 text-sm font-medium text-blue-600 border border-blue-200 rounded-xl py-2.5 hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700 transition-all">
+                        <button onClick={sendToAnalyze} className="w-full flex items-center justify-center gap-1.5 text-sm font-medium text-blue-600 border border-blue-200 rounded-xl py-3 hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700 transition-all">
                           Se nyckeltal — analysera portföljen
                           <ChevronRight className="w-3.5 h-3.5" />
                         </button>
@@ -991,6 +987,20 @@ export default function BuilderClient() {
         <button onClick={goBack} className="mt-4 text-xs text-slate-400 hover:text-slate-600 transition-colors">
           ← Tillbaka
         </button>
+      )}
+
+      {/* Sticky bottom CTA för selections-steget på mobil */}
+      {step === "selections" && (
+        <div className="sm:hidden fixed bottom-16 left-0 right-0 px-4 pb-3 pt-2 bg-white/95 backdrop-blur-sm border-t border-slate-100 z-50">
+          <button
+            type="button"
+            onClick={confirmSelections}
+            disabled={pending.length === 0}
+            className="w-full bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-6 py-4 rounded-2xl text-sm transition-colors active:scale-[0.99]"
+          >
+            {pending.length === 0 ? "Välj minst ett alternativ" : `Fortsätt — ${pending.length} valda`}
+          </button>
+        </div>
       )}
     </div>
   );

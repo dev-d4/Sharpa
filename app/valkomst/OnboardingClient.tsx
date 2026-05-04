@@ -71,9 +71,9 @@ export default function OnboardingClient() {
   if (step === 1) {
     return (
       <div className="fixed inset-0 z-[200] bg-white overflow-y-auto flex items-center justify-center px-6">
-        <div className="w-full max-w-xl relative z-10 py-16">
+        <div className="w-full max-w-xl relative z-10 py-12 sm:py-16">
           <h1
-            className="text-[50px] sm:text-[64px] leading-[1.05] tracking-[-0.025em] text-slate-900 mb-7 animate-fade-in-up"
+            className="text-[36px] sm:text-[56px] leading-[1.05] tracking-[-0.025em] text-slate-900 mb-5 sm:mb-7 animate-fade-in-up"
             style={{ fontFamily: "var(--font-dm-serif), Georgia, serif" }}
           >
             {userName ? <>{userName},<br /></> : null}
@@ -81,14 +81,15 @@ export default function OnboardingClient() {
           </h1>
 
           <p
-            className="text-lg text-slate-500 leading-relaxed max-w-[480px] mb-10 animate-fade-in-up"
+            className="text-base sm:text-lg text-slate-500 leading-relaxed max-w-[480px] mb-8 sm:mb-10 animate-fade-in-up"
             style={{ animationDelay: "0.07s" }}
           >
             Innan vi sätter ihop din portfölj vill vi förstå din risknivå. Det tar under 2 minuter och säkerställer att du får fondförslag som är anpassade just efter dig.
           </p>
 
+          {/* Stats — dölj på mobil för att hålla fokus på CTA */}
           <div
-            className="flex items-center gap-6 mb-12 animate-fade-in-up"
+            className="hidden sm:flex items-center gap-6 mb-12 animate-fade-in-up"
             style={{ animationDelay: "0.12s" }}
           >
             <div>
@@ -108,12 +109,12 @@ export default function OnboardingClient() {
           </div>
 
           <div
-            className="flex flex-col sm:flex-row items-start sm:items-center gap-4 animate-fade-in-up"
+            className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 animate-fade-in-up"
             style={{ animationDelay: "0.17s" }}
           >
             <button
               onClick={() => complete("/risk-profile")}
-              className="inline-flex items-center gap-2.5 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-8 py-4 rounded-2xl text-sm transition-all duration-200 shadow-lg shadow-blue-500/25 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0"
+              className="inline-flex items-center justify-center gap-2.5 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-8 py-4 rounded-2xl text-sm transition-all duration-200 shadow-lg shadow-blue-500/25 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0"
             >
               Besvara riskfrågorna
               <ArrowForward />
@@ -121,7 +122,7 @@ export default function OnboardingClient() {
 
             <button
               onClick={() => setStep(2)}
-              className="text-sm text-slate-400 hover:text-slate-600 transition-colors"
+              className="text-sm text-slate-400 hover:text-slate-600 transition-colors py-2 text-center sm:text-left"
             >
               Hoppa över för nu →
             </button>
@@ -134,10 +135,10 @@ export default function OnboardingClient() {
   // ── Step 2: Choose first action ───────────────────────────────────────────
   return (
     <div className="fixed inset-0 z-[200] bg-white overflow-y-auto flex items-center justify-center px-6">
-      <div className="w-full max-w-lg relative z-10 py-16">
-        <div className="mb-9 animate-fade-in-down">
+      <div className="w-full max-w-lg relative z-10 py-12 sm:py-16">
+        <div className="mb-7 sm:mb-9 animate-fade-in-down">
           <h2
-            className="text-[40px] sm:text-[50px] leading-[1.08] tracking-[-0.025em] text-slate-900"
+            className="text-[34px] sm:text-[46px] leading-[1.08] tracking-[-0.025em] text-slate-900"
             style={{ fontFamily: "var(--font-dm-serif), Georgia, serif" }}
           >
             Vad vill du<br />
@@ -150,7 +151,7 @@ export default function OnboardingClient() {
             <button
               key={action.href}
               onClick={() => complete(action.href)}
-              className="group w-full text-left bg-white hover:bg-blue-50/50 border border-slate-200 hover:border-blue-200 rounded-2xl px-6 py-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-100/50 animate-fade-in-up"
+              className="group w-full text-left bg-white hover:bg-blue-50/50 border border-slate-200 hover:border-blue-200 rounded-2xl px-5 sm:px-6 py-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-100/50 animate-fade-in-up"
               style={{ animationDelay: `${i * 0.07}s` }}
             >
               <div className="flex items-center justify-between gap-4">
