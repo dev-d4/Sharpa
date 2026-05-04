@@ -206,6 +206,7 @@ function mapNordnetListToFund(f: NordnetListFund, index: number): Fund {
     sri_value: null,
     ongoing_cost_actual: fee,
     ongoing_cost_estimated: fee,
+    selection_id: null,
   };
 }
 

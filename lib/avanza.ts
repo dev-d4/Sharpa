@@ -62,6 +62,7 @@ function mapAvanzaToFund(f: AvanzaFund, index: number): Fund {
     sri_value: f.esgScore ?? null,
     ongoing_cost_actual: f.totalFee ?? null,
     ongoing_cost_estimated: f.managementFee ?? null,
+    selection_id: null,
   };
 }
 
