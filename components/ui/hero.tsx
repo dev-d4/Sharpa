@@ -9,55 +9,71 @@ const PORTFOLIO_SLICES = [
 ];
 
 // ── Brush strokes ─────────────────────────────────────────────────────────────
-// Tre överlappande diagonala penseldrag med linjära fade-masker i ändarna.
-// overflow: visible krävs — SVG klipper annars bort rundade cap-ändar.
+// feTurbulence + feDisplacementMap ger oregelbundna "målade" kanter.
+// overflow: visible krävs — SVG klipper annars bort cap-ändarna.
 
 function BrushStrokes() {
-  // Tre diagonala drag, lätt förskjutna mot varandra
-  const s1 = "M -30 480 C 60 380 160 260 260 160 C 330 95  390 55  490 10";
-  const s2 = "M  20 520 C 110 415 200 295 295 200 C 360 138 415 100 510 58";
-  const s3 = "M -60 440 C  30 345 130 235 225 145 C 295  82 360  42 460  0";
+  const s1 = "M -20 470 C  80 360 185 245 285 150 C 358  82 415  44 510  0";
+  const s2 = "M  35 520 C 130 410 230 295 328 202 C 398 136 452  98 544 56";
+  const s3 = "M -65 425 C  35 318 138 210 238 120 C 310  55 368  18 462 -22";
+  const s4 = "M  80 560 C 172 448 268 338 362 248 C 430 183 482 146 572 106";
 
   return (
     <svg
       className="absolute pointer-events-none hidden lg:block"
-      style={{ right: -40, top: -20, width: 540, height: 560, zIndex: 0, overflow: "visible" }}
-      viewBox="0 0 540 560"
+      style={{ right: -50, top: -30, width: 580, height: 600, zIndex: 0, overflow: "visible" }}
+      viewBox="0 0 580 600"
       fill="none"
       aria-hidden
     >
       <defs>
-        {/* Gemensam linjär mask som tonar bort i båda ändarna */}
-        <linearGradient id="brushFade" x1="0%" y1="100%" x2="100%" y2="0%">
-          <stop offset="0%"   stopColor="white" stopOpacity="0" />
-          <stop offset="15%"  stopColor="white" stopOpacity="1" />
-          <stop offset="85%"  stopColor="white" stopOpacity="1" />
-          <stop offset="100%" stopColor="white" stopOpacity="0" />
-        </linearGradient>
-        <mask id="bm1" maskUnits="userSpaceOnUse" x="-100" y="-100" width="740" height="760">
-          <rect x="-100" y="-100" width="740" height="760" fill="url(#brushFade)" />
-        </mask>
+        {/* Pensel-textur: turbulens förskjuter pixlar och skapar ojämna kanter */}
+        <filter id="b-rough" x="-25%" y="-25%" width="150%" height="150%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.045 0.018" numOctaves="4" seed="5" result="noise" />
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="20" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+        <filter id="b-medium" x="-25%" y="-25%" width="150%" height="150%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.03 0.012" numOctaves="3" seed="11" result="noise" />
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="12" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+        <filter id="b-glow" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="14" />
+        </filter>
+        <filter id="b-soft" x="-25%" y="-25%" width="150%" height="150%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.05 0.022" numOctaves="3" seed="17" result="noise" />
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="9" xChannelSelector="R" yChannelSelector="G" />
+          <feGaussianBlur stdDeviation="2" />
+        </filter>
 
-        {/* Mjuk oskärpa för ett mer målat utseende */}
-        <filter id="soft">
-          <feGaussianBlur stdDeviation="6" />
-        </filter>
-        <filter id="softer">
-          <feGaussianBlur stdDeviation="10" />
-        </filter>
+        {/* Linjär fade i bägge ändar */}
+        <linearGradient id="bfade" x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%"   stopColor="white" stopOpacity="0"   />
+          <stop offset="14%"  stopColor="white" stopOpacity="1"   />
+          <stop offset="86%"  stopColor="white" stopOpacity="1"   />
+          <stop offset="100%" stopColor="white" stopOpacity="0"   />
+        </linearGradient>
+        <mask id="bm" maskUnits="userSpaceOnUse" x="-150" y="-150" width="880" height="900">
+          <rect x="-150" y="-150" width="880" height="900" fill="url(#bfade)" />
+        </mask>
       </defs>
 
-      {/* Bakre, bred skugga — ger djup */}
-      <path d={s2} stroke="#93C5FD" strokeWidth="90"  strokeLinecap="round" opacity="0.18" mask="url(#bm1)" filter="url(#softer)" />
+      {/* Alla lager inuti mask-gruppen så faden appliceras på det slutliga resultatet */}
+      <g mask="url(#bm)">
+        {/* 1. Mjuk glow i botten — ger det luftiga blå glödet */}
+        <path d={s2} stroke="#BFDBFE" strokeWidth="110" strokeLinecap="round" opacity="0.22" filter="url(#b-glow)" />
 
-      {/* Mellanskikt — huvuddraget */}
-      <path d={s1} stroke="#3B82F6" strokeWidth="56"  strokeLinecap="round" opacity="0.22" mask="url(#bm1)" filter="url(#soft)" />
+        {/* 2. Brett basslag med pensel-textur */}
+        <path d={s1} stroke="#93C5FD" strokeWidth="62"  strokeLinecap="round" opacity="0.26" filter="url(#b-medium)" />
 
-      {/* Övre tunt drag — ger "borste"-känsla */}
-      <path d={s3} stroke="#2563EB" strokeWidth="22"  strokeLinecap="round" opacity="0.30" mask="url(#bm1)" />
+        {/* 3. Förskjutet parallellt drag */}
+        <path d={s4} stroke="#A5B4FC" strokeWidth="44"  strokeLinecap="round" opacity="0.20" filter="url(#b-rough)"  />
 
-      {/* Ljus högdager längs kanten av huvuddraget */}
-      <path d={s1} stroke="#BFDBFE" strokeWidth="8"   strokeLinecap="round" opacity="0.50" mask="url(#bm1)" />
+        {/* 4. Smalt drag med stark textur — synliga penselborsttag */}
+        <path d={s3} stroke="#60A5FA" strokeWidth="24"  strokeLinecap="round" opacity="0.28" filter="url(#b-rough)"  />
+
+        {/* 5. Tunn ljus kant-highlight */}
+        <path d={s1} stroke="#EFF6FF" strokeWidth="7"   strokeLinecap="round" opacity="0.70" filter="url(#b-soft)"   />
+      </g>
     </svg>
   );
 }
