@@ -13,16 +13,16 @@ const PORTFOLIO_SLICES = [
 // overflow: visible krävs — SVG klipper annars bort cap-ändarna.
 
 function BrushStrokes() {
-  const s1 = "M -20 470 C  80 360 185 245 285 150 C 358  82 415  44 510  0";
-  const s2 = "M  35 520 C 130 410 230 295 328 202 C 398 136 452  98 544 56";
-  const s3 = "M -65 425 C  35 318 138 210 238 120 C 310  55 368  18 462 -22";
-  const s4 = "M  80 560 C 172 448 268 338 362 248 C 430 183 482 146 572 106";
+  const s1 = "M -20 360 C  80 275 185 185 285 110 C 358  55 415  20 510  0";
+  const s2 = "M  35 400 C 130 315 230 225 328 155 C 398  98 452  65 544 42";
+  const s3 = "M -65 318 C  35 234 138 148 238  78 C 310  22 368  -8 462 -28";
+  const s4 = "M  80 432 C 172 348 268 262 362 194 C 430 140 482 110 572 88";
 
   return (
     <svg
       className="absolute pointer-events-none hidden lg:block"
-      style={{ right: -50, top: -30, width: 580, height: 600, zIndex: 0, overflow: "visible" }}
-      viewBox="0 0 580 600"
+      style={{ right: -50, top: -30, width: 580, height: 490, zIndex: 0, overflow: "visible" }}
+      viewBox="0 0 580 490"
       fill="none"
       aria-hidden
     >
