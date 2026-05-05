@@ -7,17 +7,9 @@ import type { User } from "@supabase/supabase-js";
 import type { SavedPortfolio } from "@/lib/portfolio";
 import { RISK_LABELS, RISK_EQUITY, type RiskLevel } from "@/lib/risk";
 
-const CUSTODIANS = [
-  { value: "avanza", label: "Avanza" },
-  { value: "nordnet", label: "Nordnet" }
-];
-
-const PREF_KEY = "fondanalys_preferred_custodian";
-
 export default function AccountPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [preferredCustodian, setPreferredCustodian] = useState<string>("");
   const [portfolios, setPortfolios] = useState<SavedPortfolio[]>([]);
   const [riskProfile, setRiskProfile] = useState<{ score: RiskLevel; label: string } | null | undefined>(undefined);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
@@ -40,14 +32,7 @@ export default function AccountPage() {
         .then((p) => setRiskProfile(p ? { score: p.score as RiskLevel, label: p.label } : null))
         .catch(() => setRiskProfile(null));
     });
-    setPreferredCustodian(localStorage.getItem(PREF_KEY) ?? "");
   }, [router]);
-
-  function handleCustodianChange(value: string) {
-    setPreferredCustodian(value);
-    if (value) localStorage.setItem(PREF_KEY, value);
-    else localStorage.removeItem(PREF_KEY);
-  }
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -117,29 +102,6 @@ export default function AccountPage() {
                 <span className="text-sm font-medium text-slate-900">{providerLabel}</span>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Preferences */}
-      <section className="bg-white rounded-2xl border border-slate-200 shadow-sm">
-        <div className="px-6 py-4">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Inställningar</p>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <p className="text-sm font-medium text-slate-900">Föredraget depåinstitut</p>
-              <p className="text-xs text-slate-400 mt-0.5">Förvalts automatiskt vid analys</p>
-            </div>
-            <select
-              value={preferredCustodian}
-              onChange={(e) => handleCustodianChange(e.target.value)}
-              className="w-full sm:w-auto border border-slate-200 rounded-xl px-3 py-3 text-base sm:text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-            >
-              <option value="">Inget valt</option>
-              {CUSTODIANS.map((c) => (
-                <option key={c.value} value={c.value}>{c.label}</option>
-              ))}
-            </select>
           </div>
         </div>
       </section>

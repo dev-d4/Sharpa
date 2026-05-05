@@ -883,12 +883,27 @@ export default function AnalyzeClient() {
     // or adjust all weighted funds proportionally to reach 100%.
     const unweighted = withIsins.filter((e) => !e.weight.trim());
     if (unweighted.length > 0) {
-      // Give each unweighted fund an equal share of whatever remains
       const remaining = 100 - currentTotal;
+      if (remaining <= 0.1) {
+        // No headroom — redistribute evenly across ALL funds so new fund gets a real weight
+        const n = withIsins.length;
+        const baseTenths = Math.trunc(1000 / n);
+        const remainderTenths = 1000 - baseTenths * n;
+        let idx = 0;
+        const newEntries = src.map((e) => {
+          if (!e.isin.trim()) return e;
+          const w = idx === 0 ? baseTenths + remainderTenths : baseTenths;
+          idx++;
+          return { ...e, weight: (w / 10).toFixed(1) };
+        });
+        setEntries(newEntries);
+        return newEntries;
+      }
+      // Give each unweighted fund an equal share of whatever remains
       const sharePerFund = remaining / unweighted.length;
       const newEntries = src.map((e) => {
         if (!e.isin.trim() || e.weight.trim()) return e;
-        return { ...e, weight: Math.max(0, sharePerFund).toFixed(1) };
+        return { ...e, weight: sharePerFund.toFixed(1) };
       });
       setEntries(newEntries);
       return newEntries;
@@ -1034,9 +1049,10 @@ export default function AnalyzeClient() {
       });
       setEntries(workingEntries);
     } else {
-      // Auto-distribute if weights don't sum to 100
+      // Auto-distribute if weights don't sum to 100, OR if any ISINed fund has no weight set
       const currentTotal = entries.reduce((s, e) => s + (parseFloat(e.weight) || 0), 0);
-      if (Math.abs(currentTotal - 100) > 0.1) {
+      const hasUnweighted = entries.some((e) => e.isin.trim() && !e.weight.trim());
+      if (Math.abs(currentTotal - 100) > 0.1 || hasUnweighted) {
         workingEntries = distributeWeights(entries);
       }
     }
@@ -1456,8 +1472,8 @@ export default function AnalyzeClient() {
           />
         )}
 
-        {/* Fund rows — shown once a method is chosen */}
-        {inputMethod !== null && (<>
+        {/* Fund rows — in AI mode only shown once at least one fund is selected */}
+        {(inputMethod === "manual" || (inputMethod === "ai" && entries.some((e) => e.isin))) && (<>
 
         {importResult && (
           <p className="text-xs text-slate-400">
@@ -1508,7 +1524,10 @@ export default function AnalyzeClient() {
         </div>
 
         <div className="flex items-center justify-between pt-1">
-          <button onClick={addRow} className="text-sm text-blue-600 hover:underline py-2">+ Lägg till fond</button>
+          {inputMethod !== "ai" && (
+            <button onClick={addRow} className="text-sm text-blue-600 hover:underline py-2">+ Lägg till fond</button>
+          )}
+          {inputMethod === "ai" && <span />}
           {inputMode === "amount" ? (
             <span className="text-sm text-slate-500">
               Totalt: <span className="font-semibold text-slate-900">
@@ -1681,6 +1700,7 @@ function AnalysisResult({ analysis, user, portfolioValue, onLoginClick }: { anal
 
       {/* Key metrics + breakdown — side by side */}
       <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Din nuvarande portfölj</p>
         <div className="grid lg:grid-cols-[1fr_minmax(300px,auto)] gap-6 lg:gap-8 items-start">
           <div>
             <h2 className="text-lg font-bold text-slate-900 mb-4">Nyckeltal</h2>
@@ -1724,8 +1744,9 @@ function AnalysisResult({ analysis, user, portfolioValue, onLoginClick }: { anal
       {((analysis.swapSuggestions?.length ?? 0) > 0 || (analysis.bestInCategory?.length ?? 0) > 0) && (
         <BlurGate unlocked={unlocked} benefits={loginBenefits} onLoginClick={onLoginClick}>
           <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 space-y-4">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Fondbytesförslag</p>
             <div>
-              <h2 className="text-lg font-bold text-slate-900 mb-1">Fondbytesförslag</h2>
+              <h2 className="text-lg font-bold text-slate-900 mb-1">Förslag på förbättringar</h2>
               <p className="text-sm text-slate-500">Fonder i samma kategori med bättre nyckeltal.</p>
             </div>
             {(analysis.swapSuggestions?.length ?? 0) > 0 && (() => {
@@ -1856,11 +1877,19 @@ function AnalysisResult({ analysis, user, portfolioValue, onLoginClick }: { anal
         </BlurGate>
       )}
 
-      {/* Suggested portfolio — only visible when logged in */}
-      {analysis.suggestedMetrics && unlocked && (
+      {/* Suggested portfolio — shown when logged in */}
+      {unlocked && analysis.suggestedMetrics && (
         <SuggestedPortfolio
           current={{ avgCost: analysis.avgCost, weightedReturn1yr: analysis.weightedReturn1yr, weightedReturn3yr: analysis.weightedReturn3yr, weightedSharpe: analysis.weightedSharpe }}
           suggested={analysis.suggestedMetrics}
+          portfolioValue={portfolioValue}
+        />
+      )}
+
+      {/* When no swap suggestions exist — show portfolio performance projection */}
+      {unlocked && !analysis.suggestedMetrics && (analysis.swapSuggestions?.length ?? 0) === 0 && (
+        <OptimalPortfolioProjection
+          current={{ avgCost: analysis.avgCost, weightedReturn1yr: analysis.weightedReturn1yr, weightedReturn3yr: analysis.weightedReturn3yr, weightedSharpe: analysis.weightedSharpe }}
           portfolioValue={portfolioValue}
         />
       )}
@@ -1941,68 +1970,7 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
         <p className="text-sm text-slate-400 mt-0.5">Nyckeltal om du genomför alla förslag ovan.</p>
       </div>
 
-      {/* Mobile: card stack */}
-      <div className="sm:hidden space-y-2">
-        {rows.map((row) => {
-          const d = delta(row.suggestedVal, row.currentVal, row.lowerIsBetter);
-          return (
-            <div key={row.label} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2.5">
-              <div>
-                <p className="text-xs font-semibold text-slate-700">{row.label}</p>
-                <p className="text-xs text-slate-400">{row.sub}</p>
-              </div>
-              <div className="text-right space-y-0.5">
-                <div className="flex items-center gap-2 justify-end">
-                  <span className="text-xs text-slate-400">{fmt(row.currentVal)}</span>
-                  <span className="text-xs text-slate-300">→</span>
-                  <span className="text-sm font-bold text-slate-900">{fmt(row.suggestedVal)}</span>
-                </div>
-                {d && (
-                  <p className={`text-xs font-semibold ${d.better ? "text-green-600" : "text-red-500"}`}>
-                    {d.diff > 0 ? "▲" : "▼"} {Math.abs(d.diff).toFixed(2)}%
-                  </p>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Desktop: table */}
-      <div className="hidden sm:block overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-xs font-semibold text-slate-400 uppercase tracking-wide border-b border-slate-100">
-              <th className="text-left py-2 pr-4">Nyckeltal</th>
-              <th className="text-right py-2 px-4">Nuvarande</th>
-              <th className="text-right py-2 px-4">Föreslagen</th>
-              <th className="text-right py-2 pl-4">Förändring</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-50">
-            {rows.map((row) => {
-              const d = delta(row.suggestedVal, row.currentVal, row.lowerIsBetter);
-              return (
-                <tr key={row.label} className="text-slate-800">
-                  <td className="py-3 pr-4">
-                    <span className="font-medium">{row.label}</span>
-                    <span className="text-xs text-slate-400 ml-1">{row.sub}</span>
-                  </td>
-                  <td className="text-right py-3 px-4 text-slate-400">{fmt(row.currentVal)}</td>
-                  <td className="text-right py-3 px-4 font-semibold">{fmt(row.suggestedVal)}</td>
-                  <td className="text-right py-3 pl-4 font-semibold">
-                    {d ? (
-                      <span className={d.better ? "text-green-600" : "text-red-500"}>
-                        {d.diff > 0 ? "▲" : "▼"} {Math.abs(d.diff).toFixed(2)}%
-                      </span>
-                    ) : <span className="text-slate-400">–</span>}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      {/* Fondinnehav — visas först */}
       <div>
         <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Fondinnehav</p>
         <div className="space-y-1">
@@ -2015,6 +1983,74 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
               <span className="font-semibold text-slate-600">{f.weight.toFixed(1)}%</span>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Nyckeltal — jämförelse nuvarande vs föreslagen */}
+      <div>
+        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Nyckeltal</p>
+
+        {/* Mobile: card stack */}
+        <div className="sm:hidden space-y-2">
+          {rows.map((row) => {
+            const d = delta(row.suggestedVal, row.currentVal, row.lowerIsBetter);
+            return (
+              <div key={row.label} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2.5">
+                <div>
+                  <p className="text-xs font-semibold text-slate-700">{row.label}</p>
+                  <p className="text-xs text-slate-400">{row.sub}</p>
+                </div>
+                <div className="text-right space-y-0.5">
+                  <div className="flex items-center gap-2 justify-end">
+                    <span className="text-xs text-slate-400">{fmt(row.currentVal)}</span>
+                    <span className="text-xs text-slate-300">→</span>
+                    <span className="text-sm font-bold text-slate-900">{fmt(row.suggestedVal)}</span>
+                  </div>
+                  {d && (
+                    <p className={`text-xs font-semibold ${d.better ? "text-green-600" : "text-red-500"}`}>
+                      {d.diff > 0 ? "▲" : "▼"} {Math.abs(d.diff).toFixed(2)}%
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop: table */}
+        <div className="hidden sm:block overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs font-semibold text-slate-400 uppercase tracking-wide border-b border-slate-100">
+                <th className="text-left py-2 pr-4">Nyckeltal</th>
+                <th className="text-right py-2 px-4">Nuvarande</th>
+                <th className="text-right py-2 px-4">Föreslagen</th>
+                <th className="text-right py-2 pl-4">Förändring</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {rows.map((row) => {
+                const d = delta(row.suggestedVal, row.currentVal, row.lowerIsBetter);
+                return (
+                  <tr key={row.label} className="text-slate-800">
+                    <td className="py-3 pr-4">
+                      <span className="font-medium">{row.label}</span>
+                      <span className="text-xs text-slate-400 ml-1">{row.sub}</span>
+                    </td>
+                    <td className="text-right py-3 px-4 text-slate-400">{fmt(row.currentVal)}</td>
+                    <td className="text-right py-3 px-4 font-semibold">{fmt(row.suggestedVal)}</td>
+                    <td className="text-right py-3 pl-4 font-semibold">
+                      {d ? (
+                        <span className={d.better ? "text-green-600" : "text-red-500"}>
+                          {d.diff > 0 ? "▲" : "▼"} {Math.abs(d.diff).toFixed(2)}%
+                        </span>
+                      ) : <span className="text-slate-400">–</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -2083,6 +2119,60 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
           </p>
         </div>
         </div>
+      </div>
+    </section>
+  );
+}
+
+function OptimalPortfolioProjection({ current, portfolioValue }: { current: CurrentMetrics; portfolioValue: number | null }) {
+  const assumed = portfolioValue === null;
+  const pv = portfolioValue ?? 100_000;
+  const returnKr = current.weightedReturn1yr !== null ? (current.weightedReturn1yr / 100) * pv : null;
+  const feeKr = current.avgCost !== null ? (current.avgCost / 100) * pv : null;
+  const netKr = returnKr !== null && feeKr !== null ? returnKr - feeKr : null;
+
+  return (
+    <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 space-y-4 sm:space-y-5">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+          <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">Din portfölj är redan optimal</h2>
+          <p className="text-sm text-slate-400 mt-0.5">Inga fondbytesförslag — portföljen är väl sammansatt.</p>
+        </div>
+      </div>
+
+      <div className="bg-green-50 border border-green-100 rounded-xl p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-bold text-green-900">Uppskattad avkastning per år</p>
+          <span className="text-xs text-slate-500 italic">
+            {assumed ? "Beräknat på en investering av 100 000 kr" : `Beräknat på din investering av ${pv.toLocaleString("sv-SE")} kr`}
+          </span>
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <p className="text-xs text-slate-500 mb-0.5">Avkastning 1 år</p>
+            <p className={`font-bold text-sm ${returnKr !== null ? returnKr >= 0 ? "text-green-700" : "text-red-600" : "text-slate-400"}`}>
+              {returnKr !== null ? `${returnKr >= 0 ? "+" : ""}${Math.round(returnKr).toLocaleString("sv-SE")} kr` : "–"}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500 mb-0.5">Avgifter</p>
+            <p className="font-bold text-sm text-red-600">
+              {feeKr !== null ? `−${Math.round(feeKr).toLocaleString("sv-SE")} kr` : "–"}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500 mb-0.5">Netto</p>
+            <p className={`font-bold text-base ${netKr !== null ? netKr >= 0 ? "text-green-700" : "text-red-600" : "text-slate-400"}`}>
+              {netKr !== null ? `${netKr >= 0 ? "+" : ""}${Math.round(netKr).toLocaleString("sv-SE")} kr` : "–"}
+            </p>
+          </div>
+        </div>
+        <p className="text-[10px] text-slate-400">Baserat på historisk avkastning senaste 12 månader, exklusive avgifter. Historisk avkastning är ingen garanti för framtida resultat.</p>
       </div>
     </section>
   );

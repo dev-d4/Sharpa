@@ -7,6 +7,13 @@ import DonutChart from "@/components/ui/DonutChart";
 
 // ── Feature cards ─────────────────────────────────────────────────────────────
 
+const BUILD_SLICES = [
+  { label: "Global",   weight: 45 },
+  { label: "Räntor",   weight: 30 },
+  { label: "Sverige",  weight: 15 },
+  { label: "Tillväxt", weight: 10 },
+];
+
 function BuildCard() {
   return (
     <motion.div
@@ -30,6 +37,10 @@ function BuildCard() {
           <p className="text-sm text-slate-500 leading-relaxed">
             Svara på 6 frågor om dina mål och risktolerans. Vi sätter ihop en komplett fondportfölj anpassad just för dig.
           </p>
+        </div>
+
+        <div className="bg-slate-50 rounded-xl p-3 w-fit">
+          <DonutChart slices={BUILD_SLICES} centerLabel="70%" centerSub="Aktier" size={88} thickness={14} horizontal />
         </div>
 
         <ul className="space-y-2.5">
@@ -61,12 +72,6 @@ function BuildCard() {
 }
 
 function AnalyzeCard() {
-  const slices = [
-    { label: "Aktier",  weight: 72 },
-    { label: "Räntor",  weight: 18 },
-    { label: "Övrigt",  weight: 10 },
-  ];
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 24 }}
@@ -91,8 +96,26 @@ function AnalyzeCard() {
           </p>
         </div>
 
-        <div className="bg-slate-50 rounded-xl p-3 w-fit">
-          <DonutChart slices={slices} size={88} thickness={14} horizontal />
+        {/* Mock swap suggestion preview */}
+        <div className="bg-slate-50 rounded-xl p-3 space-y-2.5">
+          <div className="flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Nuvarande</p>
+              <p className="text-xs font-semibold text-slate-700 truncate">SEB Sverige Index</p>
+              <p className="text-[10px] text-slate-400">Avgift 0.40%/år</p>
+            </div>
+            <svg className="w-4 h-4 text-slate-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+            </svg>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wide mb-0.5">Föreslagen</p>
+              <p className="text-xs font-semibold text-slate-700 truncate">Avanza Zero</p>
+              <p className="text-[10px] text-emerald-600">Avgift 0.00%/år</p>
+            </div>
+          </div>
+          <div className="border-t border-slate-200 pt-2">
+            <p className="text-[10px] font-semibold text-emerald-600">▲ Sparar 0.40% per år i avgifter</p>
+          </div>
         </div>
 
         <ul className="space-y-2.5">
@@ -197,27 +220,29 @@ export default function HowItWorks() {
   return (
     <section className="space-y-24 sm:space-y-32">
 
-      {/* Section header */}
-      <motion.div
-        className="text-center"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5 }}
-      >
-        <p className="text-xs font-bold text-blue-500 uppercase tracking-widest mb-3">Vad kan du göra?</p>
-        <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 leading-tight">
-          Allt du behöver för smartare fondsparande
-        </h2>
-        <p className="text-slate-400 mt-3 text-base max-w-md mx-auto">
-          Från att bygga din första portfölj till att optimera en befintlig.
-        </p>
-      </motion.div>
+      {/* Section header + cards — grouped tightly together */}
+      <div className="space-y-10 sm:space-y-12">
+        <motion.div
+          className="text-center"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+        >
+          <p className="text-xs font-bold text-blue-500 uppercase tracking-widest mb-3">Vad kan du göra?</p>
+          <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 leading-tight">
+            Allt du behöver för smartare fondsparande
+          </h2>
+          <p className="text-slate-400 mt-3 text-base max-w-md mx-auto">
+            Från att bygga din första portfölj till att optimera en befintlig.
+          </p>
+        </motion.div>
 
-      {/* Two feature cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <BuildCard />
-        <AnalyzeCard />
+        {/* Two feature cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <BuildCard />
+          <AnalyzeCard />
+        </div>
       </div>
 
       {/* Why trust us */}

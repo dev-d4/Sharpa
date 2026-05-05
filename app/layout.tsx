@@ -5,6 +5,7 @@ import Header from "./Header";
 import Footer from "./Footer";
 import { Prefetch } from "@/components/ui/prefetch";
 import CookieBanner from "@/components/ui/CookieBanner";
+import { ScrollToTop } from "@/components/ui/ScrollToTop";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
 export const dmSerif = DM_Serif_Display({
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="sv">
       <body className={`${geist.variable} ${dmSerif.variable} ${geist.className} min-h-screen text-slate-900 leading-relaxed`}>
+        <ScrollToTop />
         <Header />
 
         <Prefetch hrefs={["/analyze", "/risk-profile"]} />

@@ -241,7 +241,28 @@ function generateSwaps(
         f.category === current.category &&
         geographicMatch(currentGeo, geographicFocus(f.name))
     );
-    if (peers.length === 0) continue;
+    if (peers.length === 0) {
+      // No comparable peers found — still acknowledge the fund so it's not silently dropped
+      const GEO: Record<string, string> = {
+        sweden: "Sverige", norway: "Norge", europe: "Europa", usa: "USA",
+        global: "Global", emerging: "Tillväxtmarknader", nordic: "Norden",
+        japan: "Japan", china: "Kina", denmark: "Danmark",
+      };
+      const geoLabel = currentGeo ? (GEO[currentGeo] ?? null) : null;
+      const catDisplay = current.category
+        ? categoryToSwedish(current.category)
+        : current.category_group
+        ? categoryLabel(current.category_group)
+        : null;
+      bestInCategory.push({
+        fundName: current.name,
+        isin: current.isin,
+        category: catDisplay
+          ? catDisplay + (geoLabel ? ` (${geoLabel})` : "")
+          : "Ej jämförbar kategori",
+      });
+      continue;
+    }
 
     const best = peers.reduce((a, b) =>
       absoluteScore(b) > absoluteScore(a) ? b : a

@@ -149,14 +149,14 @@ function PortfolioCard() {
 
 export default function Hero() {
   return (
-    <section className="relative w-full px-4 sm:px-6 pt-8 pb-12 sm:pt-10 sm:pb-16 lg:pt-12 lg:pb-20">
+    <section className="relative w-full px-4 sm:px-6 pt-20 pb-24 sm:pt-24 sm:pb-28 lg:pt-24 lg:pb-32">
       <div className="max-w-6xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-20 items-center">
 
           {/* ── Content column ─────────────────────────────────────────────────
               Mobil: centrerat.  Desktop (lg): vänsterjusterat.
           ──────────────────────────────────────────────────────────────────── */}
-          <div className="flex flex-col items-center lg:items-start text-center lg:text-left space-y-8 lg:space-y-9 w-full">
+          <div className="flex flex-col items-center lg:items-start text-center lg:text-left w-full gap-8 lg:gap-10">
 
             {/* Trust badge */}
             <div className="inline-flex items-center gap-2 text-xs font-medium text-slate-500 border border-slate-200 bg-white px-4 py-1.5 rounded-full">
@@ -165,51 +165,55 @@ export default function Hero() {
             </div>
 
             {/* Headline */}
-            <div className="space-y-4">
+            <div className="space-y-7">
               <h1
-                className="text-[40px] sm:text-[52px] lg:text-[62px] leading-[1.06] tracking-[-0.02em] text-slate-900"
+                className="text-[42px] sm:text-[54px] lg:text-[64px] leading-[1.05] tracking-[-0.02em] text-slate-900"
                 style={{ fontFamily: "var(--font-dm-serif), Georgia, serif" }}
               >
                 Bygg en smartare<br />
                 fondportfölj på{" "}
                 <span className="hero-accent">2 minuter</span>
               </h1>
-              <p className="text-base sm:text-lg text-slate-500 leading-relaxed max-w-[430px] mx-auto lg:mx-0">
+              <p className="text-base sm:text-lg text-slate-500 leading-loose max-w-[430px] mx-auto lg:mx-0">
                 Få personliga fondförslag baserat på dina mål, risk och tusentals timmars analys — helt gratis.
               </p>
             </div>
 
-            {/* Mobil: donut + legend (vänster) och knappar (höger) — dolt på desktop */}
-            <div className="lg:hidden flex items-center gap-6 w-full">
+            {/* Mobil: kort med donut + knappar under — dolt på desktop */}
+            <div className="lg:hidden flex flex-col items-center gap-6 w-full mt-6">
 
-              {/* Vänster: donut + legend under */}
-              <div className="shrink-0 flex flex-col items-center gap-2.5">
+              {/* Exempelkort */}
+              <div
+                className="w-full max-w-sm bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl p-4"
+                style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.07), 0 0 0 1px rgba(255,255,255,0.6)" }}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Rekommenderad portfölj</p>
+                    <p className="text-sm font-bold text-slate-900 mt-0.5">Din personliga mix</p>
+                  </div>
+                  <span className="text-xs bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-1 rounded-full font-semibold shrink-0">
+                    Balanserad
+                  </span>
+                </div>
                 <DonutChart
                   slices={PORTFOLIO_SLICES}
                   centerLabel="70%"
                   centerSub="Aktier"
-                  size={116}
-                  thickness={17}
-                  showLegend={false}
+                  size={100}
+                  thickness={15}
+                  horizontal
                 />
-                <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                  {PORTFOLIO_SLICES.map((s, i) => {
-                    const colors = ["#3B82F6", "#F59E0B", "#10B981", "#8B5CF6"];
-                    return (
-                      <div key={s.label} className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: colors[i] }} />
-                        <span className="text-[10px] text-slate-500">{s.label}</span>
-                      </div>
-                    );
-                  })}
-                </div>
+                <p className="text-[10px] text-slate-300 mt-3 text-center tracking-wide">
+                  Exempelportfölj · din anpassas efter dina svar
+                </p>
               </div>
 
-              {/* Höger: knappar */}
-              <div className="flex flex-col gap-3 flex-1 min-w-0">
+              {/* Knappar — full bredd */}
+              <div className="flex flex-col gap-3 w-full max-w-sm">
                 <Link
                   href="/bygg-portfolj"
-                  className="inline-flex items-center justify-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-4 py-3 rounded-xl text-sm transition-all duration-200 shadow-md shadow-blue-500/25 active:scale-[0.98]"
+                  className="inline-flex items-center justify-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-4 py-3.5 rounded-xl text-sm transition-all duration-200 shadow-md shadow-blue-500/25 active:scale-[0.98]"
                 >
                   Bygg portfölj
                   <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -218,7 +222,7 @@ export default function Hero() {
                 </Link>
                 <Link
                   href="/analyze"
-                  className="inline-flex items-center justify-center bg-slate-900 hover:bg-slate-700 text-white font-semibold px-4 py-3 rounded-xl text-sm transition-all duration-200 active:scale-[0.98]"
+                  className="inline-flex items-center justify-center bg-slate-900 hover:bg-slate-700 text-white font-semibold px-4 py-3.5 rounded-xl text-sm transition-all duration-200 active:scale-[0.98]"
                 >
                   Analysera fonder →
                 </Link>

@@ -829,7 +829,7 @@ export default function BuilderClient() {
                         )}
                       </div>
 
-                      {/* Portfolio reasoning + per-fund explanations — blurred if not logged in */}
+                      {/* Portfolio analysis — blurred if not logged in */}
                       {((result.reasoning?.length > 0) || (result.fundExplanations?.length > 0)) && (
                         <BuilderBlurGate
                           unlocked={!!user}
@@ -839,18 +839,26 @@ export default function BuilderClient() {
                           }}
                         >
                           <div className="space-y-2">
+
+                            {/* Box 1: Portföljanalys — all reasoning lines as one block */}
                             {result.reasoning?.length > 0 && (
                               <div className="border border-slate-100 rounded-xl overflow-hidden">
                                 <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
                                   <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Portföljanalys</p>
                                 </div>
-                                <div className="divide-y divide-slate-100">
+                                <div className="px-4 py-3 space-y-2">
                                   {result.reasoning.map((line, i) => (
-                                    <p key={i} className={`px-4 py-3 text-xs leading-relaxed ${line.startsWith("⚠") ? "text-amber-700 bg-amber-50" : "text-slate-600"}`}>{line}</p>
+                                    line.startsWith("⚠") ? (
+                                      <p key={i} className="text-xs leading-relaxed text-amber-700 bg-amber-50 rounded-lg px-3 py-2">{line}</p>
+                                    ) : (
+                                      <p key={i} className="text-xs leading-relaxed text-slate-600">{line}</p>
+                                    )
                                   ))}
                                 </div>
                               </div>
                             )}
+
+                            {/* Box 2: Per-fond förklaringar */}
                             {result.fundExplanations?.length > 0 && (
                               <div className="border border-slate-100 rounded-xl overflow-hidden">
                                 <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
@@ -862,6 +870,20 @@ export default function BuilderClient() {
                                     const parts: string[] = [];
                                     if (f.sharpe != null) parts.push(`Sharpe ${f.sharpe.toFixed(2)}`);
                                     if (f.cost   != null) parts.push(`avgift ${f.cost.toFixed(2)}%/år`);
+                                    const explanation = (() => {
+                                      const isVeryLowCost = f.cost  != null && f.cost  < 0.05;
+                                      const isLowCost     = f.cost  != null && f.cost  < 0.20;
+                                      const isHighSharpe  = f.sharpe != null && f.sharpe > 0.7;
+                                      const isGoodSharpe  = f.sharpe != null && f.sharpe > 0.4;
+                                      const sharpeStr = f.sharpe != null ? `Sharpe ${f.sharpe.toFixed(2)}` : null;
+                                      const costStr   = f.cost   != null ? `avgift ${f.cost.toFixed(2)}%/år` : null;
+                                      if (isVeryLowCost && !isHighSharpe) return ["Exceptionellt låg avgift", sharpeStr].filter(Boolean).join(" · ");
+                                      if (isHighSharpe && isLowCost) return ["Stark riskjusterad avkastning och låg avgift", sharpeStr, costStr].filter(Boolean).join(" · ");
+                                      if (isHighSharpe) return ["Stark riskjusterad avkastning", costStr].filter(Boolean).join(" · ");
+                                      if (isLowCost) return ["Låg avgift", sharpeStr].filter(Boolean).join(" · ");
+                                      if (isGoodSharpe) return ["God riskjusterad avkastning", costStr].filter(Boolean).join(" · ");
+                                      return ["Rankad i sin kategori", sharpeStr, costStr].filter(Boolean).join(" · ");
+                                    })();
                                     return (
                                       <div key={i}>
                                         <button type="button" onClick={() => setExpandedFunds((prev) => { const n = new Set(prev); open ? n.delete(i) : n.add(i); return n; })} className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-50 transition-colors">
@@ -875,7 +897,7 @@ export default function BuilderClient() {
                                           <div className="px-4 pb-3 space-y-1">
                                             <p className="text-xs text-slate-500">Kategori: <span className="font-medium text-slate-700">{f.rationale}</span></p>
                                             {parts.length > 0 && <p className="text-xs text-slate-500">{parts.join(" · ")}</p>}
-                                            <p className="text-xs text-slate-400 leading-relaxed">Bäst rankad i sin kategori baserat på riskjusterad avkastning och låg avgift.</p>
+                                            <p className="text-xs text-slate-400 leading-relaxed">{explanation}</p>
                                           </div>
                                         )}
                                       </div>
@@ -884,6 +906,7 @@ export default function BuilderClient() {
                                 </div>
                               </div>
                             )}
+
                           </div>
                         </BuilderBlurGate>
                       )}
@@ -908,10 +931,11 @@ export default function BuilderClient() {
                               label: RATIONALE_SHORT[slot.rationale] ?? slot.rationale.split(" ")[0],
                               weight: slot.weight,
                             }))}
-                            centerLabel={String(result.portfolio.length)}
-                            centerSub="fonder"
-                            size={140}
-                            thickness={22}
+                            centerLabel={`${result.equityPct}%`}
+                            centerSub="Aktier"
+                            size={120}
+                            thickness={18}
+                            horizontal
                           />
                           {result.summary && (
                             <p className="text-xs text-slate-600 leading-relaxed border-t border-slate-100 pt-3">
