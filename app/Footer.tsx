@@ -17,6 +17,8 @@ export default function Footer() {
           <Link href="/integritetspolicy" className="text-xs text-slate-300 hover:text-slate-500 transition-colors">Integritetspolicy</Link>
           <Link href="/villkor" className="text-xs text-slate-300 hover:text-slate-500 transition-colors">Användarvillkor</Link>
           <Link href="/kakpolicy" className="text-xs text-slate-300 hover:text-slate-500 transition-colors">Kakpolicy</Link>
+          <Link href="/faq" className="text-xs text-slate-300 hover:text-slate-500 transition-colors">FAQ</Link>
+          <Link href="/integration" className="text-xs text-slate-400 hover:text-slate-600 font-medium transition-colors">För företag →</Link>
         </div>
       </div>
     </footer>

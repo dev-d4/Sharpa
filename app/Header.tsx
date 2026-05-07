@@ -104,6 +104,7 @@ export default function Header() {
           <nav className="hidden sm:flex items-center justify-center gap-6">
             <Link href="/analyze" className={navClass("/analyze")}>Analysera</Link>
             <Link href="/bygg-portfolj" className={navClass("/bygg-portfolj")}>Bygg portfölj</Link>
+            <Link href="/faq" className={navClass("/faq")}>FAQ</Link>
           </nav>
 
           {/* Desktop right actions */}

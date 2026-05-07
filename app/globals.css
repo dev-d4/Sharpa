@@ -96,6 +96,19 @@ body {
   filter: drop-shadow(0 0 18px rgba(59,130,246,0.40));
 }
 
+/* ── Rapport mode (B2B advisor report — no site chrome) ─────────────────── */
+/* Target only the site header/footer (direct children of body),
+   not the report's own <header> which lives inside <main>. */
+
+body.rapport-mode > header,
+body.rapport-mode > footer {
+  display: none !important;
+}
+
+body.rapport-mode > main {
+  padding-bottom: 0 !important;
+}
+
 /* ── Print / PDF export ──────────────────────────────────────────────────── */
 
 @media print {
