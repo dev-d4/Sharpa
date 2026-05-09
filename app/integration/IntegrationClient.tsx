@@ -164,11 +164,10 @@ export default function IntegrationClient() {
   const [amount,    setAmount]      = useState("850000");
   const [comment,   setComment]     = useState("");
   const [funds, setFunds] = useState<FundRow[]>([
-    { isin: "NO0010827819", weight: "30" },
-    { isin: "FI4000530647", weight: "25" },
-    { isin: "SE0015382114", weight: "25" },
-    { isin: "LU0261948904", weight: "10" },
-    { isin: "LU2437452928", weight: "10" },
+    { isin: "SE0000429789", weight: "25" },
+    { isin: "SE0001718388", weight: "25" },
+    { isin: "SE0005188836", weight: "25" },
+    { isin: "LU0365089902", weight: "25" },
   ]);
 
   const [copiedUrl, setCopiedUrl] = useState(false);
