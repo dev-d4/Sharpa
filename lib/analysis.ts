@@ -440,11 +440,13 @@ export function analyzePortfolio(
     .sort((a, b) => b.weight - a.weight);
 
   // Detailed breakdown using selection_id — same granularity as build-portfolio.
-  // Falls back to the broad category_group label if selection_id is null.
+  // Uses selection_id for builder portfolios, fund.category for real portfolios (rapport).
   const detailedMap: Record<string, number> = {};
   for (const e of found) {
     const sid = e.fund!.selection_id;
-    const label = sid ? (SELECTION_ID_LABELS[sid] ?? sid) : categoryLabel(e.fund!.category_group);
+    const label = sid
+      ? (SELECTION_ID_LABELS[sid] ?? sid)
+      : (e.fund!.category ?? categoryLabel(e.fund!.category_group));
     detailedMap[label] = (detailedMap[label] ?? 0) + e.weight;
   }
   const detailedBreakdown: CategoryBreakdown[] = Object.entries(detailedMap)

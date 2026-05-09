@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PortfolioAnalysis, SwapSuggestion } from "@/lib/analysis";
 import DonutChart from "@/components/ui/DonutChart";
-import { Building2, CheckCircle2, Columns2, Download, GripVertical, Link2, Maximize2, Pencil, Plus, Settings2, X } from "lucide-react";
+import { Building2, CheckCircle2, Download, GripVertical, Link2, Maximize2, Pencil, Plus, Settings2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import FondguideTab  from "./tabs/FondguideTab";
 import ScenarioTab   from "./tabs/ScenarioTab";
@@ -15,28 +15,27 @@ type AppliedSwap = { fromIsin: string; toIsin: string; fromName: string; toName:
 
 type SectionId =
   | "summary" | "advisor-comment" | "holdings"
-  | "metrics" | "asset-allocation" | "category-breakdown"
+  | "metrics" | "asset-allocation"
   | "management" | "swaps" | "fee-calculator" | "projection";
 
 // A row holds 1 or 2 section IDs. Two IDs = half-width side by side.
 type LayoutRow = { ids: [SectionId] | [SectionId, SectionId] };
 
 const SECTION_LABELS: Record<SectionId, string> = {
-  "summary":            "Sammanfattning",
-  "advisor-comment":    "Rådgivarens kommentar",
-  "holdings":           "Portföljinnehav",
-  "metrics":            "Nyckeltal",
-  "asset-allocation":   "Tillgångsfördelning",
-  "category-breakdown": "Fondtypsfördelning",
-  "management":         "Förvaltningsstil",
-  "swaps":              "Fondgranskning",
-  "fee-calculator":     "Avgiftsräknare",
-  "projection":         "Tidssimulator",
+  "summary":          "Sammanfattning",
+  "advisor-comment":  "Rådgivarens kommentar",
+  "holdings":         "Portföljinnehav",
+  "metrics":          "Nyckeltal",
+  "asset-allocation": "Tillgångsfördelning",
+  "management":       "Förvaltningsstil",
+  "swaps":            "Fondgranskning",
+  "fee-calculator":   "Avgiftsräknare",
+  "projection":       "Tidssimulator",
 };
 
 const ALL_SECTION_IDS: SectionId[] = [
   "summary", "advisor-comment", "holdings",
-  "metrics", "asset-allocation", "category-breakdown",
+  "metrics", "asset-allocation",
   "management", "swaps", "fee-calculator", "projection",
 ];
 
@@ -45,7 +44,7 @@ const DEFAULT_LAYOUT: LayoutRow[] = [
   { ids: ["advisor-comment"] },
   { ids: ["holdings"] },
   { ids: ["metrics"] },
-  { ids: ["asset-allocation", "category-breakdown"] },
+  { ids: ["asset-allocation"] },
   { ids: ["management"] },
   { ids: ["swaps"] },
   { ids: ["fee-calculator"] },
@@ -562,31 +561,22 @@ function SectionContent({ id, data }: { id: SectionId; data: SectionData }) {
       </section>
     );
 
-    // ── Asset allocation donut ────────────────────────────────────────────────
-    case "asset-allocation": return (
-      <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 h-full">
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Tillgångsfördelning</p>
-        <DonutChart
-          slices={(analysis.detailedBreakdown ?? []).map(c => ({ label: c.label, weight: c.weight }))}
-          centerLabel={`${(analysis.detailedBreakdown ?? [])[0]?.weight.toFixed(0) ?? "–"}%`}
-          centerSub={(analysis.detailedBreakdown ?? [])[0]?.label ?? ""}
-          size={160} thickness={24} horizontal
-        />
-      </section>
-    );
-
-    // ── Category/fondtyp breakdown donut ──────────────────────────────────────
-    case "category-breakdown": return (
-      <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 h-full">
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Fondtypsfördelning</p>
-        <DonutChart
-          slices={(analysis.categoryBreakdown ?? []).map(c => ({ label: c.label, weight: c.weight }))}
-          centerLabel={`${(analysis.categoryBreakdown ?? [])[0]?.weight.toFixed(0) ?? "–"}%`}
-          centerSub={(analysis.categoryBreakdown ?? [])[0]?.label ?? ""}
-          size={160} thickness={24} horizontal
-        />
-      </section>
-    );
+    // ── Asset allocation donut (same style as BuilderClient) ────────────────
+    case "asset-allocation": {
+      const slices   = (analysis.detailedBreakdown ?? []).map(c => ({ label: c.label, weight: c.weight }));
+      const equityPct = Math.round(analysis.categoryBreakdown?.find(c => c.label === "Aktiefonder")?.weight ?? 0);
+      return (
+        <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 h-full">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Tillgångsfördelning</p>
+          <DonutChart
+            slices={slices}
+            centerLabel={`${equityPct}%`}
+            centerSub="Aktier"
+            size={160} thickness={24} horizontal
+          />
+        </section>
+      );
+    }
 
     // ── Fee calculator ────────────────────────────────────────────────────────
     case "fee-calculator":
@@ -715,11 +705,12 @@ export default function ReportClient() {
     setIsCustomerView(new URLSearchParams(window.location.search).get("kund") === "1");
   }, []);
 
-  // Share link — adds kund=1 so the recipient gets read-only view
+  // Share link — adds kund=1 + encodes current layout so recipient sees the same view
   const [copied, setCopied] = useState(false);
   function copyLink() {
     const url = new URL(window.location.href);
     url.searchParams.set("kund", "1");
+    url.searchParams.set("layout", btoa(JSON.stringify(layout)));
     navigator.clipboard.writeText(url.toString()).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -727,38 +718,19 @@ export default function ReportClient() {
   }
 
   // Layout editor
-  const [layout, setLayout]       = useState<LayoutRow[]>(DEFAULT_LAYOUT);
-  const [editMode, setEditMode]   = useState(false);
-  const [dragIdx, setDragIdx]     = useState<number | null>(null);
-  const [dropIdx, setDropIdx]     = useState<number | null>(null);
-  const [panelOpen, setPanelOpen] = useState(false);
-  const panelRef                  = useRef<HTMLDivElement>(null);
+  const [layout, setLayout]         = useState<LayoutRow[]>(DEFAULT_LAYOUT);
+  const [editMode, setEditMode]     = useState(false);
+  const [dragIdx, setDragIdx]       = useState<number | null>(null);
+  const [dropIdx, setDropIdx]       = useState<number | null>(null);
+  const [dropMode, setDropMode]     = useState<"reorder" | "pair">("reorder");
+  const [panelOpen, setPanelOpen]   = useState(false);
+  const panelRef                    = useRef<HTMLDivElement>(null);
 
   const activeSectionIds = layout.flatMap(r => r.ids);
   const hiddenSectionIds = ALL_SECTION_IDS.filter(id => !activeSectionIds.includes(id));
 
   function removeRow(rowIdx: number) {
     setLayout(prev => prev.filter((_, i) => i !== rowIdx));
-  }
-
-  function removeFromRow(rowIdx: number, id: SectionId) {
-    setLayout(prev => prev.flatMap((row, i) => {
-      if (i !== rowIdx) return [row];
-      const remaining = row.ids.filter(x => x !== id);
-      if (remaining.length === 0) return [];
-      return [{ ids: remaining as [SectionId] }];
-    }));
-  }
-
-  function addSection(id: SectionId) {
-    setLayout(prev => [...prev, { ids: [id] }]);
-  }
-
-  function pairWithRow(rowIdx: number, id: SectionId) {
-    setLayout(prev => prev.map((row, i) => {
-      if (i !== rowIdx || row.ids.length !== 1) return row;
-      return { ids: [row.ids[0], id] as [SectionId, SectionId] };
-    }));
   }
 
   function splitRow(rowIdx: number) {
@@ -768,17 +740,41 @@ export default function ReportClient() {
     }));
   }
 
-  function handleDrop(toIdx: number) {
+  function addSection(id: SectionId) {
+    setLayout(prev => [...prev, { ids: [id] }]);
+  }
+
+  function handleDragOver(e: React.DragEvent<HTMLDivElement>, rowIdx: number) {
+    e.preventDefault();
+    setDropIdx(rowIdx);
+    const rect = e.currentTarget.getBoundingClientRect();
+    const relY  = (e.clientY - rect.top) / rect.height;
+    setDropMode(relY > 0.25 && relY < 0.75 ? "pair" : "reorder");
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLDivElement>, toIdx: number) {
+    e.preventDefault();
     if (dragIdx === null || dragIdx === toIdx) { setDragIdx(null); setDropIdx(null); return; }
+
+    if (dropMode === "pair") {
+      const from = layout[dragIdx];
+      const to   = layout[toIdx];
+      if (from.ids.length === 1 && to.ids.length === 1) {
+        const next = layout.filter((_, i) => i !== dragIdx);
+        const adjustedTo = toIdx > dragIdx ? toIdx - 1 : toIdx;
+        next[adjustedTo] = { ids: [to.ids[0], from.ids[0]] };
+        setLayout(next);
+        setDragIdx(null); setDropIdx(null);
+        return;
+      }
+    }
+    // Reorder
     const next = [...layout];
     const [item] = next.splice(dragIdx, 1);
     next.splice(toIdx, 0, item);
     setLayout(next);
-    setDragIdx(null);
-    setDropIdx(null);
+    setDragIdx(null); setDropIdx(null);
   }
-
-  const removedSections = hiddenSectionIds;
 
   useEffect(() => {
     const p = parseParams();
@@ -789,6 +785,10 @@ export default function ReportClient() {
     setAmount(p.amount);
     setClient(p.client);
     setComment(p.comment);
+    const layoutParam = new URLSearchParams(window.location.search).get("layout");
+    if (layoutParam) {
+      try { setLayout(JSON.parse(atob(layoutParam)) as LayoutRow[]); } catch {}
+    }
   }, []);
 
   const analyze = useCallback(async (entries: FundEntry[], cust: string) => {
@@ -960,7 +960,7 @@ export default function ReportClient() {
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 flex items-center gap-2">
             <GripVertical className="w-4 h-4 text-blue-400 shrink-0" />
             <p className="text-xs font-medium text-blue-700">
-              Dra för att flytta rader — använd <strong>⇄</strong> för att para ihop kort — öppna <strong>+ Lägg till</strong> för fler kort.
+              Dra ett kort <strong>över</strong> ett annat för att lägga dem bredvid varandra — dra <strong>ovan/under</strong> för att flytta ordningen — klicka <strong>+ Lägg till</strong> för fler kort.
             </p>
           </div>
         </div>
@@ -996,27 +996,13 @@ export default function ReportClient() {
               ) : hiddenSectionIds.map(id => (
                 <div key={id} className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
                   <p className="text-xs font-semibold text-slate-700">{SECTION_LABELS[id]}</p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => { addSection(id); }}
-                      className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium bg-blue-500 text-white rounded-lg py-1.5 hover:bg-blue-600 transition-colors"
-                    >
-                      <Maximize2 className="w-3 h-3" /> Hel bredd
-                    </button>
-                    <button
-                      onClick={() => {
-                        const singleRow = layout.findIndex(r => r.ids.length === 1);
-                        if (singleRow >= 0) {
-                          pairWithRow(singleRow, id);
-                        } else {
-                          addSection(id);
-                        }
-                      }}
-                      className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium bg-slate-200 text-slate-700 rounded-lg py-1.5 hover:bg-slate-300 transition-colors"
-                    >
-                      <Columns2 className="w-3 h-3" /> Halv bredd
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => { addSection(id); }}
+                    className="w-full flex items-center justify-center gap-1.5 text-xs font-medium bg-blue-500 text-white rounded-lg py-1.5 hover:bg-blue-600 transition-colors"
+                  >
+                    <Plus className="w-3 h-3" /> Lägg till
+                  </button>
+                  <p className="text-[10px] text-slate-400 text-center">Dra kortet bredvid ett annat för att para ihop dem</p>
                 </div>
               ))}
             </div>
@@ -1070,7 +1056,10 @@ export default function ReportClient() {
         {activeTab === "analysis" && (
           <>
             {layout.map((row, rowIdx) => {
-              const isPair = row.ids.length === 2;
+              const isPair      = row.ids.length === 2;
+              const isBeingDragged = dragIdx === rowIdx;
+              const isDropTarget  = dropIdx === rowIdx && dragIdx !== null && !isBeingDragged;
+              const canPair       = isDropTarget && dropMode === "pair" && !isPair && dragIdx !== null && layout[dragIdx]?.ids.length === 1;
               const needsAnalysis = row.ids.some(id => id !== "holdings");
               if (needsAnalysis && !analysis) return null;
               return (
@@ -1078,16 +1067,24 @@ export default function ReportClient() {
                   key={row.ids.join("+")}
                   draggable={editMode}
                   onDragStart={() => setDragIdx(rowIdx)}
-                  onDragOver={e => { e.preventDefault(); setDropIdx(rowIdx); }}
-                  onDrop={e => { e.preventDefault(); handleDrop(rowIdx); }}
+                  onDragOver={e => handleDragOver(e, rowIdx)}
+                  onDrop={e => handleDrop(e, rowIdx)}
                   onDragEnd={() => { setDragIdx(null); setDropIdx(null); }}
                   className={cn(
                     "relative transition-all duration-150",
                     editMode && "cursor-grab active:cursor-grabbing pt-7",
-                    editMode && dragIdx === rowIdx && "opacity-40 scale-[0.98]",
-                    editMode && dropIdx === rowIdx && dragIdx !== null && dragIdx !== rowIdx && "ring-2 ring-blue-400 ring-offset-2 rounded-2xl",
+                    isBeingDragged && "opacity-40 scale-[0.98]",
+                    isDropTarget && !canPair && "ring-2 ring-blue-400 ring-offset-2 rounded-2xl",
+                    canPair && "ring-2 ring-emerald-400 ring-offset-2 rounded-2xl",
                   )}
                 >
+                  {/* Pair overlay hint */}
+                  {canPair && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-emerald-500/10 pointer-events-none no-print">
+                      <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">Lägg bredvid</span>
+                    </div>
+                  )}
+
                   {/* Row controls in edit mode */}
                   {editMode && (
                     <div className="absolute top-0 left-0 right-0 flex items-center justify-between z-20 bg-white border border-slate-200 rounded-lg shadow-sm px-2.5 py-1 no-print">
@@ -1098,24 +1095,13 @@ export default function ReportClient() {
                         </span>
                       </div>
                       <div className="flex items-center gap-1">
-                        {isPair ? (
+                        {isPair && (
                           <button
                             title="Dela upp till egna rader"
                             onClick={() => splitRow(rowIdx)}
                             className="text-slate-400 hover:text-blue-500 transition-colors p-0.5 rounded"
                           >
                             <Maximize2 className="w-3.5 h-3.5" />
-                          </button>
-                        ) : (
-                          <button
-                            title="Para ihop med nästa ensamma rad"
-                            onClick={() => {
-                              const partner = layout.findIndex((r, i) => i !== rowIdx && r.ids.length === 1);
-                              if (partner >= 0) pairWithRow(rowIdx, layout[partner].ids[0]);
-                            }}
-                            className="text-slate-400 hover:text-blue-500 transition-colors p-0.5 rounded"
-                          >
-                            <Columns2 className="w-3.5 h-3.5" />
                           </button>
                         )}
                         <button
