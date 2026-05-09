@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { PortfolioAnalysis, SwapSuggestion } from "@/lib/analysis";
 import DonutChart from "@/components/ui/DonutChart";
-import { Building2, CheckCircle2, Download, GripVertical, Link2, Pencil, PlusCircle, Settings2, X } from "lucide-react";
+import { Building2, CheckCircle2, Columns2, Download, GripVertical, Link2, Maximize2, Pencil, Plus, Settings2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import FondguideTab  from "./tabs/FondguideTab";
 import ScenarioTab   from "./tabs/ScenarioTab";
@@ -15,22 +15,41 @@ type AppliedSwap = { fromIsin: string; toIsin: string; fromName: string; toName:
 
 type SectionId =
   | "summary" | "advisor-comment" | "holdings"
-  | "metrics" | "management" | "swaps" | "fee-calculator" | "projection";
+  | "metrics" | "asset-allocation" | "category-breakdown"
+  | "management" | "swaps" | "fee-calculator" | "projection";
+
+// A row holds 1 or 2 section IDs. Two IDs = half-width side by side.
+type LayoutRow = { ids: [SectionId] | [SectionId, SectionId] };
 
 const SECTION_LABELS: Record<SectionId, string> = {
-  "summary":          "Sammanfattning",
-  "advisor-comment":  "Rådgivarens kommentar",
-  "holdings":         "Portföljinnehav",
-  "metrics":          "Nyckeltal",
-  "management":       "Förvaltningsstil",
-  "swaps":            "Fondgranskning",
-  "fee-calculator":   "Avgiftsräknare",
-  "projection":       "Tidssimulator",
+  "summary":            "Sammanfattning",
+  "advisor-comment":    "Rådgivarens kommentar",
+  "holdings":           "Portföljinnehav",
+  "metrics":            "Nyckeltal",
+  "asset-allocation":   "Tillgångsfördelning",
+  "category-breakdown": "Fondtypsfördelning",
+  "management":         "Förvaltningsstil",
+  "swaps":              "Fondgranskning",
+  "fee-calculator":     "Avgiftsräknare",
+  "projection":         "Tidssimulator",
 };
 
-const ALL_SECTIONS: SectionId[] = [
+const ALL_SECTION_IDS: SectionId[] = [
   "summary", "advisor-comment", "holdings",
-  "metrics", "management", "swaps", "fee-calculator", "projection",
+  "metrics", "asset-allocation", "category-breakdown",
+  "management", "swaps", "fee-calculator", "projection",
+];
+
+const DEFAULT_LAYOUT: LayoutRow[] = [
+  { ids: ["summary"] },
+  { ids: ["advisor-comment"] },
+  { ids: ["holdings"] },
+  { ids: ["metrics"] },
+  { ids: ["asset-allocation", "category-breakdown"] },
+  { ids: ["management"] },
+  { ids: ["swaps"] },
+  { ids: ["fee-calculator"] },
+  { ids: ["projection"] },
 ];
 
 // ── URL decoding ──────────────────────────────────────────────────────────────
@@ -519,33 +538,53 @@ function SectionContent({ id, data }: { id: SectionId; data: SectionData }) {
     case "metrics": return (
       <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Nyckeltal</p>
-        <div className="grid lg:grid-cols-[1fr_minmax(280px,auto)] gap-6 lg:gap-8 items-start">
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
-              <MetricCard label="Snittavgift"     value={analysis.avgCost}           formatted={analysis.avgCost           !== null ? `${analysis.avgCost.toFixed(2)}%`          : "–"} sub="per år"       ratingKey="cost"      info="Den genomsnittliga årliga avgiften viktat efter din fördelning." />
-              <MetricCard label="Avkastning 1 år" value={analysis.weightedReturn1yr} formatted={analysis.weightedReturn1yr !== null ? `${analysis.weightedReturn1yr.toFixed(1)}%` : "–"} sub="viktad"       ratingKey="return1yr" info="Portföljens viktade avkastning de senaste 12 månaderna." />
-              <MetricCard label="Avkastning 3 år" value={analysis.weightedReturn3yr} formatted={analysis.weightedReturn3yr !== null ? `${analysis.weightedReturn3yr.toFixed(1)}%` : "–"} sub="totalt" ratingKey="return3yr" info="Portföljens viktade totalavkastning de senaste 3 åren." />
-              <MetricCard label="Sharpe 3 år"     value={analysis.weightedSharpe}    formatted={analysis.weightedSharpe    !== null ? analysis.weightedSharpe.toFixed(2)          : "–"} sub="riskjusterad" ratingKey="sharpe"    info="Avkastning i förhållande till risk. Högre är bättre." />
-            </div>
-            {(analysis.concentrationWarnings?.length ?? 0) > 0 && (
-              <div className="flex items-start gap-3 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5">
-                <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-                </svg>
-                <div>
-                  <p className="text-sm font-semibold text-amber-800">Koncentrationsrisk</p>
-                  {analysis.concentrationWarnings.map(w => (
-                    <p key={w.category} className="text-sm text-amber-700 mt-0.5">{w.weight.toFixed(0)}% i {w.category.toLowerCase()} — överväg att sprida risken.</p>
-                  ))}
-                </div>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <MetricCard label="Snittavgift"     value={analysis.avgCost}           formatted={analysis.avgCost           !== null ? `${analysis.avgCost.toFixed(2)}%`          : "–"} sub="per år"       ratingKey="cost"      info="Den genomsnittliga årliga avgiften viktat efter din fördelning." />
+            <MetricCard label="Avkastning 1 år" value={analysis.weightedReturn1yr} formatted={analysis.weightedReturn1yr !== null ? `${analysis.weightedReturn1yr.toFixed(1)}%` : "–"} sub="viktad"       ratingKey="return1yr" info="Portföljens viktade avkastning de senaste 12 månaderna." />
+            <MetricCard label="Avkastning 3 år" value={analysis.weightedReturn3yr} formatted={analysis.weightedReturn3yr !== null ? `${analysis.weightedReturn3yr.toFixed(1)}%` : "–"} sub="totalt"       ratingKey="return3yr" info="Portföljens viktade totalavkastning de senaste 3 åren." />
+            <MetricCard label="Sharpe 3 år"     value={analysis.weightedSharpe}    formatted={analysis.weightedSharpe    !== null ? analysis.weightedSharpe.toFixed(2)          : "–"} sub="riskjusterad" ratingKey="sharpe"    info="Avkastning i förhållande till risk. Högre är bättre." />
+          </div>
+          {(analysis.concentrationWarnings?.length ?? 0) > 0 && (
+            <div className="flex items-start gap-3 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5">
+              <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+              </svg>
+              <div>
+                <p className="text-sm font-semibold text-amber-800">Koncentrationsrisk</p>
+                {analysis.concentrationWarnings.map(w => (
+                  <p key={w.category} className="text-sm text-amber-700 mt-0.5">{w.weight.toFixed(0)}% i {w.category.toLowerCase()} — överväg att sprida risken.</p>
+                ))}
               </div>
-            )}
-          </div>
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Tillgångsfördelning</p>
-            <DonutChart slices={(analysis.detailedBreakdown ?? []).map(c => ({ label: c.label, weight: c.weight }))} centerLabel={`${(analysis.detailedBreakdown ?? [])[0]?.weight.toFixed(0) ?? "–"}%`} centerSub={(analysis.detailedBreakdown ?? [])[0]?.label ?? ""} size={180} thickness={26} horizontal />
-          </div>
+            </div>
+          )}
         </div>
+      </section>
+    );
+
+    // ── Asset allocation donut ────────────────────────────────────────────────
+    case "asset-allocation": return (
+      <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 h-full">
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Tillgångsfördelning</p>
+        <DonutChart
+          slices={(analysis.detailedBreakdown ?? []).map(c => ({ label: c.label, weight: c.weight }))}
+          centerLabel={`${(analysis.detailedBreakdown ?? [])[0]?.weight.toFixed(0) ?? "–"}%`}
+          centerSub={(analysis.detailedBreakdown ?? [])[0]?.label ?? ""}
+          size={160} thickness={24} horizontal
+        />
+      </section>
+    );
+
+    // ── Category/fondtyp breakdown donut ──────────────────────────────────────
+    case "category-breakdown": return (
+      <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 h-full">
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Fondtypsfördelning</p>
+        <DonutChart
+          slices={(analysis.categoryBreakdown ?? []).map(c => ({ label: c.label, weight: c.weight }))}
+          centerLabel={`${(analysis.categoryBreakdown ?? [])[0]?.weight.toFixed(0) ?? "–"}%`}
+          centerSub={(analysis.categoryBreakdown ?? [])[0]?.label ?? ""}
+          size={160} thickness={24} horizontal
+        />
       </section>
     );
 
@@ -558,28 +597,37 @@ function SectionContent({ id, data }: { id: SectionId; data: SectionData }) {
       return amount ? <ProjectionSection amount={amount} analysis={analysis} /> : null;
 
     // ── Management ────────────────────────────────────────────────────────────
-    case "management": return (
-      <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Förvaltningsstil</p>
-        <div className="space-y-4">
-          {[
-            { label: "Aktivt förvaltad", value: analysis.managementBreakdown.active,  color: "bg-blue-500" },
-            { label: "Passiv / index",   value: analysis.managementBreakdown.passive, color: "bg-emerald-500" },
-            ...(analysis.managementBreakdown.unknown > 1 ? [{ label: "Okänd", value: analysis.managementBreakdown.unknown, color: "bg-slate-300" }] : []),
-          ].map(item => (
-            <div key={item.label}>
-              <div className="flex items-center justify-between text-sm mb-1.5">
-                <span className="text-slate-600">{item.label}</span>
-                <span className="font-semibold text-slate-900 tabular-nums">{item.value.toFixed(0)}%</span>
-              </div>
-              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div className={cn("h-full rounded-full transition-all duration-700", item.color)} style={{ width: `${item.value}%` }} />
-              </div>
+    case "management": {
+      const active  = analysis.managementBreakdown.active;
+      const passive = analysis.managementBreakdown.passive;
+      const unknown = analysis.managementBreakdown.unknown > 1 ? analysis.managementBreakdown.unknown : 0;
+      const segments = [
+        { label: "Aktivt förvaltad", value: active,  color: "bg-blue-500" },
+        { label: "Passiv / index",   value: passive, color: "bg-emerald-500" },
+        ...(unknown > 0 ? [{ label: "Okänd", value: unknown, color: "bg-slate-300" }] : []),
+      ].filter(s => s.value > 0);
+      return (
+        <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Förvaltningsstil</p>
+          <div className="space-y-3">
+            <div className="flex h-5 rounded-full overflow-hidden gap-0.5">
+              {segments.map(s => (
+                <div key={s.label} className={cn("h-full transition-all duration-700", s.color)} style={{ width: `${s.value}%` }} />
+              ))}
             </div>
-          ))}
-        </div>
-      </section>
-    );
+            <div className="flex flex-wrap gap-x-5 gap-y-1.5">
+              {segments.map(s => (
+                <div key={s.label} className="flex items-center gap-2 text-sm">
+                  <div className={cn("w-2.5 h-2.5 rounded-full shrink-0", s.color)} />
+                  <span className="text-slate-600">{s.label}</span>
+                  <span className="font-semibold text-slate-900 tabular-nums">{s.value.toFixed(0)}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+    }
 
     // ── Fondgranskning (swaps + best-in-category) ─────────────────────────────
     case "swaps": {
@@ -678,11 +726,59 @@ export default function ReportClient() {
     });
   }
 
-  // Section editor
-  const [sections, setSections]   = useState<SectionId[]>(ALL_SECTIONS);
+  // Layout editor
+  const [layout, setLayout]       = useState<LayoutRow[]>(DEFAULT_LAYOUT);
   const [editMode, setEditMode]   = useState(false);
   const [dragIdx, setDragIdx]     = useState<number | null>(null);
   const [dropIdx, setDropIdx]     = useState<number | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const panelRef                  = useRef<HTMLDivElement>(null);
+
+  const activeSectionIds = layout.flatMap(r => r.ids);
+  const hiddenSectionIds = ALL_SECTION_IDS.filter(id => !activeSectionIds.includes(id));
+
+  function removeRow(rowIdx: number) {
+    setLayout(prev => prev.filter((_, i) => i !== rowIdx));
+  }
+
+  function removeFromRow(rowIdx: number, id: SectionId) {
+    setLayout(prev => prev.flatMap((row, i) => {
+      if (i !== rowIdx) return [row];
+      const remaining = row.ids.filter(x => x !== id);
+      if (remaining.length === 0) return [];
+      return [{ ids: remaining as [SectionId] }];
+    }));
+  }
+
+  function addSection(id: SectionId) {
+    setLayout(prev => [...prev, { ids: [id] }]);
+  }
+
+  function pairWithRow(rowIdx: number, id: SectionId) {
+    setLayout(prev => prev.map((row, i) => {
+      if (i !== rowIdx || row.ids.length !== 1) return row;
+      return { ids: [row.ids[0], id] as [SectionId, SectionId] };
+    }));
+  }
+
+  function splitRow(rowIdx: number) {
+    setLayout(prev => prev.flatMap((row, i) => {
+      if (i !== rowIdx || row.ids.length !== 2) return [row];
+      return row.ids.map(id => ({ ids: [id] as [SectionId] }));
+    }));
+  }
+
+  function handleDrop(toIdx: number) {
+    if (dragIdx === null || dragIdx === toIdx) { setDragIdx(null); setDropIdx(null); return; }
+    const next = [...layout];
+    const [item] = next.splice(dragIdx, 1);
+    next.splice(toIdx, 0, item);
+    setLayout(next);
+    setDragIdx(null);
+    setDropIdx(null);
+  }
+
+  const removedSections = hiddenSectionIds;
 
   useEffect(() => {
     const p = parseParams();
@@ -729,20 +825,9 @@ export default function ReportClient() {
     analyze(newFunds, custodian);
   }
 
-  function handleDrop(toIdx: number) {
-    if (dragIdx === null || dragIdx === toIdx) { setDragIdx(null); setDropIdx(null); return; }
-    const next = [...sections];
-    const [item] = next.splice(dragIdx, 1);
-    next.splice(toIdx, 0, item);
-    setSections(next);
-    setDragIdx(null);
-    setDropIdx(null);
-  }
-
   const CUSTODIAN_LABEL: Record<string, string> = { avanza: "Avanza", nordnet: "Nordnet", "övrigt": "Övrigt" };
-  const custodianLabel    = CUSTODIAN_LABEL[custodian] ?? custodian;
-  const today             = new Date().toLocaleDateString("sv-SE", { year: "numeric", month: "long", day: "numeric" });
-  const removedSections   = ALL_SECTIONS.filter(id => !sections.includes(id));
+  const custodianLabel = CUSTODIAN_LABEL[custodian] ?? custodian;
+  const today          = new Date().toLocaleDateString("sv-SE", { year: "numeric", month: "long", day: "numeric" });
 
   const sectionData: SectionData = { funds, nameMap, analysis: analysis!, amount, comment, today, readonly: isCustomerView, appliedSwaps, onApplySwap: applySwap };
 
@@ -806,7 +891,7 @@ export default function ReportClient() {
             {/* Edit mode — advisor only, analysis tab only */}
             {!isCustomerView && analysis && activeTab === "analysis" && (
               <button
-                onClick={() => setEditMode(v => !v)}
+                onClick={() => { setEditMode(v => !v); setPanelOpen(false); }}
                 className={cn(
                   "flex items-center gap-1.5 text-sm font-medium rounded-xl px-3 py-2 border transition-colors",
                   editMode
@@ -875,10 +960,76 @@ export default function ReportClient() {
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 flex items-center gap-2">
             <GripVertical className="w-4 h-4 text-blue-400 shrink-0" />
             <p className="text-xs font-medium text-blue-700">
-              Dra för att flytta avsnitt — klicka <strong>✕</strong> för att dölja — klicka <strong>Klar</strong> när du är nöjd.
+              Dra för att flytta rader — använd <strong>⇄</strong> för att para ihop kort — öppna <strong>+ Lägg till</strong> för fler kort.
             </p>
           </div>
         </div>
+      )}
+
+      {/* ── Right panel (edit mode) ─────────────────────────────────────────────── */}
+      {editMode && activeTab === "analysis" && (
+        <>
+          {/* Backdrop */}
+          {panelOpen && (
+            <div
+              className="fixed inset-0 z-40 bg-black/20 no-print"
+              onClick={() => setPanelOpen(false)}
+            />
+          )}
+          {/* Panel */}
+          <div
+            ref={panelRef}
+            className={cn(
+              "fixed top-0 right-0 h-full w-72 bg-white border-l border-slate-200 shadow-2xl z-50 flex flex-col transition-transform duration-300 no-print",
+              panelOpen ? "translate-x-0" : "translate-x-full"
+            )}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <p className="text-sm font-bold text-slate-900">Lägg till kort</p>
+              <button onClick={() => setPanelOpen(false)} className="text-slate-400 hover:text-slate-700 p-1 rounded-lg">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {hiddenSectionIds.length === 0 ? (
+                <p className="text-sm text-slate-400 text-center py-8">Alla kort är aktiva</p>
+              ) : hiddenSectionIds.map(id => (
+                <div key={id} className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
+                  <p className="text-xs font-semibold text-slate-700">{SECTION_LABELS[id]}</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { addSection(id); }}
+                      className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium bg-blue-500 text-white rounded-lg py-1.5 hover:bg-blue-600 transition-colors"
+                    >
+                      <Maximize2 className="w-3 h-3" /> Hel bredd
+                    </button>
+                    <button
+                      onClick={() => {
+                        const singleRow = layout.findIndex(r => r.ids.length === 1);
+                        if (singleRow >= 0) {
+                          pairWithRow(singleRow, id);
+                        } else {
+                          addSection(id);
+                        }
+                      }}
+                      className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium bg-slate-200 text-slate-700 rounded-lg py-1.5 hover:bg-slate-300 transition-colors"
+                    >
+                      <Columns2 className="w-3 h-3" /> Halv bredd
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Floating toggle button */}
+          <button
+            onClick={() => setPanelOpen(v => !v)}
+            className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-blue-600 text-white text-sm font-semibold px-4 py-2.5 rounded-2xl shadow-lg hover:bg-blue-700 transition-colors no-print"
+          >
+            <Plus className="w-4 h-4" />
+            Lägg till
+          </button>
+        </>
       )}
 
       {/* ── Content ───────────────────────────────────────────────────────────── */}
@@ -918,37 +1069,70 @@ export default function ReportClient() {
         {/* ── Analysis tab ──────────────────────────────────────────────────── */}
         {activeTab === "analysis" && (
           <>
-            {sections.map((id, i) => {
-              const needsAnalysis = id !== "holdings";
+            {layout.map((row, rowIdx) => {
+              const isPair = row.ids.length === 2;
+              const needsAnalysis = row.ids.some(id => id !== "holdings");
               if (needsAnalysis && !analysis) return null;
               return (
                 <div
-                  key={id}
+                  key={row.ids.join("+")}
                   draggable={editMode}
-                  onDragStart={() => setDragIdx(i)}
-                  onDragOver={e => { e.preventDefault(); setDropIdx(i); }}
-                  onDrop={e => { e.preventDefault(); handleDrop(i); }}
+                  onDragStart={() => setDragIdx(rowIdx)}
+                  onDragOver={e => { e.preventDefault(); setDropIdx(rowIdx); }}
+                  onDrop={e => { e.preventDefault(); handleDrop(rowIdx); }}
                   onDragEnd={() => { setDragIdx(null); setDropIdx(null); }}
                   className={cn(
                     "relative transition-all duration-150",
-                    editMode && "cursor-grab active:cursor-grabbing",
-                    editMode && dragIdx === i && "opacity-40 scale-[0.98]",
-                    editMode && dropIdx === i && dragIdx !== null && dragIdx !== i && "ring-2 ring-blue-400 ring-offset-2 rounded-2xl",
+                    editMode && "cursor-grab active:cursor-grabbing pt-7",
+                    editMode && dragIdx === rowIdx && "opacity-40 scale-[0.98]",
+                    editMode && dropIdx === rowIdx && dragIdx !== null && dragIdx !== rowIdx && "ring-2 ring-blue-400 ring-offset-2 rounded-2xl",
                   )}
                 >
+                  {/* Row controls in edit mode */}
                   {editMode && (
-                    <div className="absolute -top-3 left-4 right-4 flex items-center justify-between z-20 bg-white border border-slate-200 rounded-lg shadow-sm px-2.5 py-1 no-print">
+                    <div className="absolute top-0 left-0 right-0 flex items-center justify-between z-20 bg-white border border-slate-200 rounded-lg shadow-sm px-2.5 py-1 no-print">
                       <div className="flex items-center gap-1.5">
                         <GripVertical className="w-3.5 h-3.5 text-slate-400" />
-                        <span className="text-xs font-medium text-slate-500">{SECTION_LABELS[id]}</span>
+                        <span className="text-xs font-medium text-slate-500">
+                          {row.ids.map(id => SECTION_LABELS[id]).join(" + ")}
+                        </span>
                       </div>
-                      <button onClick={() => setSections(prev => prev.filter((_, idx) => idx !== i))} className="text-slate-300 hover:text-red-400 transition-colors p-0.5 rounded">
-                        <X className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        {isPair ? (
+                          <button
+                            title="Dela upp till egna rader"
+                            onClick={() => splitRow(rowIdx)}
+                            className="text-slate-400 hover:text-blue-500 transition-colors p-0.5 rounded"
+                          >
+                            <Maximize2 className="w-3.5 h-3.5" />
+                          </button>
+                        ) : (
+                          <button
+                            title="Para ihop med nästa ensamma rad"
+                            onClick={() => {
+                              const partner = layout.findIndex((r, i) => i !== rowIdx && r.ids.length === 1);
+                              if (partner >= 0) pairWithRow(rowIdx, layout[partner].ids[0]);
+                            }}
+                            className="text-slate-400 hover:text-blue-500 transition-colors p-0.5 rounded"
+                          >
+                            <Columns2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => removeRow(rowIdx)}
+                          className="text-slate-300 hover:text-red-400 transition-colors p-0.5 rounded"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   )}
-                  <div className={cn(editMode && "mt-5")}>
-                    <SectionContent id={id} data={sectionData} />
+
+                  {/* Row content — 1 or 2 columns */}
+                  <div className={cn(isPair && "grid grid-cols-2 gap-4 sm:gap-6 items-start")}>
+                    {row.ids.map(id => (
+                      <SectionContent key={id} id={id} data={sectionData} />
+                    ))}
                   </div>
                 </div>
               );
@@ -974,22 +1158,6 @@ export default function ReportClient() {
                 <p className="text-sm text-amber-800">
                   <span className="font-semibold">Hittades ej: </span>{analysis.notFound.join(", ")}
                 </p>
-              </div>
-            )}
-
-            {editMode && removedSections.length > 0 && (
-              <div className="border-2 border-dashed border-slate-200 rounded-2xl p-5 no-print">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                  <PlusCircle className="w-3.5 h-3.5" /> Lägg till avsnitt
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {removedSections.map(id => (
-                    <button key={id} onClick={() => setSections(prev => [...prev, id])}
-                      className="text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors">
-                      + {SECTION_LABELS[id]}
-                    </button>
-                  ))}
-                </div>
               </div>
             )}
           </>
