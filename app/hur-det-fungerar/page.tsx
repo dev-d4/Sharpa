@@ -191,9 +191,9 @@ export default function HurDetFungerar() {
             bad="Väsentligt under jämförbart index"
           />
           <MetricCard
-            label="Avkastning 3 år (annualiserad)"
-            interpretation="Genomsnittlig årlig avkastning de senaste tre åren. Längre mätperiod ger en mer rättvisande bild än ett enskilt år."
-            good="Över 7–8 % / år för globala aktiefonder historiskt"
+            label="Avkastning 3 år (totalt)"
+            interpretation="Total avkastning de senaste tre åren. Längre mätperiod ger en mer rättvisande bild än ett enskilt år."
+            good="Över 25–30 % totalt för globala aktiefonder historiskt"
             bad="Konsekvent under sitt jämförelseindex"
           />
           <MetricCard
@@ -209,7 +209,7 @@ export default function HurDetFungerar() {
             bad="Hög volatilitet i kombination med kort tidshorisont"
           />
           <MetricCard
-            label="Avkastning 5 år (annualiserad)"
+            label="Avkastning 5 år (totalt)"
             interpretation="Ger en längre blick bakåt och inkluderar fler marknadscykler. Bra komplement till 3-årstalet."
             good="Konsekvent positiv avkastning över full marknadscykel"
             bad="Stor diskrepans mot 3-årstalet"

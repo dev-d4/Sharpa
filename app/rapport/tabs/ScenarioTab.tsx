@@ -224,7 +224,7 @@ export default function ScenarioTab({
   const compRows = [
     { label: "Snittavgift",     sub: "per år",       key: "cost" as const,      cur: originalAnalysis?.avgCost,           scen: scenarioAnalysis?.avgCost,           lower: true  },
     { label: "Avkastning 1 år", sub: "viktad",        key: "ret1" as const,      cur: originalAnalysis?.weightedReturn1yr, scen: scenarioAnalysis?.weightedReturn1yr, lower: false },
-    { label: "Avkastning 3 år", sub: "annualiserad",  key: "ret3" as const,      cur: originalAnalysis?.weightedReturn3yr, scen: scenarioAnalysis?.weightedReturn3yr, lower: false },
+    { label: "Avkastning 3 år", sub: "totalt",        key: "ret3" as const,      cur: originalAnalysis?.weightedReturn3yr, scen: scenarioAnalysis?.weightedReturn3yr, lower: false },
     { label: "Sharpe 3 år",     sub: "riskjusterad",  key: "sharpe" as const,    cur: originalAnalysis?.weightedSharpe,    scen: scenarioAnalysis?.weightedSharpe,    lower: false },
   ];
 

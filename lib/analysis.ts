@@ -401,7 +401,7 @@ function buildSummary(
   if (return1yr !== null)
     lines.push(`Förväntad avkastning (senaste 12 månader, viktad): ${return1yr.toFixed(1)}%.`);
   if (return3yr !== null)
-    lines.push(`Annualiserad 3-årsavkastning (viktad): ${return3yr.toFixed(1)}% per år.`);
+    lines.push(`Total 3-årsavkastning (viktad): ${return3yr.toFixed(1)}%.`);
 
   if (sharpe !== null) {
     if (sharpe > 1)

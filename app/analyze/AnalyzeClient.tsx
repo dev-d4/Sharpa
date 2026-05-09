@@ -1707,7 +1707,7 @@ function AnalysisResult({ analysis, user, portfolioValue, onLoginClick }: { anal
             <div className="grid grid-cols-2 gap-4">
               <Metric label="Snittavgift" value={analysis.avgCost !== null ? `${analysis.avgCost.toFixed(2)}%` : "–"} sub="per år" info="Den genomsnittliga årliga avgiften viktat efter din fördelning." />
               <Metric label="Avkastning 1 år" value={analysis.weightedReturn1yr !== null ? `${analysis.weightedReturn1yr.toFixed(1)}%` : "–"} sub="viktad" info="Portföljens viktade avkastning de senaste 12 månaderna." />
-              <Metric label="Avkastning 3 år" value={analysis.weightedReturn3yr !== null ? `${analysis.weightedReturn3yr.toFixed(1)}%` : "–"} sub="annualiserad" info="Genomsnittlig årlig avkastning de senaste 3 åren." />
+              <Metric label="Avkastning 3 år" value={analysis.weightedReturn3yr !== null ? `${analysis.weightedReturn3yr.toFixed(1)}%` : "–"} sub="totalt" info="Portföljens viktade totalavkastning de senaste 3 åren." />
               <Metric label="Sharpe 3 år" value={analysis.weightedSharpe !== null ? analysis.weightedSharpe.toFixed(2) : "–"} sub="riskjusterad" info="Avkastning i förhållande till risk. Högre är bättre." />
             </div>
             {(analysis.concentrationWarnings?.length ?? 0) > 0 && (
@@ -1959,7 +1959,7 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
   const rows = [
     { label: "Snittavgift", sub: "per år", currentVal: current.avgCost, suggestedVal: suggested.avgCost, lowerIsBetter: true },
     { label: "Avkastning 1 år", sub: "viktad", currentVal: current.weightedReturn1yr, suggestedVal: suggested.weightedReturn1yr },
-    { label: "Avkastning 3 år", sub: "annualiserad", currentVal: current.weightedReturn3yr, suggestedVal: suggested.weightedReturn3yr },
+    { label: "Avkastning 3 år", sub: "totalt", currentVal: current.weightedReturn3yr, suggestedVal: suggested.weightedReturn3yr },
     { label: "Sharpe 3 år", sub: "riskjusterad", currentVal: current.weightedSharpe, suggestedVal: suggested.weightedSharpe },
   ];
 

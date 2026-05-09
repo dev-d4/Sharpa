@@ -35,7 +35,7 @@ const SECTIONS = [
       },
       {
         q: "Vad är skillnaden mellan avkastning 1 år och 3 år?",
-        a: "Avkastning 1 år visar hur portföljen presterat de senaste 12 månaderna — känslig för kortsiktiga marknadsrörelser. Avkastning 3 år är annualiserad, det vill säga omräknad till ett genomsnittligt årstal över tre år, vilket ger en jämnare och mer representativ bild av portföljens historiska trend.",
+        a: "Avkastning 1 år visar hur portföljen presterat de senaste 12 månaderna — känslig för kortsiktiga marknadsrörelser. Avkastning 3 år visar den totala avkastningen de senaste tre åren, vilket ger en jämnare och mer representativ bild av portföljens historiska trend.",
       },
       {
         q: "Vad är koncentrationsrisk?",

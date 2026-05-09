@@ -33,11 +33,6 @@ const FUND_TYPE_TO_CATEGORY_GROUP: Record<string, string> = {
   MISC_FUND: "Other",
 };
 
-function annualize(cumulative: number | null, years: number): number | null {
-  if (cumulative === null) return null;
-  return (Math.pow(1 + cumulative / 100, 1 / years) - 1) * 100;
-}
-
 function mapAvanzaToFund(f: AvanzaFund, index: number): Fund {
   return {
     id: parseInt(f.orderbookId) || index,
@@ -51,8 +46,8 @@ function mapAvanzaToFund(f: AvanzaFund, index: number): Fund {
     return_ytd: f.developmentThisYear ?? null,
     return_1yr: f.developmentOneYear ?? null,
     return_2yr: null,
-    return_3yr: annualize(f.developmentThreeYears, 3),
-    return_5yr: annualize(f.developmentFiveYears, 5),
+    return_3yr: f.developmentThreeYears ?? null,
+    return_5yr: f.developmentFiveYears ?? null,
     investment_type: f.managedType ?? null,
     std_dev_3yr: f.standardDeviation ?? null,
     std_dev_1yr: null,

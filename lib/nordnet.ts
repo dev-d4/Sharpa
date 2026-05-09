@@ -177,9 +177,9 @@ const NN_CATEGORY_TO_AVANZA: Record<string, string> = {
 
 function mapNordnetListToFund(f: NordnetListFund, index: number): Fund {
   const fee = f.fund_info?.fund_yearly_fee ?? f.fund_info?.fund_calculated_fee ?? null;
-  const r1 = f.annual_growth_info?.annual_growth_1y ?? null;
-  const r3 = f.annual_growth_info?.annual_growth_3y ?? null;
-  const r5 = f.annual_growth_info?.annual_growth_5y ?? null;
+  const r1 = f.historical_returns_info?.yield_1y ?? f.annual_growth_info?.annual_growth_1y ?? null;
+  const r3 = f.historical_returns_info?.yield_3y ?? null;
+  const r5 = f.historical_returns_info?.yield_5y ?? null;
   const fundType = f.fund_info?.fund_type ?? "";
   const categoryGroup = NN_FUND_TYPE_MAP[fundType] ?? "Other";
 

@@ -340,7 +340,7 @@ export default function PrintClient() {
             {[
               { label: "Snittavgift",     value: analysis.avgCost,           fmt: (v: number) => `${v.toFixed(2)}%`, sub: "per år",       key: "cost" },
               { label: "Avkastning 1 år", value: analysis.weightedReturn1yr, fmt: (v: number) => `${v.toFixed(1)}%`, sub: "viktad",       key: "ret1" },
-              { label: "Avkastning 3 år", value: analysis.weightedReturn3yr, fmt: (v: number) => `${v.toFixed(1)}%`, sub: "annualiserad", key: "ret3" },
+              { label: "Avkastning 3 år", value: analysis.weightedReturn3yr, fmt: (v: number) => `${v.toFixed(1)}%`, sub: "totalt", key: "ret3" },
               { label: "Sharpe 3 år",     value: analysis.weightedSharpe,    fmt: (v: number) => v.toFixed(2),       sub: "riskjusterad", key: "shr"  },
             ].map(({ label, value, fmt, sub, key }) => {
               let cls = "";

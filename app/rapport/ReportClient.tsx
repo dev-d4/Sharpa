@@ -524,7 +524,7 @@ function SectionContent({ id, data }: { id: SectionId; data: SectionData }) {
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <MetricCard label="Snittavgift"     value={analysis.avgCost}           formatted={analysis.avgCost           !== null ? `${analysis.avgCost.toFixed(2)}%`          : "–"} sub="per år"       ratingKey="cost"      info="Den genomsnittliga årliga avgiften viktat efter din fördelning." />
               <MetricCard label="Avkastning 1 år" value={analysis.weightedReturn1yr} formatted={analysis.weightedReturn1yr !== null ? `${analysis.weightedReturn1yr.toFixed(1)}%` : "–"} sub="viktad"       ratingKey="return1yr" info="Portföljens viktade avkastning de senaste 12 månaderna." />
-              <MetricCard label="Avkastning 3 år" value={analysis.weightedReturn3yr} formatted={analysis.weightedReturn3yr !== null ? `${analysis.weightedReturn3yr.toFixed(1)}%` : "–"} sub="annualiserad" ratingKey="return3yr" info="Genomsnittlig årlig avkastning de senaste 3 åren." />
+              <MetricCard label="Avkastning 3 år" value={analysis.weightedReturn3yr} formatted={analysis.weightedReturn3yr !== null ? `${analysis.weightedReturn3yr.toFixed(1)}%` : "–"} sub="totalt" ratingKey="return3yr" info="Portföljens viktade totalavkastning de senaste 3 åren." />
               <MetricCard label="Sharpe 3 år"     value={analysis.weightedSharpe}    formatted={analysis.weightedSharpe    !== null ? analysis.weightedSharpe.toFixed(2)          : "–"} sub="riskjusterad" ratingKey="sharpe"    info="Avkastning i förhållande till risk. Högre är bättre." />
             </div>
             {(analysis.concentrationWarnings?.length ?? 0) > 0 && (
