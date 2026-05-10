@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { Search, X, Plus, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Search, X, Plus, ChevronDown, ChevronUp } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -150,6 +150,7 @@ export default function FondguideTab({
   const [compared, setCompared]       = useState<string[]>(portfolioIsins);
   const [details, setDetails]         = useState<FundDetail[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [showMeta, setShowMeta]       = useState(false);
 
   // Load details whenever compared list changes
   useEffect(() => {
@@ -252,26 +253,6 @@ export default function FondguideTab({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {/* Kategori */}
-                <tr className="group hover:bg-slate-50/60 transition-colors">
-                  <td className="px-4 py-3 text-sm text-slate-500">Kategori</td>
-                  {details.map(f => (
-                    <td key={f.isin} className="px-4 py-3 text-sm text-right text-slate-600">
-                      {f.category_group ?? "–"}
-                    </td>
-                  ))}
-                </tr>
-
-                {/* Förvaltning */}
-                <tr className="group hover:bg-slate-50/60 transition-colors">
-                  <td className="px-4 py-3 text-sm text-slate-500">Förvaltning</td>
-                  {details.map(f => {
-                    const t = f.investment_type?.toUpperCase() ?? "";
-                    const label = t.includes("PASSIVE") || t.includes("INDEX") ? "Passiv" : t.includes("ACTIVE") ? "Aktiv" : "–";
-                    return <td key={f.isin} className="px-4 py-3 text-sm text-right text-slate-600">{label}</td>;
-                  })}
-                </tr>
-
                 {/* Avgift */}
                 <tr className="group hover:bg-slate-50/60 transition-colors">
                   <td className="px-4 py-3">
@@ -308,19 +289,6 @@ export default function FondguideTab({
                   })}
                 </tr>
 
-                {/* Avkastning 5 år */}
-                <tr className="group hover:bg-slate-50/60 transition-colors">
-                  <td className="px-4 py-3">
-                    <p className="text-sm text-slate-500">Avkastning 5 år</p>
-                    <p className="text-[10px] text-slate-400">Annualiserad</p>
-                  </td>
-                  {details.map(f => (
-                    <td key={f.isin} className="px-4 py-3 text-sm tabular-nums font-semibold text-right text-slate-700">
-                      {fmt(f.return_5yr, 1)}
-                    </td>
-                  ))}
-                </tr>
-
                 {/* Sharpe */}
                 <tr className="group hover:bg-slate-50/60 transition-colors">
                   <td className="px-4 py-3">
@@ -332,20 +300,62 @@ export default function FondguideTab({
                     return <Cell key={f.isin} value={fmt(f.sharpe_3yr, 2, "")} isBest={n >= 2 && i === bSharpe} isWorst={n >= 2 && i === wSharpe && bSharpe !== wSharpe} />;
                   })}
                 </tr>
+
+                {/* Expandable: Kategori + Förvaltning + 5yr */}
+                {showMeta && (
+                  <>
+                    <tr className="group hover:bg-slate-50/60 transition-colors">
+                      <td className="px-4 py-3 text-sm text-slate-500">Kategori</td>
+                      {details.map(f => (
+                        <td key={f.isin} className="px-4 py-3 text-sm text-right text-slate-600">
+                          {f.category_group ?? "–"}
+                        </td>
+                      ))}
+                    </tr>
+                    <tr className="group hover:bg-slate-50/60 transition-colors">
+                      <td className="px-4 py-3 text-sm text-slate-500">Förvaltning</td>
+                      {details.map(f => {
+                        const t = f.investment_type?.toUpperCase() ?? "";
+                        const label = t.includes("PASSIVE") || t.includes("INDEX") ? "Passiv" : t.includes("ACTIVE") ? "Aktiv" : "–";
+                        return <td key={f.isin} className="px-4 py-3 text-sm text-right text-slate-600">{label}</td>;
+                      })}
+                    </tr>
+                    <tr className="group hover:bg-slate-50/60 transition-colors">
+                      <td className="px-4 py-3">
+                        <p className="text-sm text-slate-500">Avkastning 5 år</p>
+                        <p className="text-[10px] text-slate-400">Annualiserad</p>
+                      </td>
+                      {details.map(f => (
+                        <td key={f.isin} className="px-4 py-3 text-sm tabular-nums font-semibold text-right text-slate-700">
+                          {fmt(f.return_5yr, 1)}
+                        </td>
+                      ))}
+                    </tr>
+                  </>
+                )}
               </tbody>
             </table>
           </div>
 
           {/* Legend */}
-          <div className="px-4 py-3 border-t border-slate-50 flex items-center gap-5 bg-slate-50/50">
-            <div className="flex items-center gap-1.5 text-xs text-slate-500">
-              <div className="w-2 h-2 rounded-full bg-emerald-500" />
-              Bäst i kolumnen
+          <div className="px-4 py-3 border-t border-slate-50 flex items-center justify-between gap-5 bg-slate-50/50 flex-wrap">
+            <div className="flex items-center gap-5">
+              <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                Bäst i kategorin
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                <div className="w-2 h-2 rounded-full bg-red-400" />
+                Sämst i kategorin
+              </div>
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-slate-500">
-              <div className="w-2 h-2 rounded-full bg-red-400" />
-              Sämst i kolumnen
-            </div>
+            <button
+              onClick={() => setShowMeta(v => !v)}
+              className="flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              {showMeta ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              {showMeta ? "Visa färre" : "Visa mer"}
+            </button>
           </div>
         </div>
       )}

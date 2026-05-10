@@ -103,11 +103,22 @@ export default function PrintClient() {
 
   const { funds, amount, client, comment } = p!;
 
-  const annualFee    = analysis.avgCost           != null && amount ? amount * analysis.avgCost / 100           : null;
-  const annualRet3   = analysis.weightedReturn3yr != null && amount ? amount * analysis.weightedReturn3yr / 100 : null;
-  const sm           = analysis.suggestedMetrics;
-  const sugFee       = sm?.avgCost           != null && amount ? amount * sm.avgCost / 100           : null;
-  const sugRet3      = sm?.weightedReturn3yr != null && amount ? amount * sm.weightedReturn3yr / 100 : null;
+  const sm = analysis.suggestedMetrics;
+
+  function toAnnual(totalPct: number, yrs: number) {
+    return (Math.pow(1 + totalPct / 100, 1 / yrs) - 1) * 100;
+  }
+
+  const annualFee    = analysis.avgCost != null && amount ? amount * analysis.avgCost / 100 : null;
+  const sugFee       = sm?.avgCost      != null && amount ? amount * sm.avgCost / 100       : null;
+
+  const annualCurr3  = analysis.weightedReturn3yr != null ? toAnnual(analysis.weightedReturn3yr, 3) : null;
+  const annualSugg3  = sm?.weightedReturn3yr       != null ? toAnnual(sm.weightedReturn3yr, 3)       : null;
+
+  const feeSavingsKr = annualFee != null && sugFee != null ? annualFee - sugFee : null;
+  const returnGainKr = annualCurr3 != null && annualSugg3 != null && amount
+    ? (annualSugg3 - annualCurr3) / 100 * amount : null;
+  const totalGainKr  = feeSavingsKr != null && returnGainKr != null ? feeSavingsKr + returnGainKr : null;
 
   const hasSwaps = (analysis.swapSuggestions?.length ?? 0) > 0;
   const hasBest  = (analysis.bestInCategory?.length ?? 0) > 0;
@@ -208,13 +219,16 @@ export default function PrintClient() {
         .fee-val.green { color: #16a34a; }
         .fee-val.red   { color: #dc2626; }
 
-        .savings-chips { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
-        .savings-chip  { border-radius: 8px; padding: 8px 14px; text-align: center; }
-        .savings-chip .chip-label { font-size: 7.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; opacity: .7; margin-bottom: 2px; }
-        .savings-chip .chip-val   { font-size: 15px; font-weight: 700; line-height: 1.1; }
-        .savings-chip.emerald { background: #f0fdf4; color: #15803d; }
-        .savings-chip.blue    { background: #eff6ff; color: #1d4ed8; }
-        .savings-chip.violet  { background: #f5f3ff; color: #6d28d9; }
+        .gain-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 14px; margin-top: 12px; }
+        .gain-box-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .gain-box-title  { font-size: 11px; font-weight: 700; color: #14532d; }
+        .gain-box-meta   { font-size: 8.5px; color: #888; font-style: italic; }
+        .gain-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+        .gain-col .gain-label { font-size: 8.5px; color: #555; margin-bottom: 2px; }
+        .gain-col .gain-val   { font-size: 13px; font-weight: 700; }
+        .gain-col .gain-val.green { color: #15803d; }
+        .gain-col .gain-val.red   { color: #dc2626; }
+        .gain-col .gain-val.slate { color: #94a3b8; }
 
         /* ── Swap rows ───────────────────────────────────────────────────────── */
 
@@ -374,14 +388,19 @@ export default function PrintClient() {
           <div className="row">
             <div className="col">
               <h2 className="section-title">Tillgångsfördelning</h2>
-              <DonutChart
-                slices={(analysis.detailedBreakdown ?? []).map(c => ({ label: c.label, weight: c.weight }))}
-                centerLabel={`${(analysis.detailedBreakdown ?? [])[0]?.weight.toFixed(0) ?? "–"}%`}
-                centerSub={(analysis.detailedBreakdown ?? [])[0]?.label ?? ""}
-                size={140}
-                thickness={20}
-                horizontal
-              />
+              {(() => {
+                const equityPct = Math.round(analysis.categoryBreakdown?.find(c => c.label === "Aktiefonder")?.weight ?? 0);
+                return (
+                  <DonutChart
+                    slices={(analysis.detailedBreakdown ?? []).map(c => ({ label: c.label, weight: c.weight }))}
+                    centerLabel={`${equityPct}%`}
+                    centerSub="Aktier"
+                    size={140}
+                    thickness={20}
+                    horizontal
+                  />
+                );
+              })()}
             </div>
             <div className="col">
               <h2 className="section-title">Förvaltningsstil</h2>
@@ -410,26 +429,17 @@ export default function PrintClient() {
           <>
             <hr className="div" />
             <div className="no-break" style={{ marginBottom: 20 }}>
-              <h2 className="section-title">
-                Avgiftsräknare
-                <span style={{ fontSize: 10, fontFamily: "Inter, sans-serif", fontWeight: 400, color: "#888", marginLeft: 8 }}>
-                  Portföljvärde: {amount.toLocaleString("sv-SE")} kr
-                </span>
-              </h2>
+              <h2 className="section-title">Avgiftsräknare</h2>
               <div className={sm ? "fee-grid" : ""}>
                 <div className="fee-box current">
                   <div className="label" style={{ marginBottom: 8 }}>Nuvarande portfölj</div>
                   <div className="fee-row">
                     <span className="fee-label">Avgift per år</span>
-                    <span className="fee-val">{annualFee !== null ? fmtKr(annualFee) : "–"}</span>
+                    <span className="fee-val">{annualFee != null ? fmtKr(annualFee) : "–"}</span>
                   </div>
                   <div className="fee-row">
                     <span className="fee-label">Avgift i %</span>
-                    <span className="fee-val">{analysis.avgCost !== null ? `${analysis.avgCost.toFixed(2)}%` : "–"}</span>
-                  </div>
-                  <div className="fee-row">
-                    <span className="fee-label">Förv. avkastning / år</span>
-                    <span className="fee-val">{annualRet3 !== null ? fmtKr(annualRet3) : "–"}</span>
+                    <span className="fee-val">{analysis.avgCost != null ? `${analysis.avgCost.toFixed(2)}%` : "–"}</span>
                   </div>
                 </div>
                 {sm && (
@@ -437,49 +447,157 @@ export default function PrintClient() {
                     <div className="label" style={{ marginBottom: 8, color: "#16a34a" }}>Föreslagen portfölj</div>
                     <div className="fee-row">
                       <span className="fee-label">Avgift per år</span>
-                      <span className="fee-val green">{sugFee !== null ? fmtKr(sugFee) : "–"}</span>
+                      <span className="fee-val green">{sugFee != null ? fmtKr(sugFee) : "–"}</span>
                     </div>
                     <div className="fee-row">
                       <span className="fee-label">Avgift i %</span>
-                      <span className="fee-val green">{sm.avgCost !== null ? `${sm.avgCost.toFixed(2)}%` : "–"}</span>
-                    </div>
-                    <div className="fee-row">
-                      <span className="fee-label">Förv. avkastning / år</span>
-                      <span className="fee-val green">{sugRet3 !== null ? fmtKr(sugRet3) : "–"}</span>
+                      <span className="fee-val green">{sm.avgCost != null ? `${sm.avgCost.toFixed(2)}%` : "–"}</span>
                     </div>
                   </div>
                 )}
               </div>
-              {(() => {
-                const feeSaving = annualFee !== null && sugFee !== null ? annualFee - sugFee : null;
-                const retGain   = annualRet3 !== null && sugRet3 !== null ? sugRet3 - annualRet3 : null;
-                if (!feeSaving && !retGain) return null;
-                return (
-                  <div className="savings-chips">
-                    {feeSaving !== null && feeSaving > 0 && (
-                      <div className="savings-chip emerald">
-                        <div className="chip-label">Avgiftsbesparing / år</div>
-                        <div className="chip-val">+{fmtKr(feeSaving)}</div>
-                      </div>
-                    )}
-                    {retGain !== null && retGain > 0 && (
-                      <div className="savings-chip blue">
-                        <div className="chip-label">Mer i avkastning / år</div>
-                        <div className="chip-val">+{fmtKr(retGain)}</div>
-                      </div>
-                    )}
-                    {feeSaving !== null && retGain !== null && feeSaving + retGain > 0 && (
-                      <div className="savings-chip violet">
-                        <div className="chip-label">Total förbättring / år</div>
-                        <div className="chip-val">+{fmtKr(feeSaving + retGain)}</div>
-                      </div>
-                    )}
+              {sm && (
+                <div className="gain-box">
+                  <div className="gain-box-header">
+                    <span className="gain-box-title">Uppskattad vinst per år</span>
+                    <span className="gain-box-meta">Beräknat på en investering av {amount.toLocaleString("sv-SE")} kr</span>
                   </div>
-                );
-              })()}
+                  <div className="gain-grid">
+                    <div className="gain-col">
+                      <div className="gain-label">Avgiftsskillnad</div>
+                      <div className={`gain-val ${feeSavingsKr == null ? "slate" : feeSavingsKr >= 0 ? "green" : "red"}`}>
+                        {feeSavingsKr != null ? `${feeSavingsKr >= 0 ? "+" : ""}${Math.round(feeSavingsKr).toLocaleString("sv-SE")} kr` : "–"}
+                      </div>
+                    </div>
+                    <div className="gain-col">
+                      <div className="gain-label">Avkastningsskillnad</div>
+                      <div className={`gain-val ${returnGainKr == null ? "slate" : returnGainKr >= 0 ? "green" : "red"}`}>
+                        {returnGainKr != null ? `${returnGainKr >= 0 ? "+" : ""}${Math.round(returnGainKr).toLocaleString("sv-SE")} kr` : "–"}
+                      </div>
+                    </div>
+                    <div className="gain-col">
+                      <div className="gain-label">Totalt</div>
+                      <div className={`gain-val ${totalGainKr == null ? "slate" : totalGainKr >= 0 ? "green" : "red"}`} style={{ fontSize: 15 }}>
+                        {totalGainKr != null ? `${totalGainKr >= 0 ? "+" : ""}${Math.round(totalGainKr).toLocaleString("sv-SE")} kr` : "–"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </>
         )}
+
+        {/* Tidssimulator */}
+        {amount && (() => {
+          const YEARS = 10;
+          const currentRate = analysis.weightedReturn3yr != null
+            ? Math.round(toAnnual(analysis.weightedReturn3yr, 3) * 100) / 100
+            : Math.round((analysis.weightedReturn1yr ?? 0) * 100) / 100;
+          const sugRate = annualSugg3 != null ? Math.round(annualSugg3 * 100) / 100 : null;
+
+          const pts = Array.from({ length: YEARS + 1 }, (_, y) => ({
+            y,
+            curr: amount * Math.pow(1 + currentRate / 100, y),
+            sugg: sugRate != null ? amount * Math.pow(1 + sugRate / 100, y) : null,
+          }));
+
+          const finalCurr = pts[YEARS].curr;
+          const finalSugg = pts[YEARS].sugg;
+
+          const W = 560, H = 160;
+          const PAD = { t: 10, r: 14, b: 30, l: 68 };
+          const cW = W - PAD.l - PAD.r;
+          const cH = H - PAD.t - PAD.b;
+          const maxVal = Math.max(...pts.map(p => Math.max(p.curr, p.sugg ?? 0)));
+          const minVal = amount;
+          const tx = (yr: number) => PAD.l + (yr / YEARS) * cW;
+          const ty = (v: number) => maxVal === minVal ? PAD.t + cH / 2 : PAD.t + cH - ((v - minVal) / (maxVal - minVal)) * cH;
+
+          const polylineStr = (getter: (p: typeof pts[0]) => number | null) =>
+            pts.filter(p => getter(p) != null).map(p => `${tx(p.y)},${ty(getter(p)!)}`).join(" ");
+
+          const areaPathStr = (getter: (p: typeof pts[0]) => number | null) => {
+            const valid = pts.filter(p => getter(p) != null);
+            if (!valid.length) return "";
+            const bottom = PAD.t + cH;
+            const line = valid.map(p => `${tx(p.y)},${ty(getter(p)!)}`).join(" L ");
+            return `M ${tx(0)},${bottom} L ${line} L ${tx(YEARS)},${bottom} Z`;
+          };
+
+          function fmtAx(v: number) {
+            if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1).replace(".", ",")} Mkr`;
+            if (v >= 1_000)     return `${Math.round(v / 1000)} tkr`;
+            return `${Math.round(v)} kr`;
+          }
+
+          const yTicks = [0, 0.25, 0.5, 0.75, 1].map(f => ({ v: minVal + (maxVal - minVal) * f, y: PAD.t + cH * (1 - f) }));
+          const xTicks = [0, 2, 4, 6, 8, 10];
+
+          return (
+            <>
+              <hr className="div" />
+              <div className="no-break" style={{ marginBottom: 20 }}>
+                <h2 className="section-title">Tidssimulator — Värdeutveckling 10 år</h2>
+                <p style={{ fontSize: 9, color: "#aaa", marginBottom: 8 }}>
+                  Beräknad avkastning: {currentRate.toFixed(2)}% / år (annualiserad 3-årsavkastning)
+                </p>
+
+                <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", display: "block" }}>
+                  <defs>
+                    <linearGradient id="p-grad-curr" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.12" />
+                      <stop offset="100%" stopColor="#3B82F6" stopOpacity="0" />
+                    </linearGradient>
+                    <linearGradient id="p-grad-sugg" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10B981" stopOpacity="0.10" />
+                      <stop offset="100%" stopColor="#10B981" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+
+                  {yTicks.map(({ v, y }, i) => (
+                    <g key={i}>
+                      <line x1={PAD.l} y1={y} x2={W - PAD.r} y2={y} stroke="#F1F5F9" strokeWidth={1} />
+                      <text x={PAD.l - 5} y={y + 3.5} textAnchor="end" fontSize={8} fill="#94A3B8">{fmtAx(v)}</text>
+                    </g>
+                  ))}
+                  {xTicks.map(yr => (
+                    <text key={yr} x={tx(yr)} y={H - 6} textAnchor="middle" fontSize={8} fill="#94A3B8">{yr} år</text>
+                  ))}
+
+                  {finalSugg != null && <path d={areaPathStr(p => p.sugg)} fill="url(#p-grad-sugg)" />}
+                  <path d={areaPathStr(p => p.curr)} fill="url(#p-grad-curr)" />
+
+                  {finalSugg != null && (
+                    <polyline points={polylineStr(p => p.sugg)} fill="none" stroke="#10B981" strokeWidth={1.5} strokeLinejoin="round" strokeDasharray="5 3" />
+                  )}
+                  <polyline points={polylineStr(p => p.curr)} fill="none" stroke="#3B82F6" strokeWidth={1.5} strokeLinejoin="round" />
+
+                  {finalSugg != null && <circle cx={tx(YEARS)} cy={ty(finalSugg)} r={3} fill="#10B981" />}
+                  <circle cx={tx(YEARS)} cy={ty(finalCurr)} r={3} fill="#3B82F6" />
+                </svg>
+
+                <div style={{ display: "flex", gap: 20, marginTop: 8, flexWrap: "wrap" as const, fontSize: 9.5 }}>
+                  <span style={{ color: "#555" }}>
+                    <span style={{ display: "inline-block", width: 16, height: 2, background: "#CBD5E1", verticalAlign: "middle", marginRight: 5, borderTop: "2px dashed #CBD5E1" }} />
+                    Investerat: <strong style={{ color: "#333" }}>{fmtKr(amount)}</strong>
+                  </span>
+                  <span style={{ color: "#555" }}>
+                    <span style={{ display: "inline-block", width: 16, height: 2, background: "#3B82F6", verticalAlign: "middle", marginRight: 5 }} />
+                    Nuvarande portfölj efter {YEARS} år: <strong style={{ color: "#111" }}>{fmtKr(finalCurr)}</strong>
+                  </span>
+                  {finalSugg != null && (
+                    <span style={{ color: "#555" }}>
+                      <span style={{ display: "inline-block", width: 16, height: 2, background: "#10B981", verticalAlign: "middle", marginRight: 5 }} />
+                      Föreslagen portfölj: <strong style={{ color: "#15803d" }}>{fmtKr(finalSugg)}</strong>
+                      {finalSugg > finalCurr && <strong style={{ color: "#15803d" }}> (+{fmtKr(finalSugg - finalCurr)})</strong>}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </>
+          );
+        })()}
 
         {/* Fondgranskning */}
         {(hasSwaps || hasBest) && (

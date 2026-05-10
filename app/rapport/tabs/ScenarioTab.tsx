@@ -356,7 +356,7 @@ export default function ScenarioTab({
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Jämförelse</p>
                 <p className="text-sm font-bold text-slate-900 mt-0.5">Nuvarande vs scenario</p>
               </div>
-              <div className="px-5 py-2">
+              <div className="px-5 py-3">
                 <table className="w-full">
                   <thead>
                     <tr className="text-xs font-semibold text-slate-400 uppercase tracking-widest border-b border-slate-100">
@@ -379,21 +379,6 @@ export default function ScenarioTab({
                     ))}
                   </tbody>
                 </table>
-              </div>
-
-              {/* Scenario portfolio */}
-              <div className="px-5 py-4 border-t border-slate-100 bg-slate-50/50">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Scenarioportfölj</p>
-                <div className="space-y-1.5">
-                  {entries.filter(e => parseFloat(e.weight) > 0).map(e => (
-                    <div key={e.isin} className="flex items-center justify-between text-sm">
-                      <span className="text-slate-700 truncate mr-3">{e.name}</span>
-                      <span className="font-semibold text-slate-900 tabular-nums shrink-0">
-                        {parseFloat(e.weight).toFixed(1)}%
-                      </span>
-                    </div>
-                  ))}
-                </div>
               </div>
 
               {(scenarioAnalysis.notFound?.length ?? 0) > 0 && (

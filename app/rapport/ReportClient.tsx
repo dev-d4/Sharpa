@@ -43,9 +43,6 @@ const DEFAULT_LAYOUT: LayoutRow[] = [
   { ids: ["summary"] },
   { ids: ["advisor-comment"] },
   { ids: ["holdings"] },
-  { ids: ["metrics"] },
-  { ids: ["asset-allocation"] },
-  { ids: ["management"] },
   { ids: ["swaps"] },
   { ids: ["fee-calculator"] },
   { ids: ["projection"] },
@@ -132,28 +129,30 @@ function StatRow({ label, value, accent }: { label: string; value: string; accen
   );
 }
 
-function SummaryChip({ label, value, color }: { label: string; value: string; color: "emerald" | "blue" | "violet" }) {
-  const cls = { emerald: "bg-emerald-50 border-emerald-200 text-emerald-700", blue: "bg-blue-50 border-blue-200 text-blue-700", violet: "bg-violet-50 border-violet-200 text-violet-700" }[color];
-  return (
-    <div className={cn("rounded-xl border px-4 py-3 text-center min-w-[120px]", cls)}>
-      <p className="text-[10px] font-semibold uppercase tracking-widest opacity-70 mb-0.5">{label}</p>
-      <p className="text-xl font-bold leading-tight">{value}</p>
-    </div>
-  );
-}
-
 function FeeCalculatorSection({ amount, analysis }: { amount: number; analysis: PortfolioAnalysis }) {
-  const annualFee  = analysis.avgCost           !== null ? amount * analysis.avgCost / 100           : null;
-  const return3    = analysis.weightedReturn3yr !== null ? amount * analysis.weightedReturn3yr / 100 : null;
-  const return1    = analysis.weightedReturn1yr !== null ? amount * analysis.weightedReturn1yr / 100 : null;
-  const displayRet = return3 ?? return1;
-
   const sm = analysis.suggestedMetrics;
-  const sugFee     = sm?.avgCost           != null ? amount * sm.avgCost / 100           : null;
-  const sugReturn  = sm?.weightedReturn3yr != null ? amount * sm.weightedReturn3yr / 100 : null;
 
-  const feeSaving  = annualFee !== null && sugFee !== null ? annualFee - sugFee : null;
-  const retGain    = displayRet !== null && sugReturn !== null ? sugReturn - displayRet : null;
+  // Use annualized 3yr return (same basis as Tidssimulator)
+  const annualCurr3 = analysis.weightedReturn3yr != null ? toAnnual(analysis.weightedReturn3yr, 3) : null;
+  const annualSugg3 = sm?.weightedReturn3yr != null ? toAnnual(sm.weightedReturn3yr, 3) : null;
+
+  const feeSavingsKr = analysis.avgCost != null && sm?.avgCost != null
+    ? (analysis.avgCost - sm.avgCost) / 100 * amount : null;
+  const returnGainKr = annualCurr3 != null && annualSugg3 != null
+    ? (annualSugg3 - annualCurr3) / 100 * amount : null;
+  const totalGainKr  = feeSavingsKr != null && returnGainKr != null ? feeSavingsKr + returnGainKr : null;
+
+  const annualFee = analysis.avgCost != null ? amount * analysis.avgCost / 100 : null;
+  const sugFee    = sm?.avgCost      != null ? amount * sm.avgCost / 100       : null;
+
+  function fmtGain(v: number | null) {
+    if (v == null) return "–";
+    return `${v >= 0 ? "+" : ""}${Math.round(v).toLocaleString("sv-SE")} kr`;
+  }
+  function gainColor(v: number | null) {
+    if (v == null) return "text-slate-400";
+    return v >= 0 ? "text-green-700" : "text-red-600";
+  }
 
   return (
     <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 space-y-5">
@@ -162,48 +161,52 @@ function FeeCalculatorSection({ amount, analysis }: { amount: number; analysis: 
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Avgiftsräknare</p>
           <h2 className="text-base font-bold text-slate-900 mt-0.5">Vad kostar din portfölj?</h2>
         </div>
-        <span className="text-sm font-semibold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full shrink-0">
-          {amount.toLocaleString("sv-SE")} kr
-        </span>
       </div>
 
+      {/* Cost detail rows */}
       <div className={cn("grid gap-4", sm ? "sm:grid-cols-2" : "")}>
-        {/* Current */}
         <div className="bg-slate-50 rounded-xl p-4 space-y-2">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Nuvarande portfölj</p>
-          <StatRow label="Avgift per år" value={annualFee !== null ? fmtKr(annualFee) : "–"} accent={annualFee !== null && annualFee > 3000 ? "bad" : undefined} />
-          <StatRow label="Avgift i %" value={analysis.avgCost !== null ? `${analysis.avgCost.toFixed(2)}% / år` : "–"} />
-          <StatRow label="Förv. avkastning / år" value={displayRet !== null ? fmtKr(displayRet) : "–"} />
+          <StatRow label="Avgift per år" value={annualFee != null ? fmtKr(annualFee) : "–"} accent={annualFee != null && annualFee > 3000 ? "bad" : undefined} />
+          <StatRow label="Avgift i %" value={analysis.avgCost != null ? `${analysis.avgCost.toFixed(2)}% / år` : "–"} />
         </div>
-
-        {/* Suggested */}
         {sm && (
           <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 space-y-2">
             <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-3">Föreslagen portfölj</p>
-            <StatRow label="Avgift per år"         value={sugFee    !== null ? fmtKr(sugFee)    : "–"} accent="good" />
-            <StatRow label="Avgift i %"            value={sm.avgCost !== null ? `${sm.avgCost.toFixed(2)}% / år` : "–"} />
-            <StatRow label="Förv. avkastning / år" value={sugReturn !== null ? fmtKr(sugReturn) : "–"} accent="good" />
+            <StatRow label="Avgift per år" value={sugFee != null ? fmtKr(sugFee) : "–"} accent="good" />
+            <StatRow label="Avgift i %" value={sm.avgCost != null ? `${sm.avgCost.toFixed(2)}% / år` : "–"} />
           </div>
         )}
       </div>
 
-      {/* Chips */}
-      {(feeSaving !== null || retGain !== null) && (
-        <div className="flex flex-wrap gap-3">
-          {feeSaving !== null && feeSaving > 0 && (
-            <SummaryChip label="Avgiftsbesparing / år" value={`+${fmtKr(feeSaving)}`} color="emerald" />
-          )}
-          {retGain !== null && retGain > 0 && (
-            <SummaryChip label="Mer i avkastning / år" value={`+${fmtKr(retGain)}`} color="blue" />
-          )}
-          {feeSaving !== null && retGain !== null && feeSaving + retGain > 0 && (
-            <SummaryChip label="Total förbättring / år" value={`+${fmtKr(feeSaving + retGain)}`} color="violet" />
-          )}
+      {/* Gain summary — same style as AnalyzeClient */}
+      {sm && (
+        <div className="bg-green-50 border border-green-100 rounded-xl p-4 space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <p className="text-sm font-bold text-green-900">Uppskattad vinst per år</p>
+            <span className="text-xs text-slate-500 italic">
+              Beräknat på en investering av {amount.toLocaleString("sv-SE")} kr
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <p className="text-xs text-slate-500 mb-0.5">Avgiftsskillnad</p>
+              <p className={cn("font-bold text-sm", gainColor(feeSavingsKr))}>{fmtGain(feeSavingsKr)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500 mb-0.5">Avkastningsskillnad</p>
+              <p className={cn("font-bold text-sm", gainColor(returnGainKr))}>{fmtGain(returnGainKr)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500 mb-0.5">Totalt</p>
+              <p className={cn("font-bold text-base", gainColor(totalGainKr))}>{fmtGain(totalGainKr)}</p>
+            </div>
+          </div>
         </div>
       )}
 
       <p className="text-[10px] text-slate-400 leading-relaxed">
-        Baserat på historisk 3-årsavkastning viktat efter portföljvikterna. Historisk avkastning är ingen garanti för framtida avkastning.
+        Avkastningsskillnad baseras på annualiserad 3-årsavkastning viktat efter portföljvikterna. Historisk avkastning är ingen garanti för framtida avkastning.
       </p>
     </section>
   );
@@ -211,13 +214,25 @@ function FeeCalculatorSection({ amount, analysis }: { amount: number; analysis: 
 
 // ── Projection chart ──────────────────────────────────────────────────────────
 
+// Convert total N-year return to annualized rate
+function toAnnual(totalPct: number, years: number): number {
+  return (Math.pow(1 + totalPct / 100, 1 / years) - 1) * 100;
+}
+
 function ProjectionSection({ amount, analysis }: { amount: number; analysis: PortfolioAnalysis }) {
   const [years, setYears] = useState(9);
 
-  const currentRate  = Math.round((analysis.weightedReturn3yr ?? analysis.weightedReturn1yr ?? 0) * 100) / 100;
-  const sm           = analysis.suggestedMetrics;
-  const rawSuggestedRate = sm?.weightedReturn3yr ?? sm?.weightedReturn1yr ?? null;
-  const suggestedRate = rawSuggestedRate !== null ? Math.round(rawSuggestedRate * 100) / 100 : null;
+  // weightedReturn3yr is TOTAL over 3 years → convert to annual rate
+  const currentRate = analysis.weightedReturn3yr != null
+    ? Math.round(toAnnual(analysis.weightedReturn3yr, 3) * 100) / 100
+    : Math.round((analysis.weightedReturn1yr ?? 0) * 100) / 100;
+
+  const sm = analysis.suggestedMetrics;
+  const suggestedRate = sm?.weightedReturn3yr != null
+    ? Math.round(toAnnual(sm.weightedReturn3yr, 3) * 100) / 100
+    : sm?.weightedReturn1yr != null
+      ? Math.round(sm.weightedReturn1yr * 100) / 100
+      : null;
 
   const pts = Array.from({ length: years + 1 }, (_, y) => ({
     y,
@@ -273,7 +288,7 @@ function ProjectionSection({ amount, analysis }: { amount: number; analysis: Por
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tidssimulator</p>
           <h2 className="text-base font-bold text-slate-900 mt-0.5">Värdeutveckling över tid</h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Beräknad avkastning: {currentRate.toFixed(2)}% / år (viktad 3-årsavkastning)
+            Beräknad avkastning: {currentRate.toFixed(2)}% / år (annualiserad 3-årsavkastning)
           </p>
         </div>
         <div className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-2.5">
@@ -333,6 +348,11 @@ function ProjectionSection({ amount, analysis }: { amount: number; analysis: Por
 
       {/* Legend */}
       <div className="flex flex-wrap gap-5">
+        <div className="flex items-center gap-2.5 text-sm">
+          <div className="w-5 h-px bg-slate-300 shrink-0" style={{ borderTop: "2px dashed #CBD5E1" }} />
+          <span className="text-slate-400">Investerat belopp</span>
+          <span className="font-semibold text-slate-500">{fmtKr(amount)}</span>
+        </div>
         <div className="flex items-center gap-2.5 text-sm">
           <div className="w-5 h-0.5 bg-blue-500 rounded shrink-0" />
           <span className="text-slate-600">Nuvarande portfölj</span>
@@ -724,6 +744,8 @@ export default function ReportClient() {
   const [dropIdx, setDropIdx]       = useState<number | null>(null);
   const [dropMode, setDropMode]     = useState<"reorder" | "pair">("reorder");
   const [panelOpen, setPanelOpen]   = useState(false);
+  const [panelDragId, setPanelDragId] = useState<SectionId | null>(null);
+  const [stripDropIdx, setStripDropIdx] = useState<number | null>(null);
   const panelRef                    = useRef<HTMLDivElement>(null);
 
   const activeSectionIds = layout.flatMap(r => r.ids);
@@ -740,10 +762,6 @@ export default function ReportClient() {
     }));
   }
 
-  function addSection(id: SectionId) {
-    setLayout(prev => [...prev, { ids: [id] }]);
-  }
-
   function handleDragOver(e: React.DragEvent<HTMLDivElement>, rowIdx: number) {
     e.preventDefault();
     setDropIdx(rowIdx);
@@ -752,8 +770,29 @@ export default function ReportClient() {
     setDropMode(relY > 0.25 && relY < 0.75 ? "pair" : "reorder");
   }
 
+  function handleStripDragOver(e: React.DragEvent<HTMLDivElement>, insertAt: number) {
+    e.preventDefault();
+    e.stopPropagation();
+    setStripDropIdx(insertAt);
+    setDropIdx(null);
+  }
+
+  function handleStripDrop(e: React.DragEvent<HTMLDivElement>, insertAt: number) {
+    e.preventDefault();
+    if (panelDragId === null) return;
+    setLayout(prev => {
+      const next = [...prev];
+      next.splice(insertAt, 0, { ids: [panelDragId] });
+      return next;
+    });
+    setPanelDragId(null);
+    setStripDropIdx(null);
+    setDropIdx(null);
+  }
+
   function handleDrop(e: React.DragEvent<HTMLDivElement>, toIdx: number) {
     e.preventDefault();
+
     if (dragIdx === null || dragIdx === toIdx) { setDragIdx(null); setDropIdx(null); return; }
 
     if (dropMode === "pair") {
@@ -960,7 +999,7 @@ export default function ReportClient() {
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 flex items-center gap-2">
             <GripVertical className="w-4 h-4 text-blue-400 shrink-0" />
             <p className="text-xs font-medium text-blue-700">
-              Dra ett kort <strong>över</strong> ett annat för att lägga dem bredvid varandra — dra <strong>ovan/under</strong> för att flytta ordningen — klicka <strong>+ Lägg till</strong> för fler kort.
+              Dra ett kort <strong>över</strong> ett annat för att lägga dem bredvid varandra — dra <strong>ovan/under</strong> för att flytta ordningen.
             </p>
           </div>
         </div>
@@ -969,42 +1008,43 @@ export default function ReportClient() {
       {/* ── Right panel (edit mode) ─────────────────────────────────────────────── */}
       {editMode && activeTab === "analysis" && (
         <>
-          {/* Backdrop */}
-          {panelOpen && (
-            <div
-              className="fixed inset-0 z-40 bg-black/20 no-print"
-              onClick={() => setPanelOpen(false)}
-            />
-          )}
           {/* Panel */}
           <div
             ref={panelRef}
             className={cn(
-              "fixed top-0 right-0 h-full w-72 bg-white border-l border-slate-200 shadow-2xl z-50 flex flex-col transition-transform duration-300 no-print",
+              "fixed top-0 right-0 h-full w-64 bg-white border-l border-slate-200 shadow-2xl z-50 flex flex-col transition-transform duration-300 no-print",
               panelOpen ? "translate-x-0" : "translate-x-full"
             )}
           >
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-              <p className="text-sm font-bold text-slate-900">Lägg till kort</p>
+            <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-100">
+              <p className="text-sm font-bold text-slate-900">Tillgängliga kort</p>
               <button onClick={() => setPanelOpen(false)} className="text-slate-400 hover:text-slate-700 p-1 rounded-lg">
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
               {hiddenSectionIds.length === 0 ? (
                 <p className="text-sm text-slate-400 text-center py-8">Alla kort är aktiva</p>
-              ) : hiddenSectionIds.map(id => (
-                <div key={id} className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
-                  <p className="text-xs font-semibold text-slate-700">{SECTION_LABELS[id]}</p>
-                  <button
-                    onClick={() => { addSection(id); }}
-                    className="w-full flex items-center justify-center gap-1.5 text-xs font-medium bg-blue-500 text-white rounded-lg py-1.5 hover:bg-blue-600 transition-colors"
-                  >
-                    <Plus className="w-3 h-3" /> Lägg till
-                  </button>
-                  <p className="text-[10px] text-slate-400 text-center">Dra kortet bredvid ett annat för att para ihop dem</p>
-                </div>
-              ))}
+              ) : (
+                <>
+                  <p className="text-[10px] text-slate-400 px-1 pb-1">Dra ett kort till önskad position i rapporten</p>
+                  {hiddenSectionIds.map(id => (
+                    <div
+                      key={id}
+                      draggable
+                      onDragStart={() => setPanelDragId(id)}
+                      onDragEnd={() => { setPanelDragId(null); setDropIdx(null); }}
+                      className={cn(
+                        "bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 flex items-center gap-2.5 cursor-grab active:cursor-grabbing select-none transition-colors",
+                        panelDragId === id && "opacity-40"
+                      )}
+                    >
+                      <GripVertical className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <p className="text-xs font-semibold text-slate-700">{SECTION_LABELS[id]}</p>
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
           </div>
           {/* Floating toggle button */}
@@ -1055,74 +1095,107 @@ export default function ReportClient() {
         {/* ── Analysis tab ──────────────────────────────────────────────────── */}
         {activeTab === "analysis" && (
           <>
-            {layout.map((row, rowIdx) => {
-              const isPair      = row.ids.length === 2;
-              const isBeingDragged = dragIdx === rowIdx;
-              const isDropTarget  = dropIdx === rowIdx && dragIdx !== null && !isBeingDragged;
-              const canPair       = isDropTarget && dropMode === "pair" && !isPair && dragIdx !== null && layout[dragIdx]?.ids.length === 1;
-              const needsAnalysis = row.ids.some(id => id !== "holdings");
-              if (needsAnalysis && !analysis) return null;
-              return (
-                <div
-                  key={row.ids.join("+")}
-                  draggable={editMode}
-                  onDragStart={() => setDragIdx(rowIdx)}
-                  onDragOver={e => handleDragOver(e, rowIdx)}
-                  onDrop={e => handleDrop(e, rowIdx)}
-                  onDragEnd={() => { setDragIdx(null); setDropIdx(null); }}
-                  className={cn(
-                    "relative transition-all duration-150",
-                    editMode && "cursor-grab active:cursor-grabbing pt-7",
-                    isBeingDragged && "opacity-40 scale-[0.98]",
-                    isDropTarget && !canPair && "ring-2 ring-blue-400 ring-offset-2 rounded-2xl",
-                    canPair && "ring-2 ring-emerald-400 ring-offset-2 rounded-2xl",
-                  )}
-                >
-                  {/* Pair overlay hint */}
-                  {canPair && (
-                    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-emerald-500/10 pointer-events-none no-print">
-                      <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">Lägg bredvid</span>
-                    </div>
-                  )}
-
-                  {/* Row controls in edit mode */}
-                  {editMode && (
-                    <div className="absolute top-0 left-0 right-0 flex items-center justify-between z-20 bg-white border border-slate-200 rounded-lg shadow-sm px-2.5 py-1 no-print">
-                      <div className="flex items-center gap-1.5">
-                        <GripVertical className="w-3.5 h-3.5 text-slate-400" />
-                        <span className="text-xs font-medium text-slate-500">
-                          {row.ids.map(id => SECTION_LABELS[id]).join(" + ")}
-                        </span>
+            {(() => {
+              // Drop strip rendered between rows when dragging from the panel
+              const Strip = ({ insertAt }: { insertAt: number }) => {
+                const active = stripDropIdx === insertAt;
+                return (
+                  <div
+                    onDragOver={e => handleStripDragOver(e, insertAt)}
+                    onDrop={e => handleStripDrop(e, insertAt)}
+                    onDragLeave={() => setStripDropIdx(null)}
+                    className={cn(
+                      "relative flex items-center justify-center transition-all no-print",
+                      active ? "h-10 -my-1" : "h-3 -my-0"
+                    )}
+                  >
+                    {active && (
+                      <div className="absolute inset-x-0 flex items-center gap-2 px-2">
+                        <div className="flex-1 h-0.5 bg-violet-400 rounded-full" />
+                        <span className="text-[10px] font-semibold text-violet-600 bg-violet-50 border border-violet-200 px-2 py-0.5 rounded-full shrink-0">Släpp här</span>
+                        <div className="flex-1 h-0.5 bg-violet-400 rounded-full" />
                       </div>
-                      <div className="flex items-center gap-1">
-                        {isPair && (
-                          <button
-                            title="Dela upp till egna rader"
-                            onClick={() => splitRow(rowIdx)}
-                            className="text-slate-400 hover:text-blue-500 transition-colors p-0.5 rounded"
-                          >
-                            <Maximize2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                        <button
-                          onClick={() => removeRow(rowIdx)}
-                          className="text-slate-300 hover:text-red-400 transition-colors p-0.5 rounded"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Row content — 1 or 2 columns */}
-                  <div className={cn(isPair && "grid grid-cols-2 gap-4 sm:gap-6 items-start")}>
-                    {row.ids.map(id => (
-                      <SectionContent key={id} id={id} data={sectionData} />
-                    ))}
+                    )}
                   </div>
-                </div>
-              );
-            })}
+                );
+              };
+
+              const rows: React.ReactNode[] = [];
+              if (panelDragId !== null) rows.push(<Strip key="strip-0" insertAt={0} />);
+
+              layout.forEach((row, rowIdx) => {
+                const isPair         = row.ids.length === 2;
+                const isBeingDragged = dragIdx === rowIdx;
+                const isRowTarget    = dropIdx === rowIdx && dragIdx !== null && !isBeingDragged;
+                const canPair        = isRowTarget && dropMode === "pair" && !isPair && dragIdx !== null && layout[dragIdx]?.ids.length === 1;
+                const needsAnalysis  = row.ids.some(id => id !== "holdings");
+                if (!(needsAnalysis && !analysis)) {
+                  rows.push(
+                    <div
+                      key={row.ids.join("+")}
+                      draggable={editMode && panelDragId === null}
+                      onDragStart={() => setDragIdx(rowIdx)}
+                      onDragOver={e => handleDragOver(e, rowIdx)}
+                      onDrop={e => handleDrop(e, rowIdx)}
+                      onDragEnd={() => { setDragIdx(null); setDropIdx(null); }}
+                      className={cn(
+                        "relative transition-all duration-150",
+                        editMode && "cursor-grab active:cursor-grabbing pt-7",
+                        isBeingDragged && "opacity-40 scale-[0.98]",
+                        isRowTarget && !canPair && "ring-2 ring-blue-400 ring-offset-2 rounded-2xl",
+                        canPair && "ring-2 ring-emerald-400 ring-offset-2 rounded-2xl",
+                      )}
+                    >
+                      {/* Pair overlay hint */}
+                      {canPair && (
+                        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-emerald-500/10 pointer-events-none no-print">
+                          <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">Lägg bredvid</span>
+                        </div>
+                      )}
+
+                      {/* Row controls in edit mode */}
+                      {editMode && (
+                        <div className="absolute top-0 left-0 right-0 flex items-center justify-between z-20 bg-white border border-slate-200 rounded-lg shadow-sm px-2.5 py-1 no-print">
+                          <div className="flex items-center gap-1.5">
+                            <GripVertical className="w-3.5 h-3.5 text-slate-400" />
+                            <span className="text-xs font-medium text-slate-500">
+                              {row.ids.map(id => SECTION_LABELS[id]).join(" + ")}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {isPair && (
+                              <button
+                                title="Dela upp till egna rader"
+                                onClick={() => splitRow(rowIdx)}
+                                className="text-slate-400 hover:text-blue-500 transition-colors p-0.5 rounded"
+                              >
+                                <Maximize2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => removeRow(rowIdx)}
+                              className="text-slate-300 hover:text-red-400 transition-colors p-0.5 rounded"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Row content — 1 or 2 columns */}
+                      <div className={cn(isPair && "grid grid-cols-2 gap-4 sm:gap-6 items-start")}>
+                        {row.ids.map(id => (
+                          <SectionContent key={id} id={id} data={sectionData} />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+                if (panelDragId !== null) rows.push(<Strip key={`strip-${rowIdx + 1}`} insertAt={rowIdx + 1} />);
+              });
+
+              return rows;
+            })()}
 
             {loading && (
               <div className="min-h-[200px] flex items-center justify-center">

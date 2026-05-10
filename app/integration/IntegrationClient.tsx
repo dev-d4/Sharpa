@@ -165,9 +165,8 @@ export default function IntegrationClient() {
   const [comment,   setComment]     = useState("");
   const [funds, setFunds] = useState<FundRow[]>([
     { isin: "SE0005188836", weight: "40" },
-    { isin: "LU2544647246", weight: "20" },
-    { isin: "SE0000429789", weight: "15" },
-    { isin: "SE0001718388", weight: "15" },
+    { isin: "SE0014262788", weight: "20" },
+    { isin: "SE0001718388", weight: "30" },
     { isin: "LU0365089902", weight: "10" },
   ]);
 
