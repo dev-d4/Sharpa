@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "refresh-funds": "node scripts/refresh-funds.mjs && npx tsx scripts/classify-funds.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.86.0",
