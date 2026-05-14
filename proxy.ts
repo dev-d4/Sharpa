@@ -5,12 +5,13 @@ const SITE_COOKIE  = "integration_auth";
 const LOGIN_PAGE   = "/integration/login";
 const LOGIN_API    = "/api/integration/auth";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // ── Global password gate ──────────────────────────────────────────────────
-  const isPublic = pathname === LOGIN_PAGE || pathname.startsWith(LOGIN_API);
-  if (!isPublic) {
+  // ── Integration password gate (only integration paths) ───────────────────
+  const isIntegrationPath = pathname.startsWith("/integration") || pathname.startsWith("/api/integration");
+  const isIntegrationLogin = pathname === LOGIN_PAGE || pathname.startsWith(LOGIN_API);
+  if (isIntegrationPath && !isIntegrationLogin) {
     const token    = request.cookies.get(SITE_COOKIE)?.value;
     const expected = process.env.INTEGRATION_PASSWORD;
     if (expected && token !== expected) {
@@ -41,6 +42,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Matcha allt utom Next.js-interna resurser och statiska filer
   matcher: ["/((?!_next/static|_next/image|favicon.ico|logo.svg).*)"],
 };

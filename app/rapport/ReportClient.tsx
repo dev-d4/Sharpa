@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PortfolioAnalysis, SwapSuggestion } from "@/lib/analysis";
+import { decodePayload } from "@/lib/report-url";
 import DonutChart from "@/components/ui/DonutChart";
 import { Building2, CheckCircle2, Download, GripVertical, Link2, Maximize2, Pencil, Plus, Settings2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -54,7 +55,7 @@ function parseParams(): { custodian: string; funds: FundEntry[]; amount?: number
   try {
     const p = new URLSearchParams(window.location.search).get("p");
     if (!p) return null;
-    const obj = JSON.parse(atob(p));
+    const obj = decodePayload(p) as Record<string, unknown>;
     if (!obj?.custodian || !Array.isArray(obj.funds) || !obj.funds.length) return null;
     return {
       custodian: obj.custodian,
@@ -594,6 +595,7 @@ function SectionContent({ id, data }: { id: SectionId; data: SectionData }) {
             centerSub="Aktier"
             size={160} thickness={24} horizontal
           />
+          <p className="text-[10px] text-slate-400 leading-snug mt-2">* Fördelning baseras på fondkategori, inte underliggande innehav.</p>
         </section>
       );
     }

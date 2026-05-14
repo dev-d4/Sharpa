@@ -158,9 +158,9 @@ const NN_CATEGORY_TO_AVANZA: Record<string, string> = {
   "Norway Equity":                         "Norge",
   "Norwegian Equity":                      "Norge",
   "Sverige (Norge)":                       "Norge",
-  "Sweden Equity":                         "Sverige, Mix bolag",
-  "Swedish Equity":                        "Sverige, Mix bolag",
-  "Sverige":                               "Sverige, Mix bolag",
+  "Sweden Equity":                         "Sverige",
+  "Swedish Equity":                        "Sverige",
+  "Sverige":                               "Sverige",
   "Denmark Equity":                        "Danmark",
   "Sverige (Danmark)":                     "Danmark",
   "Finnish Equity":                        "Finland",
@@ -172,6 +172,23 @@ const NN_CATEGORY_TO_AVANZA: Record<string, string> = {
   "Convertibles":                          "Konvertibler - global",
   "Commodities Broad Basket":              "Råvaror - Blandade",
 };
+
+// If the fund name reveals a more specific geography than the broad Morningstar
+// category, use that. Mirrors the same logic in scripts/refresh-funds.mjs.
+function refineCategory(mappedCategory: string | null, fundName: string): string | null {
+  if (!mappedCategory || !fundName) return mappedCategory;
+  const n = fundName.toLowerCase();
+  if (/sverig|sweden|swedish|svenska/.test(n))  return "Sverige";
+  if (/\bnorg|norway|norwegian|norsk/.test(n))  return "Norge";
+  if (/\bdanm|denmark|danish|dansk/.test(n))    return "Danmark";
+  if (/\bfinlan|finska|suomi/.test(n))          return "Finland";
+  if (/nordic|norden|skandin/.test(n))          return "Norden";
+  if (/\bkina\b|china|chinese/.test(n))         return "Kina & närliggande";
+  if (/indien|india\b/.test(n))                 return "Indien";
+  if (/japan|japanese/.test(n))                 return "Japan, Mix bolag";
+  if (/\bbrasil|\bbrazil/.test(n))              return "Brasilien";
+  return mappedCategory;
+}
 
 // ── Map Nordnet list entry → Fund (without Sharpe) ───────────────────────────
 
@@ -325,12 +342,13 @@ export async function fetchNordnetFunds(): Promise<Fund[]> {
 
     console.log(`[nordnet] dynamic category mappings built: ${dynamicCatMap.size}`);
 
-    // Apply: static map first (curated, trusted), dynamic map second, raw category last
+    // Apply: static map first, dynamic map second, raw last — then name-based refinement
     funds = funds.map((f) => ({
       ...f,
-      category: f.category
-        ? NN_CATEGORY_TO_AVANZA[f.category] ?? dynamicCatMap.get(f.category) ?? f.category
-        : null,
+      category: refineCategory(
+        f.category ? NN_CATEGORY_TO_AVANZA[f.category] ?? dynamicCatMap.get(f.category) ?? f.category : null,
+        f.name,
+      ),
     }));
   }
 

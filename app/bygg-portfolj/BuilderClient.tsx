@@ -937,6 +937,7 @@ export default function BuilderClient() {
                             thickness={18}
                             horizontal
                           />
+                          <p className="text-[10px] text-slate-400 leading-snug">* Fördelning baseras på fondkategori, inte underliggande innehav.</p>
                           {result.summary && (
                             <p className="text-xs text-slate-600 leading-relaxed border-t border-slate-100 pt-3">
                               {result.summary}

@@ -37,6 +37,101 @@ const NN_HEADERS = {
   Accept: "application/json", Referer: "https://www.nordnet.se/",
 };
 
+// Morningstar → Avanza-kategori (hålls i sync med lib/nordnet.ts)
+const NN_CATEGORY_TO_AVANZA = {
+  "Global Equity Large Cap":                  "Global, Mix bolag",
+  "Global Equity Mid/Small Cap":              "Global, Små/medelstora bolag",
+  "Global Emerging Markets Equity":           "Tillväxtmarknader",
+  "Europe Equity Large Cap":                  "Europa, Mix bolag",
+  "Europe Equity Mid/Small Cap":              "Europa, Småbolag",
+  "Europe Emerging Markets Equity":           "Östeuropa ex Ryssland",
+  "US Equity Large Cap Blend":                "USA, Mix bolag",
+  "US Equity Large Cap Growth":               "USA, Tillväxtbolag",
+  "US Equity Large Cap Value":                "USA, Värdebolag",
+  "US Equity Small Cap":                      "USA, Småbolag",
+  "US Equity Mid Cap":                        "USA, Medelstora bolag",
+  "Asia ex-Japan Equity":                     "Asien ex Japan",
+  "Asia Equity":                              "Asien & Australien ex Japan",
+  "Japan Equity":                             "Japan, Mix bolag",
+  "Greater China Equity":                     "Kina & närliggande",
+  "India Equity":                             "Indien",
+  "Latin America Equity":                     "Latinamerika",
+  "Africa Equity":                            "Afrika och Mellanöstern",
+  "UK Equity Large Cap":                      "Storbritannien",
+  "Korea Equity":                             "Övriga aktiefonder",
+  "Thailand Equity":                          "Övriga aktiefonder",
+  "Australia & New Zealand Equity":           "Övriga aktiefonder",
+  "Equity Miscellaneous":                     "Övriga aktiefonder",
+  "Technology Sector Equity":                 "Branschfond, Ny teknik",
+  "Healthcare Sector Equity":                 "Branschfond, Bioteknik",
+  "Real Estate Sector Equity":                "Branschfond, Fastighetsbolag övriga",
+  "Energy Sector Equity":                     "Branschfond, Energi",
+  "Natural Resources Sector Equity":          "Branschfond, Råvaror",
+  "Infrastructure Sector Equity":             "Branschfond, Infrastruktur",
+  "Precious Metals Sector Equity":            "Branschfond, Ädelmetaller",
+  "Consumer Goods & Services Sector Equity":  "Branschfond, Konsument",
+  "Industrials Sector Equity":                "Branschfond, Industrimaterial",
+  "Financials Sector Equity":                 "Branschfond, Finans",
+  "Communications Sector Equity":             "Branschfond, Kommunikation",
+  "Europe Fixed Income":                      "Ränte - euro obligationer",
+  "Global Fixed Income":                      "Ränte - övriga obligationer",
+  "Emerging Markets Fixed Income":            "Ränte - tillväxtmarknader, Obligationer",
+  "US Fixed Income":                          "Ränte - övriga obligationer",
+  "Asia Fixed Income":                        "Ränte - övriga obligationer",
+  "Fixed Income Miscellaneous":               "Ränte - övriga obligationer",
+  "Moderate Allocation":                      "Blandfond - SEK, Balanserad",
+  "Flexible Allocation":                      "Blandfond - SEK, Flexibel",
+  "Aggressive Allocation":                    "Blandfond - SEK, Aggressiv",
+  "Cautious Allocation":                      "Blandfond - SEK, Försiktig",
+  "Allocation Miscellaneous":                 "Blandfond - SEK, Flexibel",
+  "Target Date":                              "Blandfond - SEK, Balanserad",
+  "Long/Short Equity":                        "Lång/kort, Övriga",
+  "Global Macro":                             "Hedgefond, Global makro, Övriga",
+  "Market Neutral":                           "Hedgefond, Marknadsneutral, Övriga",
+  "Multialternative":                         "Hedgefond, Multi-strategi, Övriga",
+  "Alternative Miscellaneous":                "Hedgefond, Övriga",
+  "Options Trading":                          "Hedgefond, Övriga",
+  "Euro Money Market":                        "Penningmarknadsfond",
+  "US Money Market":                          "Penningmarknadsfond",
+  "Money Market Miscellaneous":               "Penningmarknadsfond",
+  "Norway Equity":                            "Norge",
+  "Norwegian Equity":                         "Norge",
+  "Sverige (Norge)":                          "Norge",
+  "Sweden Equity":                            "Sverige",
+  "Swedish Equity":                           "Sverige",
+  "Sverige":                                  "Sverige",
+  "Denmark Equity":                           "Danmark",
+  "Sverige (Danmark)":                        "Danmark",
+  "Finnish Equity":                           "Finland",
+  "Sverige (Finland)":                        "Finland",
+  "Nordic Equity":                            "Norden",
+  "Scandinavia Equity":                       "Norden",
+};
+
+// Om fondnamnet innehåller ett specifikt land/region som är mer precist än vad
+// Morningstar-kategorin anger, använd det istället.
+// Exempel: "Nordnet Sverige Index" har Morningstar "Europe Equity Large Cap"
+// → mappas till "Europa, Mix bolag", men namnet säger Sverige → "Sverige, Mix bolag".
+function refineCategory(mappedCategory, fundName) {
+  if (!mappedCategory || !fundName) return mappedCategory;
+  const n = fundName.toLowerCase();
+
+  // Namn med specifikt nordiskt land — ska alltid vinna över breda regionkategorier
+  if (/sverig|sweden|swedish|svenska/.test(n))  return "Sverige";
+  if (/\bnorg|norway|norwegian|norsk/.test(n))  return "Norge";
+  if (/\bdanm|denmark|danish|dansk/.test(n))    return "Danmark";
+  if (/\bfinlan|finska|suomi/.test(n))          return "Finland";
+  if (/nordic|norden|skandin/.test(n))          return "Norden";
+
+  // Specifika EM-länder — vinner över bred tillväxtmarknadskategori
+  if (/\bkina\b|china|chinese/.test(n))         return "Kina & närliggande";
+  if (/indien|india\b/.test(n))                 return "Indien";
+  if (/japan|japanese/.test(n))                 return "Japan, Mix bolag";
+  if (/\bbrasil|\bbrazil/.test(n))              return "Brasilien";
+
+  return mappedCategory;
+}
+
 // ── Avanza ────────────────────────────────────────────────────────────────────
 
 const AVANZA_URL = "https://www.avanza.se/_api/fund-guide/list?shouldCheckFundExcludedFromPromotion=true";
@@ -160,7 +255,7 @@ async function upsertNordnet(raw, avanzaIsins) {
       id: info.instrument_id ?? i + 100000,
       name: info.name, base_currency: "SEK", isin: info.isin,
       category_group: NN_TYPE_MAP[fi.fund_type] ?? "Other",
-      category: fi.fund_category ?? null, global_category: null, equity_style_box: null,
+      category: refineCategory(fi.fund_category ? (NN_CATEGORY_TO_AVANZA[fi.fund_category] ?? fi.fund_category) : null, info.name), global_category: null, equity_style_box: null,
       return_ytd: hist.yield_ytd ?? null, return_1yr: hist.yield_1y ?? null,
       return_2yr: null, return_3yr: hist.yield_3y ?? null, return_5yr: hist.yield_5y ?? null,
       investment_type: fi.fund_type === "Index" ? "PASSIVE_INDEX" : fi.fund_type ? "ACTIVELY_MANAGED" : null,

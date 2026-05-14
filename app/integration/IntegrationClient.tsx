@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Check, Copy, ExternalLink, Plus, X } from "lucide-react";
+import { encodePayload } from "@/lib/report-url";
 
 // ── URL builder ───────────────────────────────────────────────────────────────
 
@@ -23,7 +24,7 @@ function buildUrl(
   if (parseFloat(amount) > 0) payload.amount = parseFloat(amount);
   if (client.trim())  payload.client  = client.trim();
   if (comment.trim()) payload.comment = comment.trim();
-  return `/rapport?p=${btoa(JSON.stringify(payload))}`;
+  return `/rapport?p=${encodePayload(payload)}`;
 }
 
 // ── Code examples ─────────────────────────────────────────────────────────────
@@ -35,7 +36,8 @@ const TS_CODE = `function buildRapportUrl(params: {
   client?:   string;
   comment?:  string;
 }): string {
-  const p = btoa(JSON.stringify(params));
+  // Buffer.from hanterar UTF-8 korrekt (fungerar för Å Ä Ö i kundnamn)
+  const p = Buffer.from(JSON.stringify(params)).toString("base64");
   return \`https://er-domän.se/rapport?p=\${p}\`;
 }
 

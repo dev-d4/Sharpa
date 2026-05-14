@@ -1736,6 +1736,7 @@ function AnalysisResult({ analysis, user, portfolioValue, onLoginClick }: { anal
               thickness={26}
               horizontal
             />
+            <p className="text-[10px] text-slate-400 leading-snug mt-2">* Fördelning baseras på fondkategori, inte underliggande innehav.</p>
           </div>
         </div>
       </section>

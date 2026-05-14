@@ -43,15 +43,23 @@ export default function AccountPage() {
   async function handleDeleteAccount() {
     setDeleting(true);
     const res = await fetch("/api/account", { method: "DELETE" });
+    const supabase = createClient();
     if (res.ok) {
-      const supabase = createClient();
       await supabase.auth.signOut();
       router.push("/");
-    } else {
-      setDeleting(false);
-      setDeleteConfirm(false);
-      alert("Något gick fel. Försök igen.");
+      return;
     }
+    // Non-ok response — verify whether the account was actually deleted
+    // before showing an error (e.g. prod redirect or secondary cleanup failure)
+    const { data: { user: stillHere } } = await supabase.auth.getUser();
+    if (!stillHere) {
+      await supabase.auth.signOut();
+      router.push("/");
+      return;
+    }
+    setDeleting(false);
+    setDeleteConfirm(false);
+    alert("Något gick fel. Försök igen.");
   }
 
   if (loading) {

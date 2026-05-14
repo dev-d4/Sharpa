@@ -141,65 +141,76 @@ function absoluteScore(f: Fund): number {
   return score;
 }
 
-// ── Category similarity description ──────────────────────────────────────────
+// ── Category display ──────────────────────────────────────────────────────────
+// Categories are stored in Swedish in the DB — use them directly, no translation.
 
-function categoryToSwedish(category: string | null): string {
-  if (!category) return "samma kategori";
-  // Avanza categories are already in readable Swedish — return as-is.
-  // Only map the few English/Morningstar strings that can appear.
-  const c = category.toLowerCase();
-  if (c.includes("money market")) return "Penningmarknadsfonder";
-  if (c.includes("short-term bond") || c.includes("short term bond")) return "Korträntefonder";
-  if (c.includes("long-term bond") || c.includes("long term bond")) return "Långräntefonder";
-  if (c.includes("allocation") || c.includes("balanced")) return "Blandfonder";
-  if (c.includes("technology") || c.includes("tech")) return "Teknikfonder";
-  if (c.includes("health") || c.includes("biotech") || c.includes("pharma")) return "Hälsovårdsfonder";
-  if (c.includes("real estate") || c.includes("property")) return "Fastighetsfonder";
-  return category;
+function categoryDisplay(category: string | null): string {
+  return category ?? "samma kategori";
 }
 
-// ── Geographic focus extracted from fund name ─────────────────────────────────
-// Returns a normalised tag so peers with different geographic focus are never
-// compared even when they share the same broad category string.
+// ── Geographic focus ──────────────────────────────────────────────────────────
+// Primary source: Avanza category (already encodes geography explicitly, e.g.
+// "Asien ex Japan", "Global, Mix bolag"). Name parsing is only a fallback for
+// funds whose category carries no geographic signal.
 
-function geographicFocus(name: string): string {
+export function geoFromCategory(category: string | null): string {
+  if (!category) return "";
+  const c = category.toLowerCase();
+
+  // Non-geographic top-level categories — let name fallback handle or leave unconstrained
+  if (c.startsWith("branschfond") || c.startsWith("ränte") || c.startsWith("pengamark")) return "";
+
+  // Use the full category string to derive geo — this naturally handles "ex"-variants
+  // (e.g. "Asien ex Japan" → "asia-ex-japan", different from "Asien" → "asia")
+  if (c.includes("global")) return "global";
+  if (c.includes("tillväxtmark") || c.includes("emerging market")) return "emerging";
+  if (c.includes("asien ex japan")) return "asia-ex-japan";
+  if (c.includes("asien")) return "asia";
+  if (c.includes("japan")) return "japan";
+  if (c.includes("kina") || c.includes("china")) return "china";
+  if (c.includes("indien") || c.includes("india")) return "india";
+  if (c.includes("norden") || c.includes("nordic")) return "nordic";
+  if (c.includes("sverige")) return "sweden";
+  if (c.includes("norge")) return "norway";
+  if (c.includes("danmark")) return "denmark";
+  if (c.includes("finland")) return "finland";
+  if (c.includes("usa") || c.includes("nordamerika")) return "usa";
+  if (c.includes("östeuropa") || c.includes("europa")) return "europe";
+  if (c.includes("latinamerika") || c.includes("brasilien")) return "latam";
+  if (c.includes("blandfond") || c.includes("allokering")) return "";
+
+  return "";
+}
+
+function geoFromName(name: string): string {
   const n = name.toLowerCase();
-
-  // Specific countries / markets — checked before broader regions
   if (/sverig|sweden|swedish|svenska/.test(n)) return "sweden";
   if (/norg|norway|norwegian|norsk/.test(n)) return "norway";
-  if (/danm|denmark|danish|dansk/.test(n)) return "denmark";
   if (/finlan|finska|suomi/.test(n)) return "finland";
   if (/\bisland|\biceland/.test(n)) return "iceland";
-
-  // Nordics (must come before "europe")
   if (/nordic|norden|skandin/.test(n)) return "nordic";
-
-  // USA / North America
+  if (/\bex[\s-]?usa\b|excl[\.\s]+usa|excluding usa/.test(n)) return "global";
   if (/\busa\b|united states|amerik|s&p|nasdaq|dow jones|north americ/.test(n)) return "usa";
-
-  // Emerging markets
   if (/emerging|tillväxtmark|frontier/.test(n)) return "emerging";
-
-  // Specific large markets
   if (/japan|japanese/.test(n)) return "japan";
   if (/kina|china|chinese|hong kong/.test(n)) return "china";
   if (/indien|india|indian/.test(n)) return "india";
   if (/\bbrasil|\bbrazil/.test(n)) return "brazil";
-
-  // Broad regions
   if (/europ/.test(n)) return "europe";
   if (/asia|pacific|apac/.test(n)) return "asia";
   if (/latin americ|latinameri/.test(n)) return "latam";
   if (/africa|afrik/.test(n)) return "africa";
   if (/middle east|nahost/.test(n)) return "middleeast";
-
-  // Truly global — no geographic restriction
   if (/global|world|värld|international/.test(n)) return "global";
-
-  // No geographic signal — treat as unconstrained (matches everything in same category)
   return "";
 }
+
+function geographicFocus(category: string | null, name: string): string {
+  const fromCat = geoFromCategory(category);
+  if (fromCat !== "") return fromCat;
+  return geoFromName(name);
+}
+
 
 // Two funds are geographic peers if their focus is the same, OR if either has
 // no detectable focus (broadly-named funds can match within any geography).
@@ -209,7 +220,7 @@ function geographicMatch(a: string, b: string): boolean {
 }
 
 function buildSimilarityNote(current: Fund, suggested: Fund): string {
-  const cat = categoryToSwedish(current.category);
+  const cat = categoryDisplay(current.category);
   const styleMatch =
     current.equity_style_box && suggested.equity_style_box &&
     current.equity_style_box === suggested.equity_style_box;
@@ -232,34 +243,21 @@ function generateSwaps(
   for (const entry of entries) {
     const current = entry.fund!;
 
-    const currentGeo = geographicFocus(current.name);
+    const currentGeo = geographicFocus(current.category, current.name);
 
     const peers = allFunds.filter(
       (f) =>
         f.isin !== current.isin &&
         f.category !== null &&
         f.category === current.category &&
-        geographicMatch(currentGeo, geographicFocus(f.name))
+        geographicMatch(currentGeo, geographicFocus(f.category, f.name))
     );
     if (peers.length === 0) {
       // No comparable peers found — still acknowledge the fund so it's not silently dropped
-      const GEO: Record<string, string> = {
-        sweden: "Sverige", norway: "Norge", europe: "Europa", usa: "USA",
-        global: "Global", emerging: "Tillväxtmarknader", nordic: "Norden",
-        japan: "Japan", china: "Kina", denmark: "Danmark",
-      };
-      const geoLabel = currentGeo ? (GEO[currentGeo] ?? null) : null;
-      const catDisplay = current.category
-        ? categoryToSwedish(current.category)
-        : current.category_group
-        ? categoryLabel(current.category_group)
-        : null;
       bestInCategory.push({
         fundName: current.name,
         isin: current.isin,
-        category: catDisplay
-          ? catDisplay + (geoLabel ? ` (${geoLabel})` : "")
-          : "Ej jämförbar kategori",
+        category: current.category ?? categoryLabel(current.category_group),
       });
       continue;
     }
@@ -269,20 +267,10 @@ function generateSwaps(
     );
 
     if (absoluteScore(best) <= absoluteScore(current)) {
-      const GEO_LABELS: Record<string, string> = {
-        sweden: "Sverige", norway: "Norge", denmark: "Danmark",
-        finland: "Finland", iceland: "Island", nordic: "Norden",
-        usa: "USA", emerging: "Tillväxtmarknader", japan: "Japan",
-        china: "Kina", india: "Indien", brazil: "Brasilien",
-        europe: "Europa", asia: "Asien", latam: "Latinamerika",
-        africa: "Afrika", middleeast: "Mellanöstern", global: "Global",
-      };
-      const geoLabel = currentGeo ? GEO_LABELS[currentGeo] ?? null : null;
       bestInCategory.push({
         fundName: current.name,
         isin: current.isin,
-        category: (current.category ?? current.category_group ?? "Okänd kategori") +
-          (geoLabel ? ` (${geoLabel})` : ""),
+        category: current.category ?? categoryLabel(current.category_group),
       });
       continue;
     }
@@ -488,7 +476,7 @@ export function analyzePortfolio(
   const concentrationWarnings: ConcentrationWarning[] = Object.entries(specificCatMap)
     .filter(([key, w]) => key !== "__unknown__" && totalWeight > 0 && (w / totalWeight) * 100 >= 50)
     .map(([key, w]) => ({
-      category: categoryToSwedish(key) || key,
+      category: categoryDisplay(key),
       weight: (w / totalWeight) * 100,
     }))
     .sort((a, b) => b.weight - a.weight);
