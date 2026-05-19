@@ -58,8 +58,8 @@ function parseParams(): { custodian: string; funds: FundEntry[]; amount?: number
     const obj = decodePayload(p) as Record<string, unknown>;
     if (!obj?.custodian || !Array.isArray(obj.funds) || !obj.funds.length) return null;
     return {
-      custodian: obj.custodian,
-      funds:     obj.funds,
+      custodian: obj.custodian as string,
+      funds:     obj.funds as FundEntry[],
       amount:    typeof obj.amount   === "number" ? obj.amount   : undefined,
       client:    typeof obj.client   === "string" ? obj.client   : undefined,
       comment:   typeof obj.comment  === "string" ? obj.comment  : undefined,
