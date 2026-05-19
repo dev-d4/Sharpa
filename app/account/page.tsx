@@ -57,9 +57,10 @@ export default function AccountPage() {
       router.push("/");
       return;
     }
+    const body = await res.json().catch(() => ({}));
     setDeleting(false);
     setDeleteConfirm(false);
-    alert("Något gick fel. Försök igen.");
+    alert(body.error ? `Något gick fel: ${body.error}` : "Något gick fel. Försök igen.");
   }
 
   if (loading) {

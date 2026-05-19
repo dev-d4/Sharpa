@@ -8,10 +8,12 @@ const LOGIN_API    = "/api/integration/auth";
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // ── Integration password gate (only integration paths) ───────────────────
-  const isIntegrationPath = pathname.startsWith("/integration") || pathname.startsWith("/api/integration");
-  const isIntegrationLogin = pathname === LOGIN_PAGE || pathname.startsWith(LOGIN_API);
-  if (isIntegrationPath && !isIntegrationLogin) {
+  // ── Site-wide password gate ───────────────────────────────────────────────
+  const isGateExempt =
+    pathname === LOGIN_PAGE ||
+    pathname.startsWith(LOGIN_API) ||
+    pathname === "/auth/callback";
+  if (!isGateExempt) {
     const token    = request.cookies.get(SITE_COOKIE)?.value;
     const expected = process.env.INTEGRATION_PASSWORD;
     if (expected && token !== expected) {
