@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { Building2, Landmark, Search, Sparkles, X } from "lucide-react"
+import { Search, Sparkles, X } from "lucide-react"
 import type { SavedPortfolio } from "@/lib/portfolio"
 import DonutChart from "@/components/ui/DonutChart"
 
@@ -21,95 +21,6 @@ const CUSTODIANS = [
   { value: "nordnet", label: "Nordnet" },
   { value: "övrigt", label: "Övrigt" },
 ];
-
-// ── Login CTA data ────────────────────────────────────────────────────────────
-
-type BlurBenefit = { value: string; label: string };
-
-function buildLoginBenefits(analysis: PortfolioAnalysis): BlurBenefit[] {
-  const benefits: BlurBenefit[] = [];
-
-  if (
-    analysis.suggestedMetrics &&
-    analysis.avgCost !== null &&
-    analysis.suggestedMetrics.avgCost !== null
-  ) {
-    const saving = analysis.avgCost - analysis.suggestedMetrics.avgCost;
-    if (saving >= 0.05)
-      benefits.push({ value: `−${saving.toFixed(2)}%`, label: "lägre avgift per år" });
-  }
-
-  if (
-    analysis.suggestedMetrics &&
-    analysis.weightedReturn1yr !== null &&
-    analysis.suggestedMetrics.weightedReturn1yr !== null
-  ) {
-    const gain = analysis.suggestedMetrics.weightedReturn1yr - analysis.weightedReturn1yr;
-    if (gain >= 1)
-      benefits.push({ value: `+${gain.toFixed(1)}%`, label: "högre avkastning" });
-  }
-
-  return benefits;
-}
-
-// ── Blur gate ─────────────────────────────────────────────────────────────────
-
-function BlurGate({
-  children,
-  unlocked,
-  benefits,
-  onLoginClick,
-}: {
-  children: React.ReactNode;
-  unlocked: boolean;
-  benefits: BlurBenefit[];
-  onLoginClick: () => void;
-}) {
-  if (unlocked) return <>{children}</>;
-
-  return (
-    <div className="relative">
-      <div className="blur-sm pointer-events-none select-none">{children}</div>
-      <div className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl p-6 text-center bg-white/85 backdrop-blur-[2px]">
-        <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center mb-4">
-          <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-          </svg>
-        </div>
-
-        {benefits.length > 0 ? (
-          <>
-            <div className="flex items-start justify-center gap-8 mb-4">
-              {benefits.map((b) => (
-                <div key={b.label} className="text-center">
-                  <p className="text-3xl font-bold text-blue-600 leading-none">{b.value}</p>
-                  <p className="text-xs text-slate-500 mt-1.5">{b.label}</p>
-                </div>
-              ))}
-            </div>
-            <p className="text-sm text-slate-500 mb-5 max-w-[220px] leading-relaxed">
-              Logga in för att se vilka fonder som ger dig detta.
-            </p>
-          </>
-        ) : (
-          <>
-            <h3 className="text-base font-bold text-slate-900 mb-1">Fondbytesförslag</h3>
-            <p className="text-sm text-slate-500 mb-5 max-w-xs leading-relaxed">
-              Logga in för att se personliga fondbytesförslag för din portfölj.
-            </p>
-          </>
-        )}
-
-        <button
-          onClick={onLoginClick}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-xl text-sm transition-colors"
-        >
-          Logga in — det är gratis
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // ── Fund quiz ─────────────────────────────────────────────────────────────────
 
@@ -725,11 +636,6 @@ function loadSession() {
   } catch { return null; }
 }
 
-function saveSession(custodian: string | null, entries: Entry[], analysis: PortfolioAnalysis | null) {
-  try {
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ custodian, entries, analysis }));
-  } catch { /* ignore */ }
-}
 
 export default function AnalyzeClient() {
   const router = useRouter();
@@ -754,12 +660,17 @@ export default function AnalyzeClient() {
   const [importResult, setImportResult] = useState<{ matched: number; unmatched: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Import wizard state
+  type ImportWizardState = { open: boolean; step: 1 | 2; file: File | null; name: string };
+  const [importWizard, setImportWizard] = useState<ImportWizardState>({ open: false, step: 1, file: null, name: "" });
+
   // Portfolio saving state
   const [portfolioId, setPortfolioId] = useState<string | null>(null);
   const [showSaveForm, setShowSaveForm] = useState(false);
   const [savingName, setSavingName] = useState("");
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [savedPortfolios, setSavedPortfolios] = useState<SavedPortfolio[]>([]);
+  const [savedPortfoliosLoading, setSavedPortfoliosLoading] = useState(false);
   const [portfolioLoading, setPortfolioLoading] = useState(() =>
     new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").has("portfolio")
   );
@@ -826,10 +737,12 @@ export default function AnalyzeClient() {
       const u = data.session?.user ?? null;
       setUser(u);
       if (u) {
+        setSavedPortfoliosLoading(true);
         fetch("/api/portfolios")
           .then((r) => r.ok ? r.json() : [])
           .then(setSavedPortfolios)
-          .catch(() => {});
+          .catch(() => {})
+          .finally(() => setSavedPortfoliosLoading(false));
         fetch("/api/risk-profile")
           .then((r) => r.ok ? r.json() : null)
           .then((p) => setRiskProfile(p ?? null))
@@ -930,7 +843,7 @@ export default function AnalyzeClient() {
 
   // ── CSV import ────────────────────────────────────────────────────────────
 
-  async function handleFileImport(file: File) {
+  async function handleFileImport(file: File): Promise<Entry[] | null> {
     setImporting(true);
     setImportResult(null);
     try {
@@ -952,7 +865,7 @@ export default function AnalyzeClient() {
       const firstLine = text.split(/\r?\n/)[0] ?? "";
       const sep = firstLine.includes("\t") ? "\t" : ";";
       const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-      if (lines.length < 2) { setImporting(false); return; }
+      if (lines.length < 2) { setImporting(false); return null; }
 
       const header = lines[0].split(sep).map(h => h.trim().toLowerCase().replace(/['"]/g, ""));
       const nameIdx = header.findIndex(h => h === "namn" || h === "name");
@@ -961,7 +874,7 @@ export default function AnalyzeClient() {
         (h.includes("värde") && h.includes("sek") && !h.includes("inköp") && !h.includes("belån")) ||
         h === "andel (%)" || h === "andel"
       );
-      if (nameIdx === -1 || valueIdx === -1) { setImporting(false); return; }
+      if (nameIdx === -1 || valueIdx === -1) { setImporting(false); return null; }
 
       const rows = lines.slice(1).flatMap(line => {
         const cells = line.split(sep).map(c => c.trim().replace(/^"|"$/g, ""));
@@ -970,7 +883,7 @@ export default function AnalyzeClient() {
         const value = parseFloat(raw.replace(/[^0-9.]/g, ""));
         return name && value > 0 ? [{ name, value }] : [];
       });
-      if (rows.length === 0) { setImporting(false); return; }
+      if (rows.length === 0) { setImporting(false); return null; }
 
       const total = rows.reduce((s, r) => s + r.value, 0);
       // Round weights to 1 decimal, fix rounding error on first row
@@ -1001,9 +914,11 @@ export default function AnalyzeClient() {
       setEntries(results);
       setInputMode("weight");
       setImportResult({ matched, unmatched: results.length - matched });
+      return results;
+    } catch {
+      return null;
     } finally {
       setImporting(false);
-      // Reset file input so same file can be re-imported
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }
@@ -1030,30 +945,33 @@ export default function AnalyzeClient() {
     "Sammanställer analys…",
   ];
 
-  async function analyze() {
+  async function analyze(entriesOverride?: Entry[]) {
+    if (!custodian) return;
     setError(null);
     setAnalysis(null);
 
-    let workingEntries = entries;
+    let workingEntries = entriesOverride ?? entries;
 
-    if (inputMode === "amount") {
-      // Compute weights from amounts
-      const validAmt = entries.filter((e) => e.isin.trim() && (e.amount ?? "").trim());
-      if (validAmt.length === 0) { setError("Lägg till minst en fond med belopp."); return; }
-      const totalAmt = validAmt.reduce((s, e) => s + (parseFloat(e.amount || "0") || 0), 0);
-      if (totalAmt === 0) { setError("Ange belopp för dina fonder."); return; }
-      workingEntries = entries.map((e) => {
-        if (!e.isin.trim() || !(e.amount ?? "").trim()) return e;
-        const w = ((parseFloat(e.amount || "0") / totalAmt) * 100).toFixed(1);
-        return { ...e, weight: w };
-      });
-      setEntries(workingEntries);
-    } else {
-      // Auto-distribute if weights don't sum to 100, OR if any ISINed fund has no weight set
-      const currentTotal = entries.reduce((s, e) => s + (parseFloat(e.weight) || 0), 0);
-      const hasUnweighted = entries.some((e) => e.isin.trim() && !e.weight.trim());
-      if (Math.abs(currentTotal - 100) > 0.1 || hasUnweighted) {
-        workingEntries = distributeWeights(entries);
+    if (!entriesOverride) {
+      if (inputMode === "amount") {
+        // Compute weights from amounts
+        const validAmt = workingEntries.filter((e) => e.isin.trim() && (e.amount ?? "").trim());
+        if (validAmt.length === 0) { setError("Lägg till minst en fond med belopp."); return; }
+        const totalAmt = validAmt.reduce((s, e) => s + (parseFloat(e.amount || "0") || 0), 0);
+        if (totalAmt === 0) { setError("Ange belopp för dina fonder."); return; }
+        workingEntries = workingEntries.map((e) => {
+          if (!e.isin.trim() || !(e.amount ?? "").trim()) return e;
+          const w = ((parseFloat(e.amount || "0") / totalAmt) * 100).toFixed(1);
+          return { ...e, weight: w };
+        });
+        setEntries(workingEntries);
+      } else {
+        // Auto-distribute if weights don't sum to 100, OR if any ISINed fund has no weight set
+        const currentTotal = workingEntries.reduce((s, e) => s + (parseFloat(e.weight) || 0), 0);
+        const hasUnweighted = workingEntries.some((e) => e.isin.trim() && !e.weight.trim());
+        if (Math.abs(currentTotal - 100) > 0.1 || hasUnweighted) {
+          workingEntries = distributeWeights(workingEntries);
+        }
       }
     }
 
@@ -1127,9 +1045,29 @@ export default function AnalyzeClient() {
     }
   }
 
+  async function handleWizardComplete() {
+    if (!importWizard.file || !importWizard.name.trim()) return;
+    const name = importWizard.name.trim();
+    setImportWizard({ open: false, step: 1, file: null, name: "" });
+    setSavingName(name);
+    setShowSaveForm(true);
+    setInputMethod("manual");
+    const parsed = await handleFileImport(importWizard.file);
+    if (parsed && parsed.some(e => e.isin)) {
+      await analyze(parsed);
+    }
+  }
+
   const totalWeight = entries.reduce((s, e) => s + (parseFloat(e.weight) || 0), 0);
   const totalAmount = entries.reduce((s, e) => s + (parseFloat(e.amount || "0") || 0), 0);
   const portfolioValue = inputMode === "amount" && totalAmount > 0 ? totalAmount : null;
+
+  function handleLoginFromBlur() {
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ custodian, entries, analysis }));
+    } catch { /* ignore */ }
+    router.push("/login?next=/analyze");
+  }
 
   if (portfolioLoading) {
     return (
@@ -1139,117 +1077,6 @@ export default function AnalyzeClient() {
     );
   }
     
-  if (!custodian) {
-    return (
-      <div className="min-h-screen">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-20 space-y-8 sm:space-y-10">
-          {/* Header */}
-          <div className="text-center space-y-3">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
-              Analysera din portfölj
-            </h1>
-            <p className="text-slate-600 text-base leading-relaxed">
-              Lägg in dina fonder och se om du betalar för mycket i avgifter, hur risken ser ut — och få förslag på bättre alternativ.
-            </p>
-            <p className="text-slate-400 text-sm">Välj var du förvaltar dina fonder så hämtar vi rätt fondutbud.</p>
-          </div>
-
-          {/* Cards */}
-          <div className="grid sm:grid-cols-3 gap-5 w-full">
-            {[
-              {
-                value: "avanza",
-                label: "Avanza",
-                funds: "1 500+",
-                description: "Sveriges största nätmäklare med ett brett utbud av fonder.",
-                icon: Landmark,
-              },
-              {
-                value: "nordnet",
-                label: "Nordnet",
-                funds: "1 700+",
-                description: "Nordisk nätmäklare med ett av marknadens bredaste fondutbud.",
-                icon: Landmark,
-              },
-              {
-                value: "övrigt",
-                label: "Övrigt",
-                description: "Sök bland alla tillgängliga fonder oavsett depå.",
-                icon: Search,
-              },
-            ].map((c) => (
-              <button
-                key={c.value}
-                type="button"
-                onClick={() => setCustodian(c.value)}
-                className={cn(
-                  "group text-left rounded-2xl border p-6 space-y-4 transition-all duration-300",
-                  "bg-white/80 backdrop-blur",
-                  "border-slate-200 hover:border-blue-300 hover:shadow-xl hover:-translate-y-1"
-                )}
-              >
-                {/* Top */}
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2">
-                    <c.icon className="w-5 h-5 text-blue-500" />
-                    <p className="font-bold text-slate-900">{c.label}</p>
-                  </div>
-                  {"funds" in c && (
-                    <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">
-                      {c.funds} fonder
-                    </span>
-                  )}
-                </div>
-                {/* Description */}
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  {c.description}
-                </p>
-                {/* CTA */}
-                <div className="text-sm font-medium text-blue-600 flex items-center gap-1">
-                  Välj {c.label}
-                  <span className="transition-transform group-hover:translate-x-1">→</span>
-                </div>
-              </button>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="flex-1 h-px bg-slate-100" />
-            <p className="text-xs text-slate-400 shrink-0">eller</p>
-            <div className="flex-1 h-px bg-slate-100" />
-          </div>
-          <div className="text-center space-y-2">
-            <p className="text-sm text-slate-500">Har du ingen portfölj än?</p>
-            <Link href="/bygg-portfolj" className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors">
-              Bygg din portfölj på 2 minuter →
-            </Link>
-          </div>
-
-          {/* Saved portfolios */}
-          {savedPortfolios.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide text-center">Mina portföljer</p>
-              <div className="flex items-center gap-2 flex-wrap justify-center">
-                {savedPortfolios.map((p) => {
-                  const custodianLabel = p.custodian === "nordnet" ? "Nordnet" : p.custodian === "övrigt" ? "Övrigt" : "Avanza";
-                  return (
-                    <button
-                      key={p.id}
-                      onClick={() => loadPortfolio(p)}
-                      className="text-sm px-3 py-1.5 rounded-lg border bg-white border-slate-200 text-slate-600 hover:border-blue-200 hover:text-blue-600 transition-all flex items-baseline gap-1.5"
-                    >
-                      {p.name}
-                      <span className="text-xs opacity-70">{custodianLabel}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
 
 
 
@@ -1271,6 +1098,7 @@ export default function AnalyzeClient() {
   }
 
   return (
+    <>
     <div className="min-h-screen">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8">
       {/* Risk profile nudge — shown when logged in with no risk profile */}
@@ -1294,7 +1122,17 @@ export default function AnalyzeClient() {
       )}
 
       {/* Saved portfolios switcher — only shown when logged in with saved portfolios */}
-      {savedPortfolios.length > 0 && (
+      {savedPortfoliosLoading && (
+        <div className="no-print flex items-center gap-2 flex-wrap animate-pulse">
+          <div className="h-4 w-24 rounded bg-slate-100" />
+          <div className="flex gap-2">
+            <div className="h-8 w-28 rounded-lg bg-slate-100" />
+            <div className="h-8 w-24 rounded-lg bg-slate-100" />
+            <div className="h-8 w-20 rounded-lg bg-slate-100" />
+          </div>
+        </div>
+      )}
+      {!savedPortfoliosLoading && savedPortfolios.length > 0 && (
         <div className="no-print flex items-center gap-2 sm:gap-3 flex-wrap">
           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide w-full sm:w-auto">Mina portföljer</span>
           <div className="flex items-center gap-2 flex-wrap">
@@ -1320,7 +1158,7 @@ export default function AnalyzeClient() {
               );
             })}
             <button
-              onClick={() => { setPortfolioId(null); setCustodian(null); setEntries([{ isin: "", name: "", weight: "" }]); setAnalysis(null); setError(null); }}
+              onClick={() => { setPortfolioId(null); setEntries([{ isin: "", name: "", weight: "" }]); setAnalysis(null); setError(null); setInputMethod(null); }}
               className={cn(
                 "text-sm px-3 py-1.5 rounded-lg border transition-all",
                 !portfolioId
@@ -1341,27 +1179,66 @@ export default function AnalyzeClient() {
         </div>
       )}
 
-      <section className="no-print bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 space-y-4">
+      <section className="no-print bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-lg font-bold text-slate-900 shrink-0">Din portfölj</h2>
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
-            {inputMethod !== null && (
-              <button
-                type="button"
-                onClick={() => setInputMode(inputMode === "weight" ? "amount" : "weight")}
-                className="text-xs text-slate-400 hover:text-slate-600 underline transition-colors whitespace-nowrap"
-              >
-                {inputMode === "weight" ? "Ange belopp" : "Ange vikter (%)"}
-              </button>
-            )}
+          {inputMethod !== null && custodian && (
             <button
-              onClick={() => { setCustodian(null); setInputMethod(null); setAnalysis(null); setError(null); setPortfolioId(null); setEntries([{ isin: "", name: "", weight: "" }]); }}
-              className="text-xs text-slate-400 hover:text-slate-600 transition-colors whitespace-nowrap"
+              type="button"
+              onClick={() => setInputMode(inputMode === "weight" ? "amount" : "weight")}
+              className="text-xs text-slate-400 hover:text-slate-600 underline transition-colors whitespace-nowrap"
             >
-              {CUSTODIANS.find((c) => c.value === custodian)?.label} · <span className="underline">Byt</span>
+              {inputMode === "weight" ? "Ange belopp" : "Ange vikter (%)"}
             </button>
+          )}
+        </div>
+
+        {/* Custodian selector */}
+        <div className="space-y-2.5">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-[0.08em]">Var förvaltar du dina fonder?</p>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { value: "avanza",  label: "Avanza",  funds: "1 500+" },
+              { value: "nordnet", label: "Nordnet", funds: "1 700+" },
+              { value: "övrigt",  label: "Övrigt",  funds: null },
+            ].map((c) => (
+              <button
+                key={c.value}
+                type="button"
+                onClick={() => {
+                  if (custodian !== c.value) {
+                    setEntries([{ isin: "", name: "", weight: "" }]);
+                    setInputMethod(null);
+                    setAnalysis(null);
+                    setError(null);
+                    setPortfolioId(null);
+                  }
+                  setCustodian(c.value);
+                  localStorage.setItem("fondanalys_preferred_custodian", c.value);
+                }}
+                className={cn(
+                  "flex flex-col items-center justify-center gap-0.5 rounded-xl border p-3 text-center transition-all min-h-[56px]",
+                  custodian === c.value
+                    ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500/20"
+                    : "border-slate-200 bg-slate-50/50 hover:border-blue-300 hover:bg-white"
+                )}
+              >
+                <span className={cn("text-[15px] font-semibold", custodian === c.value ? "text-blue-700" : "text-slate-800")}>
+                  {c.label}
+                </span>
+                {c.funds && (
+                  <span className="text-[10px] text-slate-400">{c.funds} fonder</span>
+                )}
+              </button>
+            ))}
           </div>
+          <p className="text-xs text-slate-400">
+            Äger du inga fonder?{" "}
+            <Link href="/bygg-portfolj" className="text-blue-600 hover:underline font-medium">
+              Bygg en portfölj
+            </Link>
+          </p>
         </div>
 
         {/* Hidden file input */}
@@ -1376,187 +1253,194 @@ export default function AnalyzeClient() {
           }}
         />
 
-        {/* Method selector — three options */}
-        <div className="grid grid-cols-3 gap-2">
-          {/* AI */}
-          <button
-            type="button"
-            onClick={() => {
-              if (!user) { router.push("/login"); return; }
-              setInputMethod("ai");
-            }}
-            className={cn(
-              "flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition-all",
-              inputMethod === "ai"
-                ? "border-indigo-200 bg-indigo-50"
-                : "border-slate-200 bg-white hover:border-indigo-200 hover:bg-slate-50"
-            )}
-          >
-            <div className="flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-              <span className="text-xs font-semibold ai-shimmer-text">
-                Sök med AI
-              </span>
-            </div>
-            <span className="text-[11px] text-slate-400 leading-tight hidden sm:block">
-              {user ? "Beskriv vad du letar efter" : "Kräver inloggning"}
-            </span>
-          </button>
+        {/* Rest of form — shown only when custodian is selected */}
+        {custodian && (
+          <>
+            {/* Divider */}
+            <div className="h-px bg-slate-100" />
 
-          {/* Import */}
-          <button
-            type="button"
-            onClick={() => { setImportResult(null); fileInputRef.current?.click(); }}
-            disabled={importing}
-            className={cn(
-              "flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition-all",
-              importing
-                ? "border-blue-200 bg-blue-50"
-                : "border-slate-200 bg-white hover:border-blue-200 hover:bg-slate-50"
-            )}
-          >
-            <div className="flex items-center gap-1.5">
-              {importing ? (
-                <span className="w-3.5 h-3.5 rounded-full border-2 border-blue-400 border-t-transparent animate-spin" />
-              ) : (
-                <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                </svg>
-              )}
-              <span className="text-xs font-semibold text-slate-700">
-                {importing ? "Importerar…" : "Importera fil"}
-              </span>
-            </div>
-            <span className="text-[11px] text-slate-400 leading-tight hidden sm:block">
-              Från Nordnet eller Avanza
-            </span>
-          </button>
-
-          {/* Manual */}
-          <button
-            type="button"
-            onClick={() => setInputMethod("manual")}
-            className={cn(
-              "flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition-all",
-              inputMethod === "manual"
-                ? "border-blue-200 bg-blue-50"
-                : "border-slate-200 bg-white hover:border-blue-200 hover:bg-slate-50"
-            )}
-          >
-            <div className="flex items-center gap-1.5">
-              <Search className={cn("w-3.5 h-3.5", inputMethod === "manual" ? "text-blue-500" : "text-slate-400")} />
-              <span className={cn("text-xs font-semibold", inputMethod === "manual" ? "text-blue-700" : "text-slate-700")}>
-                Sök manuellt
-              </span>
-            </div>
-            <span className="text-[11px] text-slate-400 leading-tight hidden sm:block">
-              Sök på fondnamn eller ISIN
-            </span>
-          </button>
-        </div>
-
-        {/* AI widget — shown when AI method selected */}
-        {inputMethod === "ai" && user && (
-          <FundQuiz
-            custodian={custodian}
-            autoOpen
-            existingIsins={entries.map((e) => e.isin).filter(Boolean)}
-            onAdd={(isin: string, name: string) => {
-              setInputMethod("ai");
-              setEntries((prev) => {
-                const empty = prev.findIndex((e) => !e.isin);
-                if (empty !== -1) return prev.map((e, idx) => idx === empty ? { ...e, isin, name } : e);
-                return [...prev, { isin, name, weight: "", amount: "" }];
-              });
-            }}
-          />
-        )}
-
-        {/* Fund rows — in AI mode only shown once at least one fund is selected */}
-        {(inputMethod === "manual" || (inputMethod === "ai" && entries.some((e) => e.isin))) && (<>
-
-        {importResult && (
-          <p className="text-xs text-slate-400">
-            {importResult.matched} av {importResult.matched + importResult.unmatched} fonder matchade
-            {importResult.unmatched > 0 && " — sök manuellt för de resterande"}
-          </p>
-        )}
-
-        <div className="space-y-3">
-          <div className="hidden sm:grid grid-cols-[1fr_100px_44px] gap-2 text-xs font-semibold text-slate-500 px-1">
-            <span>Fond</span>
-            <span>{inputMode === "weight" ? "Vikt (%)" : "Belopp (kr)"}</span>
-            <span />
-          </div>
-          {entries.map((entry, i) => (
-            <div key={i} className="space-y-2 sm:space-y-0 sm:grid sm:grid-cols-[1fr_100px_44px] sm:gap-2 bg-slate-50 sm:bg-transparent rounded-xl sm:rounded-none p-3 sm:p-0 border border-slate-100 sm:border-0">
-              {/* Mobilrubrik */}
-              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide sm:hidden">Fond {i + 1}</p>
-              <FundSearchInput isin={entry.isin} name={entry.name} custodian={custodian} excludeIsins={entries.filter((_, idx) => idx !== i).map((e) => e.isin).filter(Boolean)} onSelect={(isin, name) => selectFund(i, isin, name)} onClear={() => clearFund(i)} />
-              <div className="flex items-center gap-2 sm:contents">
-                <div className="flex items-center gap-2 flex-1 sm:contents">
-                  <span className="text-xs text-slate-400 sm:hidden shrink-0">
-                    {inputMode === "weight" ? "Vikt:" : "Belopp:"}
+            {/* Method selector */}
+            <div className="grid grid-cols-3 gap-2">
+              {/* AI */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (!user) { router.push("/login"); return; }
+                  setInputMethod("ai");
+                }}
+                className={cn(
+                  "flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition-all",
+                  inputMethod === "ai"
+                    ? "border-indigo-200 bg-indigo-50"
+                    : "border-slate-200 bg-white hover:border-indigo-200 hover:bg-slate-50"
+                )}
+              >
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                  <span className="text-xs font-semibold ai-shimmer-text">
+                    Sök med AI
                   </span>
-                  {inputMode === "weight" ? (
-                    <input
-                      type="number" placeholder="%" min={0} max={100}
-                      value={entry.weight} onChange={(e) => updateWeight(i, e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRow(); } }}
-                      className="w-20 sm:w-auto flex-none border border-slate-300 rounded-lg px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  ) : (
-                    <input
-                      type="number" placeholder="kr" min={0}
-                      value={entry.amount ?? ""} onChange={(e) => updateAmount(i, e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRow(); } }}
-                      className="flex-1 sm:flex-none border border-slate-300 rounded-lg px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  )}
                 </div>
-                <button
-                  onClick={() => removeRow(i)} disabled={entries.length === 1}
-                  className="h-11 w-11 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-200 disabled:opacity-30 transition-colors shrink-0"
-                >✕</button>
-              </div>
+                <span className="text-[11px] text-slate-400 leading-tight hidden sm:block">
+                  {user ? "Beskriv vad du letar efter" : "Kräver inloggning"}
+                </span>
+              </button>
+
+              {/* Import */}
+              <button
+                type="button"
+                onClick={() => { setImportResult(null); setImportWizard({ open: true, step: 1, file: null, name: "" }); }}
+                disabled={importing}
+                className={cn(
+                  "flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition-all",
+                  importing
+                    ? "border-blue-200 bg-blue-50"
+                    : "border-slate-200 bg-white hover:border-blue-200 hover:bg-slate-50"
+                )}
+              >
+                <div className="flex items-center gap-1.5">
+                  {importing ? (
+                    <span className="w-3.5 h-3.5 rounded-full border-2 border-blue-400 border-t-transparent animate-spin" />
+                  ) : (
+                    <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                    </svg>
+                  )}
+                  <span className="text-xs font-semibold text-slate-700">
+                    {importing ? "Importerar…" : "Importera fil"}
+                  </span>
+                </div>
+                <span className="text-[11px] text-slate-400 leading-tight hidden sm:block">
+                  Från Nordnet eller Avanza
+                </span>
+              </button>
+
+              {/* Manual */}
+              <button
+                type="button"
+                onClick={() => setInputMethod("manual")}
+                className={cn(
+                  "flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition-all",
+                  inputMethod === "manual"
+                    ? "border-blue-200 bg-blue-50"
+                    : "border-slate-200 bg-white hover:border-blue-200 hover:bg-slate-50"
+                )}
+              >
+                <div className="flex items-center gap-1.5">
+                  <Search className={cn("w-3.5 h-3.5", inputMethod === "manual" ? "text-blue-500" : "text-slate-400")} />
+                  <span className={cn("text-xs font-semibold", inputMethod === "manual" ? "text-blue-700" : "text-slate-700")}>
+                    Sök manuellt
+                  </span>
+                </div>
+                <span className="text-[11px] text-slate-400 leading-tight hidden sm:block">
+                  Sök på fondnamn eller ISIN
+                </span>
+              </button>
             </div>
-          ))}
-        </div>
 
-        <div className="flex items-center justify-between pt-1">
-          {inputMethod !== "ai" && (
-            <button onClick={addRow} className="text-sm text-blue-600 hover:underline py-2">+ Lägg till fond</button>
-          )}
-          {inputMethod === "ai" && <span />}
-          {inputMode === "amount" ? (
-            <span className="text-sm text-slate-500">
-              Totalt: <span className="font-semibold text-slate-900">
-                {totalAmount > 0 ? totalAmount.toLocaleString("sv-SE") + " kr" : "–"}
-              </span>
-            </span>
-          ) : Math.abs(totalWeight - 100) < 0.1 ? (
-            <span className="text-sm font-semibold text-green-600">Summa: {totalWeight.toFixed(1)}%</span>
-          ) : (
-            <button onClick={() => distributeWeights()} className="text-sm font-semibold text-slate-500 hover:text-blue-600 transition-colors" title="Fördela jämnt">
-              Summa: {totalWeight.toFixed(1)}% <span className="text-xs font-normal underline">fördela jämnt</span>
+            {/* AI widget — shown when AI method selected */}
+            {inputMethod === "ai" && user && (
+              <FundQuiz
+                custodian={custodian}
+                autoOpen
+                existingIsins={entries.map((e) => e.isin).filter(Boolean)}
+                onAdd={(isin: string, name: string) => {
+                  setInputMethod("ai");
+                  setEntries((prev) => {
+                    const empty = prev.findIndex((e) => !e.isin);
+                    if (empty !== -1) return prev.map((e, idx) => idx === empty ? { ...e, isin, name } : e);
+                    return [...prev, { isin, name, weight: "", amount: "" }];
+                  });
+                }}
+              />
+            )}
+
+            {/* Fund rows — in AI mode only shown once at least one fund is selected */}
+            {(inputMethod === "manual" || (inputMethod === "ai" && entries.some((e) => e.isin))) && (<>
+
+            {importResult && (
+              <p className="text-xs text-slate-400">
+                {importResult.matched} av {importResult.matched + importResult.unmatched} fonder matchade
+                {importResult.unmatched > 0 && " — sök manuellt för de resterande"}
+              </p>
+            )}
+
+            <div className="space-y-3">
+              <div className="hidden sm:grid grid-cols-[1fr_100px_44px] gap-2 text-xs font-semibold text-slate-500 px-1">
+                <span>Fond</span>
+                <span>{inputMode === "weight" ? "Vikt (%)" : "Belopp (kr)"}</span>
+                <span />
+              </div>
+              {entries.map((entry, i) => (
+                <div key={i} className="space-y-2 sm:space-y-0 sm:grid sm:grid-cols-[1fr_100px_44px] sm:gap-2 bg-slate-50 sm:bg-transparent rounded-xl sm:rounded-none p-3 sm:p-0 border border-slate-100 sm:border-0">
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide sm:hidden">Fond {i + 1}</p>
+                  <FundSearchInput isin={entry.isin} name={entry.name} custodian={custodian} excludeIsins={entries.filter((_, idx) => idx !== i).map((e) => e.isin).filter(Boolean)} onSelect={(isin, name) => selectFund(i, isin, name)} onClear={() => clearFund(i)} />
+                  <div className="flex items-center gap-2 sm:contents">
+                    <div className="flex items-center gap-2 flex-1 sm:contents">
+                      <span className="text-xs text-slate-400 sm:hidden shrink-0">
+                        {inputMode === "weight" ? "Vikt:" : "Belopp:"}
+                      </span>
+                      {inputMode === "weight" ? (
+                        <input
+                          type="number" placeholder="%" min={0} max={100}
+                          value={entry.weight} onChange={(e) => updateWeight(i, e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRow(); } }}
+                          className="w-20 sm:w-auto flex-none border border-slate-300 rounded-lg px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      ) : (
+                        <input
+                          type="number" placeholder="kr" min={0}
+                          value={entry.amount ?? ""} onChange={(e) => updateAmount(i, e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRow(); } }}
+                          className="flex-1 sm:flex-none border border-slate-300 rounded-lg px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      )}
+                    </div>
+                    <button
+                      onClick={() => removeRow(i)} disabled={entries.length === 1}
+                      className="h-11 w-11 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-200 disabled:opacity-30 transition-colors shrink-0"
+                    >✕</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
+              {inputMethod !== "ai" && (
+                <button onClick={addRow} className="text-sm text-blue-600 hover:underline py-2">+ Lägg till fond</button>
+              )}
+              {inputMethod === "ai" && <span />}
+              {inputMode === "amount" ? (
+                <span className="text-sm text-slate-500">
+                  Totalt: <span className="font-semibold text-slate-900">
+                    {totalAmount > 0 ? totalAmount.toLocaleString("sv-SE") + " kr" : "–"}
+                  </span>
+                </span>
+              ) : Math.abs(totalWeight - 100) < 0.1 ? (
+                <span className="text-sm font-semibold text-green-600">Summa: {totalWeight.toFixed(1)}%</span>
+              ) : (
+                <button onClick={() => distributeWeights()} className="text-sm font-semibold text-slate-500 hover:text-blue-600 transition-colors" title="Fördela jämnt">
+                  Summa: {totalWeight.toFixed(1)}% <span className="text-xs font-normal underline">fördela jämnt</span>
+                </button>
+              )}
+            </div>
+
+            {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl p-3">{error}</p>}
+
+            </>)}
+
+            <button
+              onClick={() => analyze()} disabled={loading || inputMethod === null}
+              className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:from-blue-300 disabled:to-blue-300 text-white font-medium rounded-xl py-3 transition-all shadow-md shadow-blue-200"
+            >
+              {loading ? "Analyserar…" : "Analysera portfölj"}
             </button>
-          )}
-        </div>
-
-        {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl p-3">{error}</p>}
-
-        </>)}
-
-        <button
-          onClick={analyze} disabled={loading || inputMethod === null}
-          className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:from-blue-300 disabled:to-blue-300 text-white font-medium rounded-xl py-3 transition-all shadow-md shadow-blue-200"
-        >
-          {loading ? "Analyserar…" : "Analysera portfölj"}
-        </button>
+          </>
+        )}
       </section>
 
       <div ref={resultsRef} />
-      {analysis && <AnalysisResult analysis={analysis} user={user ?? null} portfolioValue={portfolioValue} onLoginClick={() => { saveSession(custodian, entries, analysis); router.push("/login"); }} />}
+      {analysis && <AnalysisResult analysis={analysis} portfolioValue={portfolioValue} user={user} onLoginClick={handleLoginFromBlur} />}
 
       {analysis && user && !portfolioId && (
         <section className="no-print bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
@@ -1610,17 +1494,207 @@ export default function AnalyzeClient() {
         <p className="text-center text-sm text-green-600 font-medium">Portföljen sparades ✓</p>
       )}
     </div></div>
+
+    {/* Import wizard modal */}
+    {importWizard.open && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4"
+        onClick={(e) => { if (e.target === e.currentTarget) setImportWizard(w => ({ ...w, open: false })); }}
+      >
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+          {/* Header */}
+          <div className="px-6 pt-6 pb-4 border-b border-slate-100">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-bold text-slate-900">Importera portfölj</h2>
+              <button
+                onClick={() => setImportWizard(w => ({ ...w, open: false }))}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex gap-1.5">
+              <div className="h-1 flex-1 rounded-full bg-blue-500" />
+              <div className={`h-1 flex-1 rounded-full transition-colors duration-300 ${importWizard.step === 2 ? "bg-blue-500" : "bg-slate-200"}`} />
+            </div>
+          </div>
+
+          <div className="p-6">
+            {/* Step 1: File */}
+            {importWizard.step === 1 && (
+              <div className="space-y-5">
+                <div>
+                  <p className="font-semibold text-slate-900">Välj fil</p>
+                  <p className="text-sm text-slate-500 mt-1">
+                    Exportera dina innehav som CSV från din depå och ladda upp filen.
+                  </p>
+                </div>
+                <label className="block cursor-pointer">
+                  <input
+                    type="file"
+                    accept=".csv"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) setImportWizard(w => ({ ...w, file: f }));
+                    }}
+                  />
+                  <div className={cn(
+                    "border-2 border-dashed rounded-xl p-8 text-center transition-all",
+                    importWizard.file
+                      ? "border-blue-300 bg-blue-50"
+                      : "border-slate-200 hover:border-blue-300 hover:bg-slate-50"
+                  )}>
+                    {importWizard.file ? (
+                      <div className="space-y-2">
+                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mx-auto">
+                          <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                        <p className="font-medium text-slate-900 text-sm">{importWizard.file.name}</p>
+                        <p className="text-xs text-slate-400">Klicka för att byta fil</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mx-auto">
+                          <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                          </svg>
+                        </div>
+                        <p className="font-medium text-slate-700 text-sm">Dra och släpp eller klicka</p>
+                        <p className="text-xs text-slate-400">CSV-format (från Nordnet)</p>
+                      </div>
+                    )}
+                  </div>
+                </label>
+                <button
+                  disabled={!importWizard.file}
+                  onClick={() => setImportWizard(w => ({ ...w, step: 2 }))}
+                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white font-medium py-3 rounded-xl transition-colors text-sm"
+                >
+                  Nästa
+                </button>
+              </div>
+            )}
+
+            {/* Step 2: Name */}
+            {importWizard.step === 2 && (
+              <div className="space-y-5">
+                <div>
+                  <p className="font-semibold text-slate-900">Döp din portfölj</p>
+                  <p className="text-sm text-slate-500 mt-1">
+                    Ge portföljen ett namn så du enkelt hittar den igen.
+                  </p>
+                </div>
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="t.ex. ISK Nordnet, Pension, Barnspar…"
+                  value={importWizard.name}
+                  onChange={(e) => setImportWizard(w => ({ ...w, name: e.target.value }))}
+                  onKeyDown={(e) => { if (e.key === "Enter" && importWizard.name.trim()) handleWizardComplete(); }}
+                  className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setImportWizard(w => ({ ...w, step: 1 }))}
+                    className="px-4 py-3 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 transition-colors"
+                  >
+                    Tillbaka
+                  </button>
+                  <button
+                    disabled={!importWizard.name.trim() || importing}
+                    onClick={handleWizardComplete}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white font-medium py-3 rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
+                  >
+                    {importing ? (
+                      <>
+                        <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                        Importerar…
+                      </>
+                    ) : "Analysera portfölj"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 
 // ── Results ───────────────────────────────────────────────────────────────────
 
-function AnalysisResult({ analysis, user, portfolioValue, onLoginClick }: { analysis: PortfolioAnalysis; user: User | null; portfolioValue: number | null; onLoginClick: () => void }) {
-  const unlocked = !!user;
-  const loginBenefits = buildLoginBenefits(analysis);
+function ann3yr(total3yr: number): number {
+  return ((1 + total3yr / 100) ** (1 / 3) - 1) * 100;
+}
+
+function calcScore(analysis: PortfolioAnalysis): number {
+  let total = 0, count = 0;
+  if (analysis.avgCost !== null) {
+    total += analysis.avgCost < 0.2 ? 10 : analysis.avgCost < 0.4 ? 8 : analysis.avgCost < 0.6 ? 6 : analysis.avgCost < 0.9 ? 4 : 2;
+    count++;
+  }
+  if (analysis.weightedSharpe !== null) {
+    total += analysis.weightedSharpe > 1.2 ? 10 : analysis.weightedSharpe > 0.8 ? 8 : analysis.weightedSharpe > 0.5 ? 6 : analysis.weightedSharpe > 0.2 ? 4 : 2;
+    count++;
+  }
+  if (analysis.weightedReturn3yr !== null) {
+    total += analysis.weightedReturn3yr > 40 ? 10 : analysis.weightedReturn3yr > 25 ? 9 : analysis.weightedReturn3yr > 15 ? 8 : analysis.weightedReturn3yr > 8 ? 7 : analysis.weightedReturn3yr > 3 ? 5 : 2;
+    count++;
+  }
+  if (analysis.categoryBreakdown?.length) {
+    const n = analysis.categoryBreakdown.filter(c => c.weight > 5).length;
+    total += n >= 4 ? 10 : n === 3 ? 8 : n === 2 ? 5 : 2;
+    count++;
+  }
+  return count > 0 ? Math.round((total / count) * 10) / 10 : 5.0;
+}
+
+function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { analysis: PortfolioAnalysis; portfolioValue: number | null; user: User | null | undefined; onLoginClick: () => void }) {
+  const showBlur = user === null;
+  const score = calcScore(analysis);
+  const [showAllSwaps, setShowAllSwaps] = useState(false);
+
+  const pv = portfolioValue ?? 100_000;
+  const assumed = portfolioValue === null;
+
+  let potentialGainKr: number | null = null;
+  if (analysis.suggestedMetrics) {
+    const fee = analysis.avgCost !== null && analysis.suggestedMetrics.avgCost !== null
+      ? (analysis.avgCost - analysis.suggestedMetrics.avgCost) / 100 * pv : 0;
+    const ret = analysis.weightedReturn3yr !== null && analysis.suggestedMetrics.weightedReturn3yr !== null
+      ? (ann3yr(analysis.suggestedMetrics.weightedReturn3yr) - ann3yr(analysis.weightedReturn3yr)) / 100 * pv : 0;
+    if (fee + ret > 100) potentialGainKr = fee + ret;
+  }
+
+  const scoreColor = score >= 7.5 ? "#16A34A" : score >= 5 ? "#F59E0B" : "#ef4444";
+
+  const strengths: string[] = [];
+  const warnings: string[] = [];
+  if (analysis.avgCost !== null) {
+    if (analysis.avgCost < 0.3) strengths.push("Låg avgift");
+    else if (analysis.avgCost > 0.6) warnings.push("Hög avgift");
+  }
+  if (analysis.weightedSharpe !== null) {
+    if (analysis.weightedSharpe > 0.7) strengths.push("Stark riskjusterad avkastning");
+    else if (analysis.weightedSharpe < 0.3) warnings.push("Svag riskjusterad avkastning");
+  }
+  if (analysis.categoryBreakdown?.length) {
+    const n = analysis.categoryBreakdown.filter(c => c.weight > 5).length;
+    if (n >= 3) strengths.push("Bra riskspridning");
+    else warnings.push("Låg riskspridning");
+  }
+  if (analysis.weightedReturn3yr !== null) {
+    if (analysis.weightedReturn3yr > 10) strengths.push("Stark historisk avkastning");
+    else if (analysis.weightedReturn3yr < 3) warnings.push("Låg historisk avkastning");
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
 
       {/* Print-only header */}
       <div className="print-only hidden border-b border-slate-200 pb-4 mb-2">
@@ -1631,128 +1705,193 @@ function AnalysisResult({ analysis, user, portfolioValue, onLoginClick }: { anal
         <p className="text-sm text-slate-500 mt-1">Portföljanalys — fondanalys.se</p>
       </div>
 
-      {/* Download button */}
-      <div className="no-print flex justify-end">
-        <button
-          onClick={() => window.print()}
-          className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-800 border border-slate-200 hover:border-slate-300 rounded-xl px-4 py-2 transition-colors bg-white"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-          </svg>
-          Ladda ner som PDF
-        </button>
-      </div>
-
-      {/* Insight badges */}
-      {(() => {
-        const badges: { label: string; ok: boolean }[] = [];
-        if (analysis.avgCost !== null) {
-          badges.push(analysis.avgCost < 0.3
-            ? { label: "Låg avgift", ok: true }
-            : analysis.avgCost > 0.6
-              ? { label: "Hög avgift", ok: false }
-              : { label: "Rimlig avgift", ok: true });
-        }
-        if (analysis.weightedSharpe !== null) {
-          badges.push(analysis.weightedSharpe > 0.7
-            ? { label: "Stark riskjusterad avkastning", ok: true }
-            : analysis.weightedSharpe < 0.3
-              ? { label: "Svag riskjusterad avkastning", ok: false }
-              : { label: "Godkänd riskprofil", ok: true });
-        }
-        if (analysis.categoryBreakdown?.length) {
-          const numCats = analysis.categoryBreakdown.filter(c => c.weight > 5).length;
-          badges.push(numCats >= 3
-            ? { label: "Bra spridning", ok: true }
-            : { label: "Låg spridning", ok: false });
-        }
-        if (analysis.weightedReturn3yr !== null) {
-          badges.push(analysis.weightedReturn3yr > 10
-            ? { label: "Stark historisk avkastning", ok: true }
-            : analysis.weightedReturn3yr < 3
-              ? { label: "Låg historisk avkastning", ok: false }
-              : { label: "Godkänd avkastning", ok: true });
-        }
-        if (!badges.length) return null;
-        return (
-          <div className="no-print flex flex-wrap gap-2">
-            {badges.map((b) => (
-              <span key={b.label} className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border ${b.ok ? "bg-green-50 text-green-700 border-green-200" : "bg-amber-50 text-amber-700 border-amber-200"}`}>
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  {b.ok
-                    ? <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
-                    : <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
-                  }
-                </svg>
-                {b.label}
-              </span>
-            ))}
-          </div>
-        );
-      })()}
-
-      {/* Summary */}
-      <section className="bg-blue-50 border border-blue-100 rounded-2xl p-4 sm:p-6">
-        <h2 className="text-lg font-bold text-blue-900 mb-2">Sammanfattning</h2>
-        <p className="text-sm text-blue-900 leading-relaxed">{analysis.summaryText}</p>
-      </section>
-
-      {/* Key metrics + breakdown — side by side */}
-      <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Din nuvarande portfölj</p>
-        <div className="grid lg:grid-cols-[1fr_minmax(300px,auto)] gap-6 lg:gap-8 items-start">
+      {/* Hero card */}
+      <section className="no-print rounded-2xl p-6 sm:p-8 text-white" style={{ background: "linear-gradient(135deg, #0D1F36 0%, #0F2744 100%)" }}>
+        <div className="flex items-start justify-between gap-6 flex-wrap">
           <div>
-            <h2 className="text-lg font-bold text-slate-900 mb-4">Nyckeltal</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <Metric label="Snittavgift" value={analysis.avgCost !== null ? `${analysis.avgCost.toFixed(2)}%` : "–"} sub="per år" info="Den genomsnittliga årliga avgiften viktat efter din fördelning." />
-              <Metric label="Avkastning 1 år" value={analysis.weightedReturn1yr !== null ? `${analysis.weightedReturn1yr.toFixed(1)}%` : "–"} sub="viktad" info="Portföljens viktade avkastning de senaste 12 månaderna." />
-              <Metric label="Avkastning 3 år" value={analysis.weightedReturn3yr !== null ? `${analysis.weightedReturn3yr.toFixed(1)}%` : "–"} sub="totalt" info="Portföljens viktade totalavkastning de senaste 3 åren." />
-              <Metric label="Sharpe 3 år" value={analysis.weightedSharpe !== null ? analysis.weightedSharpe.toFixed(2) : "–"} sub="riskjusterad" info="Avkastning i förhållande till risk. Högre är bättre." />
+            <p className="text-xs font-semibold tracking-[0.12em] uppercase text-white/40 mb-2">Portföljbetyg</p>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-5xl sm:text-6xl font-bold tabular-nums" style={{ color: scoreColor }}>
+                {score.toFixed(1).replace(".", ",")}
+              </span>
+              <span className="text-2xl text-white/25 font-light">/10</span>
             </div>
-            {(analysis.concentrationWarnings?.length ?? 0) > 0 && (
-              <div className="flex items-start gap-3 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5 mt-4">
-                <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-                </svg>
-                <div>
-                  <p className="text-sm font-semibold text-amber-800">Koncentrationsrisk</p>
-                  {(analysis.concentrationWarnings ?? []).map((w) => (
-                    <p key={w.category} className="text-sm text-amber-700 mt-0.5">
-                      {w.weight.toFixed(0)}% i {w.category.toLowerCase()} — överväg att sprida risken.
+          </div>
+          {potentialGainKr !== null && (
+            <div className="text-right">
+              <p className="text-xs font-semibold tracking-[0.12em] uppercase text-white/40 mb-2">Förbättringspotential</p>
+              <p className="text-3xl font-bold text-green-400">+{Math.round(potentialGainKr).toLocaleString("sv-SE")} kr</p>
+              <p className="text-xs text-white/35 mt-1">per år{assumed ? " (vid 100 000 kr)" : ""}</p>
+              <p className="text-[10px] text-white/25 mt-0.5">inkl. historisk avkastningsskillnad</p>
+            </div>
+          )}
+        </div>
+
+        <p className="mt-5 pt-5 border-t border-white/10 text-white/70 leading-relaxed text-[15px]">
+          {analysis.summaryText}
+        </p>
+
+        {(strengths.length > 0 || warnings.length > 0) && (
+          <div className="mt-5 grid sm:grid-cols-2 gap-4">
+            {strengths.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold tracking-[0.1em] uppercase text-white/40 mb-2">Styrkor</p>
+                <div className="space-y-1.5">
+                  {strengths.map(s => (
+                    <p key={s} className="text-sm text-green-400 flex items-center gap-2">
+                      <span className="shrink-0">✓</span> {s}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+            {warnings.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold tracking-[0.1em] uppercase text-white/40 mb-2">Förbättringsområden</p>
+                <div className="space-y-1.5">
+                  {warnings.map(w => (
+                    <p key={w} className="text-sm text-amber-400 flex items-center gap-2">
+                      <span className="shrink-0">⚠</span> {w}
                     </p>
                   ))}
                 </div>
               </div>
             )}
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 mb-4">Fördelning</h2>
-            <DonutChart
-              slices={(analysis.detailedBreakdown ?? []).map((c) => ({ label: c.label, weight: c.weight }))}
-              centerLabel={`${(analysis.detailedBreakdown ?? [])[0]?.weight.toFixed(0)}%`}
-              centerSub={(analysis.detailedBreakdown ?? [])[0]?.label ?? ""}
-              size={180}
-              thickness={26}
-              horizontal
-            />
-            <p className="text-[10px] text-slate-400 leading-snug mt-2">* Fördelning baseras på fondkategori, inte underliggande innehav.</p>
-          </div>
+        )}
+
+        <div className="mt-5 pt-4 border-t border-white/10 flex justify-end">
+          <button
+            onClick={() => window.print()}
+            className="flex items-center gap-2 text-xs text-white/35 hover:text-white/60 transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Ladda ner PDF
+          </button>
         </div>
       </section>
 
-      {/* Swap suggestions + best in category — blurred if not logged in */}
-      {((analysis.swapSuggestions?.length ?? 0) > 0 || (analysis.bestInCategory?.length ?? 0) > 0) && (
-        <BlurGate unlocked={unlocked} benefits={loginBenefits} onLoginClick={onLoginClick}>
-          <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 space-y-4">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Fondbytesförslag</p>
-            <div>
-              <h2 className="text-lg font-bold text-slate-900 mb-1">Förslag på förbättringar</h2>
-              <p className="text-sm text-slate-500">Fonder i samma kategori med bättre nyckeltal.</p>
-            </div>
+      {/* Key metrics + allocation */}
+      <section className="bg-white rounded-2xl p-6 sm:p-8" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.04)", border: "1px solid #F1F5F9" }}>
+        <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-6">Nyckeltal</p>
+        <div className="grid lg:grid-cols-[1fr_340px] gap-8 items-start">
+          <div className="grid grid-cols-2 gap-x-8 gap-y-6">
+            <Metric label="Snittavgift" value={analysis.avgCost !== null ? `${analysis.avgCost.toFixed(2)}%` : "–"} sub="per år" info="Den genomsnittliga årliga avgiften viktat efter din fördelning." />
+            <Metric label="Avkastning 1 år" value={analysis.weightedReturn1yr !== null ? `${analysis.weightedReturn1yr.toFixed(1)}%` : "–"} sub="senaste 12 mån" info="Portföljens viktade avkastning de senaste 12 månaderna." />
+            <Metric label="Avkastning 3 år" value={analysis.weightedReturn3yr !== null ? `${analysis.weightedReturn3yr.toFixed(1)}%` : "–"} sub="totalt" info="Portföljens viktade totalavkastning de senaste 3 åren." />
+            <Metric label="Sharpe 3 år" value={analysis.weightedSharpe !== null ? analysis.weightedSharpe.toFixed(2) : "–"} sub="riskjusterad" info="Avkastning i förhållande till risk. Högre är bättre." />
+          </div>
+          <div>
+            <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-4">Fördelning</p>
+            <DonutChart
+              slices={(analysis.detailedBreakdown ?? []).map(c => ({ label: c.label, weight: c.weight }))}
+              centerLabel={`${(analysis.detailedBreakdown ?? [])[0]?.weight.toFixed(0)}%`}
+              centerSub={(analysis.detailedBreakdown ?? [])[0]?.label ?? ""}
+              size={145}
+              thickness={22}
+              horizontal
+            />
+            <p className="text-[10px] text-slate-400 mt-2 leading-snug">* Baseras på fondkategori, inte underliggande innehav.</p>
+          </div>
+        </div>
+
+        {/* Tillgångsslag + Förvaltningsstil */}
+        <div className="mt-8 pt-6 border-t border-slate-50 grid sm:grid-cols-2 gap-8">
+          {(analysis.categoryBreakdown?.length ?? 0) > 0 && (() => {
+            const ASSET_COLORS: Record<string, string> = {
+              Aktiefonder:          "#3B82F6",
+              Räntefonder:          "#F59E0B",
+              Blandfonder:          "#10B981",
+              "Alternativa fonder": "#8B5CF6",
+              Penningmarknadsfonder:"#06B6D4",
+              Övrigt:               "#94A3B8",
+            };
+            const items = (analysis.categoryBreakdown ?? []).filter(c => c.weight > 0);
+            return (
+              <div>
+                <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-3">Tillgångsslag</p>
+                <div className="h-3 rounded-full overflow-hidden flex">
+                  {items.map((c) => (
+                    <div key={c.label} style={{ width: `${c.weight}%`, backgroundColor: ASSET_COLORS[c.label] ?? "#94A3B8" }} />
+                  ))}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
+                  {items.map((c) => (
+                    <div key={c.label} className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: ASSET_COLORS[c.label] ?? "#94A3B8" }} />
+                      <span className="text-xs text-slate-500">{c.label}</span>
+                      <span className="text-xs font-semibold text-slate-800 tabular-nums">{c.weight.toFixed(1)}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
+          {(analysis.managementBreakdown.active + analysis.managementBreakdown.passive + analysis.managementBreakdown.unknown) > 0 && (() => {
+            const items = [
+              { label: "Aktivt förvaltad", value: analysis.managementBreakdown.active,  color: "#3B82F6" },
+              { label: "Indexfond",         value: analysis.managementBreakdown.passive, color: "#F59E0B" },
+              { label: "Oklassad",          value: analysis.managementBreakdown.unknown, color: "#94A3B8" },
+            ].filter(i => i.value > 0);
+            return (
+              <div>
+                <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-3">Förvaltningsstil</p>
+                <div className="h-3 rounded-full overflow-hidden flex">
+                  {items.map((item) => (
+                    <div key={item.label} style={{ width: `${item.value}%`, backgroundColor: item.color }} />
+                  ))}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
+                  {items.map((item) => (
+                    <div key={item.label} className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full shrink-0 border border-slate-200" style={{ backgroundColor: item.color }} />
+                      <span className="text-xs text-slate-500">{item.label}</span>
+                      <span className="text-xs font-semibold text-slate-800 tabular-nums">{item.value.toFixed(1)}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      </section>
+
+      <div className="relative">
+        <div className={`space-y-5${showBlur ? " blur-sm pointer-events-none select-none" : ""}`}>
+
+      {/* Swap suggestions + best-in-category */}
+      {((analysis.swapSuggestions?.length ?? 0) > 0 ||
+        (analysis.bestInCategory?.length ?? 0) > 0) && (
+        <section className="bg-white rounded-2xl p-6 sm:p-8" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.04)", border: "1px solid #F1F5F9" }}>
+            <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-1">Fondbytesförslag</p>
+            <p className="text-lg font-semibold text-[#111827] mb-4">Förslag på förbättringar</p>
+
+            {(analysis.bestInCategory?.length ?? 0) > 0 && (() => {
+              const bics = analysis.bestInCategory ?? [];
+              const hasSwaps = (analysis.swapSuggestions?.length ?? 0) > 0;
+              const label = bics.length === 1 ? "Redan bäst i sin kategori" : "Redan bäst i sina kategorier";
+              return (
+                <div className={`flex items-start gap-3 ${hasSwaps ? "mb-4 pb-4 border-b border-slate-200" : ""}`}>
+                  <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center shrink-0 mt-0.5">
+                    <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-green-600 mb-1">{label}</p>
+                    {bics.map((bic, i) => (
+                      <p key={i} className="text-sm font-semibold text-[#111827] leading-snug truncate">{bic.fundName}</p>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {(analysis.swapSuggestions?.length ?? 0) > 0 && (() => {
               const swaps = analysis.swapSuggestions ?? [];
-              // Group by suggested fund isin, sort largest groups first
               const groupMap = new Map<string, typeof swaps>();
               for (const s of swaps) {
                 const key = s.suggestedFund.isin;
@@ -1761,125 +1900,133 @@ function AnalysisResult({ analysis, user, portfolioValue, onLoginClick }: { anal
               }
               const groups = Array.from(groupMap.values()).sort((a, b) => b.length - a.length);
 
+              const VISIBLE = 3;
+              const visibleGroups = showAllSwaps ? groups : groups.slice(0, VISIBLE);
+              const total = groupMap.size;
               return (
-                <div className="space-y-4">
-                  {groups.map((group, gi) => {
-                    const suggested = group[0].suggestedFund;
-                    const isConsolidate = group[0].consolidate;
+                <>
+                  <div className="divide-y divide-slate-200">
+                    {visibleGroups.map((group, gi) => {
+                      const suggested = group[0].suggestedFund;
+                      const isConsolidate = group[0].consolidate;
+                      const s = group[0];
+                      const isMultiGroup = group.length >= 2;
+                      const showInfo = isMultiGroup || (s.reason || s.similarityNote);
 
-                    if (group.length >= 2) {
-                      // ── Group card (topval / konsolidera) ──────────────────
-                      return (
-                        <div key={gi} className={`rounded-xl p-4 space-y-3 border-2 ${isConsolidate ? "border-blue-200 bg-blue-50/30" : "border-amber-200 bg-amber-50/30"}`}>
-                          <div className="flex items-center justify-between gap-2 flex-wrap">
-                            <span className={`text-xs font-bold px-2.5 py-1 rounded-full border uppercase tracking-wide ${isConsolidate ? "text-blue-700 bg-blue-100 border-blue-200" : "text-amber-700 bg-amber-100 border-amber-200"}`}>
-                              {isConsolidate ? `Konsolidera ${group.length} fonder hit` : `Topval — bättre än ${group.length} fonder`}
-                            </span>
-                          </div>
+                      let tooltipContent: React.ReactNode = null;
+                      if (isMultiGroup) {
+                        const totalW = group.reduce((sum, item) => sum + item.weight, 0);
+                        if (totalW > 0) {
+                          const items = group.map(item => ({
+                            normW: item.weight / totalW,
+                            cost: item.currentFund.ongoing_cost_actual ?? item.currentFund.ongoing_cost_estimated,
+                            r1yr: item.currentFund.return_1yr,
+                            sharpe: item.currentFund.sharpe_3yr,
+                          }));
+                          const compCost = items.every(x => x.cost !== null)
+                            ? items.reduce((sum, x) => sum + x.normW * x.cost!, 0) : null;
+                          const compReturn = items.every(x => x.r1yr !== null)
+                            ? items.reduce((sum, x) => sum + x.normW * x.r1yr!, 0) : null;
+                          const compSharpe = items.every(x => x.sharpe !== null)
+                            ? items.reduce((sum, x) => sum + x.normW * x.sharpe!, 0) : null;
+                          const sugCost = suggested.ongoing_cost_actual ?? suggested.ongoing_cost_estimated;
+                          tooltipContent = (
+                            <div>
+                              <p className="font-semibold mb-1.5">Nuvarande (sammanvägt)</p>
+                              {compCost !== null && <p>Avgift: {compCost.toFixed(2)}%</p>}
+                              {compReturn !== null && <p>Avk. 1 år: {compReturn.toFixed(1)}%</p>}
+                              {compSharpe !== null && <p>Sharpe: {compSharpe.toFixed(2)}</p>}
+                              <div className="border-t border-white/20 my-2" />
+                              <p className="font-semibold mb-1">Föreslagen</p>
+                              {suggested.category && <p className="opacity-70 mb-1">{suggested.category}</p>}
+                              {sugCost !== null && <p>Avgift: {sugCost.toFixed(2)}%</p>}
+                              {suggested.return_1yr !== null && <p>Avk. 1 år: {suggested.return_1yr.toFixed(1)}%</p>}
+                              {suggested.sharpe_3yr !== null && <p>Sharpe: {suggested.sharpe_3yr.toFixed(2)}</p>}
+                            </div>
+                          );
+                        }
+                      } else {
+                        const curCost = s.currentFund.ongoing_cost_actual ?? s.currentFund.ongoing_cost_estimated;
+                        const sugCost = s.suggestedFund.ongoing_cost_actual ?? s.suggestedFund.ongoing_cost_estimated;
+                        tooltipContent = (
                           <div>
-                            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-0.5">
-                              {isConsolidate ? "Redan i din portfölj" : "Föreslagen fond"}
-                            </p>
-                            <p className="font-bold text-slate-900">{suggested.name}</p>
-                            <p className="text-xs text-slate-400">{suggested.isin}</p>
+                            <p className="font-semibold mb-1.5">Nuvarande</p>
+                            {s.currentFund.category && <p className="opacity-70 mb-1">{s.currentFund.category}</p>}
+                            {curCost !== null && <p>Avgift: {curCost.toFixed(2)}%</p>}
+                            {s.currentFund.return_1yr !== null && <p>Avk. 1 år: {s.currentFund.return_1yr.toFixed(1)}%</p>}
+                            {s.currentFund.sharpe_3yr !== null && <p>Sharpe: {s.currentFund.sharpe_3yr.toFixed(2)}</p>}
+                            <div className="border-t border-white/20 my-2" />
+                            <p className="font-semibold mb-1.5">Föreslagen</p>
+                            {s.suggestedFund.category && <p className="opacity-70 mb-1">{s.suggestedFund.category}</p>}
+                            {sugCost !== null && <p>Avgift: {sugCost.toFixed(2)}%</p>}
+                            {s.suggestedFund.return_1yr !== null && <p>Avk. 1 år: {s.suggestedFund.return_1yr.toFixed(1)}%</p>}
+                            {s.suggestedFund.sharpe_3yr !== null && <p>Sharpe: {s.suggestedFund.sharpe_3yr.toFixed(2)}</p>}
                           </div>
-                          {group[0].similarityNote && (
-                            <p className="text-xs text-slate-500 italic">{group[0].similarityNote}</p>
+                        );
+                      }
+
+                      return (
+                        <div key={gi} className="py-4 first:pt-0 last:pb-0">
+                          {isConsolidate && isMultiGroup && (
+                            <div className="mb-2">
+                              <span className="inline-flex text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-[#2563EB]">
+                                Konsolidera {group.length} fonder
+                              </span>
+                            </div>
                           )}
-                          <div className="pt-2 border-t border-slate-200/60 space-y-2">
-                            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Ersätter</p>
-                            {group.map((s, si) => (
-                              <div key={si} className="flex items-start justify-between gap-3 text-sm">
-                                <div className="min-w-0">
-                                  <span className="font-medium text-slate-800">{s.currentFund.name}</span>
-                                  <span className="text-xs text-slate-400 ml-2">{s.currentFund.isin}</span>
-                                </div>
-                                {s.reason && (
-                                  <span className="text-xs text-green-600 shrink-0 text-right max-w-[45%]">{s.reason}</span>
-                                )}
+                          <div className="grid grid-cols-[1fr_40px_1fr_20px] items-start gap-2">
+                            <div className="min-w-0">
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#2563EB] mb-1">Nuvarande</p>
+                              {group.map((item, si) => (
+                                <p key={si} className="text-sm font-semibold text-[#111827] leading-snug truncate">{item.currentFund.name}</p>
+                              ))}
+                            </div>
+                            <div className="flex justify-center pt-[16px]">
+                              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                                <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                                </svg>
                               </div>
-                            ))}
+                            </div>
+                            <div className="min-w-0 text-right">
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#2563EB] mb-1">
+                                {isConsolidate ? "Öka i" : "Föreslagen"}
+                              </p>
+                              <p className="text-sm font-semibold text-[#111827] leading-snug truncate">{suggested.name}</p>
+                            </div>
+                            <div className="flex justify-end">
+                              {showInfo && (
+                                <div className="relative group/reason">
+                                  <span className="flex items-center justify-center w-3.5 h-3.5 rounded-full bg-slate-200 text-[9px] text-slate-500 cursor-default select-none">i</span>
+                                  <div className="pointer-events-none absolute bottom-full right-0 mb-2 w-56
+                                    bg-slate-700 text-white text-xs rounded-xl px-3 py-2.5
+                                    opacity-0 group-hover/reason:opacity-100 transition-opacity z-20 leading-relaxed shadow-lg whitespace-normal text-left">
+                                    {tooltipContent}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       );
-                    }
-
-                    // ── Single swap card ────────────────────────────────────
-                    const s = group[0];
-                    return (
-                      <div key={gi} className="border border-slate-200 rounded-xl p-4 space-y-2 bg-slate-50">
-                        {s.consolidate ? (
-                          <>
-                            <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Överväg att sälja</p>
-                                <p className="font-semibold text-sm text-slate-900 break-words">{s.currentFund.name}</p>
-                                <p className="text-xs text-slate-400">{s.currentFund.isin}</p>
-                              </div>
-                              <span className="text-slate-400 text-lg sm:mt-3 self-start sm:self-auto"><span className="sm:hidden">↓</span><span className="hidden sm:inline">→</span></span>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Öka i befintlig fond</p>
-                                <p className="font-semibold text-sm text-slate-900 break-words">{s.suggestedFund.name}</p>
-                                <p className="text-xs text-slate-400">{s.suggestedFund.isin}</p>
-                              </div>
-                            </div>
-                            {s.similarityNote && <p className="text-xs text-slate-400 italic">{s.similarityNote}</p>}
-                            <p className="text-sm text-slate-600">
-                              <span className="font-semibold text-blue-600">Konsolidera: </span>
-                              Du har redan {s.suggestedFund.name} i portföljen och den är den bästa fonden i kategorin. Flytta kapitalet från {s.currentFund.name} dit istället.{s.reason && ` (${s.reason})`}
-                            </p>
-                          </>
-                        ) : (
-                          <>
-                            <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Nuvarande fond</p>
-                                <p className="font-semibold text-sm text-slate-900 break-words">{s.currentFund.name}</p>
-                                <p className="text-xs text-slate-400">{s.currentFund.isin}</p>
-                              </div>
-                              <span className="text-slate-400 text-lg sm:mt-3 self-start sm:self-auto"><span className="sm:hidden">↓</span><span className="hidden sm:inline">→</span></span>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-semibold text-green-600 uppercase tracking-wide">Föreslagen fond</p>
-                                <p className="font-semibold text-sm text-slate-900 break-words">{s.suggestedFund.name}</p>
-                                <p className="text-xs text-slate-400">{s.suggestedFund.isin}</p>
-                              </div>
-                            </div>
-                            {s.similarityNote && <p className="text-xs text-slate-400 italic">{s.similarityNote}</p>}
-                            <p className="text-sm text-slate-600">
-                              <span className="font-semibold text-green-600">Förbättring: </span>{s.reason}
-                            </p>
-                          </>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                    })}
+                  </div>
+                  {total > VISIBLE && (
+                    <button
+                      onClick={() => setShowAllSwaps(v => !v)}
+                      className="mt-2 w-full py-2.5 text-sm font-medium text-slate-500 hover:text-[#111827] border border-slate-100 hover:border-slate-200 rounded-xl transition-colors"
+                    >
+                      {showAllSwaps ? "Visa färre förslag" : `Visa alla ${total} förslag`}
+                    </button>
+                  )}
+                </>
               );
             })()}
-            {(analysis.bestInCategory?.length ?? 0) > 0 && (
-              <div className="pt-2 border-t border-slate-100">
-                <div className="flex items-center gap-2 mb-2">
-                  <svg className="w-4 h-4 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
-                  </svg>
-                  <p className="text-sm font-bold text-green-900">Redan bäst i sin kategori</p>
-                </div>
-                <div className="space-y-1">
-                  {(analysis.bestInCategory ?? []).map((f) => (
-                    <div key={f.isin} className="flex items-baseline justify-between text-sm">
-                      <span className="font-medium text-green-900">{f.fundName}</span>
-                      <span className="text-xs text-green-600 ml-3 shrink-0">{f.category}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+
           </section>
-        </BlurGate>
       )}
 
-      {/* Suggested portfolio — shown when logged in */}
-      {unlocked && analysis.suggestedMetrics && (
+      {analysis.suggestedMetrics && (
         <SuggestedPortfolio
           current={{ avgCost: analysis.avgCost, weightedReturn1yr: analysis.weightedReturn1yr, weightedReturn3yr: analysis.weightedReturn3yr, weightedSharpe: analysis.weightedSharpe }}
           suggested={analysis.suggestedMetrics}
@@ -1887,13 +2034,40 @@ function AnalysisResult({ analysis, user, portfolioValue, onLoginClick }: { anal
         />
       )}
 
-      {/* When no swap suggestions exist — show portfolio performance projection */}
-      {unlocked && !analysis.suggestedMetrics && (analysis.swapSuggestions?.length ?? 0) === 0 && (
+      {!analysis.suggestedMetrics && (analysis.swapSuggestions?.length ?? 0) === 0 && (
         <OptimalPortfolioProjection
           current={{ avgCost: analysis.avgCost, weightedReturn1yr: analysis.weightedReturn1yr, weightedReturn3yr: analysis.weightedReturn3yr, weightedSharpe: analysis.weightedSharpe }}
           portfolioValue={portfolioValue}
         />
       )}
+        </div>
+
+        {showBlur && (
+          <div className="absolute inset-0 flex items-center justify-center z-10">
+            <div className="bg-white rounded-2xl p-6 shadow-xl border border-slate-100 max-w-sm w-full mx-4 text-center space-y-4">
+              <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto">
+                <svg className="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                </svg>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-slate-900">
+                  {potentialGainKr !== null
+                    ? `Logga in för att se fondbytena med +${Math.round(potentialGainKr).toLocaleString("sv-SE")} kr/år i förbättringspotential`
+                    : "Logga in för att se personliga fondbytesförslag"}
+                </p>
+                <p className="text-xs text-slate-400">Gratis · Klart på under en minut</p>
+              </div>
+              <button
+                onClick={onLoginClick}
+                className="w-full bg-slate-900 hover:bg-slate-700 text-white font-semibold py-3 rounded-xl transition-colors text-sm"
+              >
+                Logga in
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {analysis.notFound.length > 0 && (
         <section className="bg-amber-50 border border-amber-100 rounded-2xl p-4">
@@ -1908,30 +2082,18 @@ function AnalysisResult({ analysis, user, portfolioValue, onLoginClick }: { anal
 
 function Metric({ label, value, sub, info }: { label: string; value: string; sub: string; info: string }) {
   return (
-    <div className="relative group bg-slate-50 rounded-xl p-4">
-      
-      {/* Tooltip (centered on card, above it) */}
-      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-44
-        bg-slate-400/90 backdrop-blur-sm text-white text-xs
-        rounded-xl px-2.5 py-1.5
-        opacity-0 group-hover:opacity-100 transition-opacity
-        z-10 text-center leading-snug
-        shadow-md shadow-slate-500/20
-        ring-1 ring-white/20">
+    <div className="relative group">
+      <span className="pointer-events-none absolute bottom-full left-0 mb-2 w-48
+        bg-slate-600 text-white text-xs rounded-xl px-3 py-2
+        opacity-0 group-hover:opacity-100 transition-opacity z-10 leading-snug shadow-lg">
         {info}
       </span>
-
-      <div className="flex items-center gap-1 mb-1">
-        <p className="text-xs font-semibold text-slate-500">{label}</p>
-
-        {/* Info icon */}
-        <span className="flex items-center justify-center w-3 h-3 rounded-full bg-slate-300 text-[9px] text-white cursor-default">
-          i
-        </span>
-      </div>
-
-      <p className="text-2xl font-bold text-slate-900">{value}</p>
-      <p className="text-xs text-slate-400 mt-1">{sub}</p>
+      <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-1.5 flex items-center gap-1 cursor-default">
+        {label}
+        <span className="flex items-center justify-center w-3.5 h-3.5 rounded-full bg-slate-200 text-[9px] text-slate-500">i</span>
+      </p>
+      <p className="text-3xl font-bold text-[#111827] leading-none tabular-nums">{value}</p>
+      <p className="text-xs text-slate-400 mt-1.5">{sub}</p>
     </div>
   );
 }
@@ -1953,9 +2115,8 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
   const pv = portfolioValue ?? 100_000;
   const feeSavingsKr = current.avgCost !== null && suggested.avgCost !== null
     ? (current.avgCost - suggested.avgCost) / 100 * pv : null;
-  const returnGainKr = current.weightedReturn1yr !== null && suggested.weightedReturn1yr !== null
-    ? (suggested.weightedReturn1yr - current.weightedReturn1yr) / 100 * pv : null;
-  const totalGainKr = feeSavingsKr !== null && returnGainKr !== null ? feeSavingsKr + returnGainKr : null;
+  const returnGainKr = current.weightedReturn3yr !== null && suggested.weightedReturn3yr !== null
+    ? (ann3yr(suggested.weightedReturn3yr) - ann3yr(current.weightedReturn3yr)) / 100 * pv : null;
 
   const rows = [
     { label: "Snittavgift", sub: "per år", currentVal: current.avgCost, suggestedVal: suggested.avgCost, lowerIsBetter: true },
@@ -1965,87 +2126,71 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
   ];
 
   return (
-    <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 space-y-4 sm:space-y-5">
-      <div>
-        <h2 className="text-lg font-bold text-slate-900">Föreslagen portfölj</h2>
-        <p className="text-sm text-slate-400 mt-0.5">Nyckeltal om du genomför alla förslag ovan.</p>
-      </div>
+    <section className="bg-white rounded-2xl p-6 sm:p-8" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.04)", border: "1px solid #F1F5F9" }}>
+      <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-1">Föreslagen portfölj</p>
+      <p className="text-lg font-semibold text-[#111827] mb-6">Nyckeltal efter föreslagna byten</p>
 
-      {/* Fondinnehav — visas först */}
-      <div>
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Fondinnehav</p>
-        <div className="space-y-1">
+      <div className="mb-6">
+        <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-3">Fondinnehav</p>
+        <div className="space-y-0">
           {suggested.funds.map((f, i) => (
-            <div key={i} className="flex items-center justify-between text-sm py-1.5 border-b border-slate-50 last:border-0">
+            <div key={i} className="flex items-center justify-between py-2.5 border-b border-slate-50 last:border-0">
               <div>
-                <span className="font-medium text-slate-900">{f.name}</span>
+                <span className="text-sm font-medium text-[#111827]">{f.name}</span>
                 <span className="text-xs text-slate-400 ml-2">{f.isin}</span>
               </div>
-              <span className="font-semibold text-slate-600">{f.weight.toFixed(1)}%</span>
+              <span className="text-sm font-semibold text-slate-500 tabular-nums">{f.weight.toFixed(1)}%</span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Nyckeltal — jämförelse nuvarande vs föreslagen */}
-      <div>
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Nyckeltal</p>
-
-        {/* Mobile: card stack */}
-        <div className="sm:hidden space-y-2">
+      <div className="mb-6">
+        <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-3">Jämförelse</p>
+        <div className="sm:hidden space-y-0">
           {rows.map((row) => {
             const d = delta(row.suggestedVal, row.currentVal, row.lowerIsBetter);
             return (
-              <div key={row.label} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2.5">
-                <div>
-                  <p className="text-xs font-semibold text-slate-700">{row.label}</p>
-                  <p className="text-xs text-slate-400">{row.sub}</p>
-                </div>
-                <div className="text-right space-y-0.5">
-                  <div className="flex items-center gap-2 justify-end">
-                    <span className="text-xs text-slate-400">{fmt(row.currentVal)}</span>
-                    <span className="text-xs text-slate-300">→</span>
-                    <span className="text-sm font-bold text-slate-900">{fmt(row.suggestedVal)}</span>
-                  </div>
+              <div key={row.label} className="flex items-center justify-between py-2.5 border-b border-slate-50 last:border-0">
+                <p className="text-sm text-slate-500">{row.label}</p>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-slate-400 tabular-nums">{fmt(row.currentVal)}</span>
+                  <span className="text-slate-300">→</span>
+                  <span className="font-semibold text-[#111827] tabular-nums">{fmt(row.suggestedVal)}</span>
                   {d && (
-                    <p className={`text-xs font-semibold ${d.better ? "text-green-600" : "text-red-500"}`}>
-                      {d.diff > 0 ? "▲" : "▼"} {Math.abs(d.diff).toFixed(2)}%
-                    </p>
+                    <span className={`text-xs font-semibold tabular-nums ${d.better ? "text-[#16A34A]" : "text-red-500"}`}>
+                      {d.diff > 0 ? "▲" : "▼"}{Math.abs(d.diff).toFixed(2)}%
+                    </span>
                   )}
                 </div>
               </div>
             );
           })}
         </div>
-
-        {/* Desktop: table */}
-        <div className="hidden sm:block overflow-x-auto">
+        <div className="hidden sm:block">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-xs font-semibold text-slate-400 uppercase tracking-wide border-b border-slate-100">
-                <th className="text-left py-2 pr-4">Nyckeltal</th>
-                <th className="text-right py-2 px-4">Nuvarande</th>
-                <th className="text-right py-2 px-4">Föreslagen</th>
-                <th className="text-right py-2 pl-4">Förändring</th>
+              <tr className="text-xs font-semibold tracking-[0.06em] uppercase text-slate-400 border-b border-slate-100">
+                <th className="text-left pb-3 pr-4 font-semibold">Nyckeltal</th>
+                <th className="text-right pb-3 px-4 font-semibold">Nuvarande</th>
+                <th className="text-right pb-3 px-4 font-semibold">Föreslagen</th>
+                <th className="text-right pb-3 pl-4 font-semibold">Förändring</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody>
               {rows.map((row) => {
                 const d = delta(row.suggestedVal, row.currentVal, row.lowerIsBetter);
                 return (
-                  <tr key={row.label} className="text-slate-800">
-                    <td className="py-3 pr-4">
-                      <span className="font-medium">{row.label}</span>
-                      <span className="text-xs text-slate-400 ml-1">{row.sub}</span>
-                    </td>
-                    <td className="text-right py-3 px-4 text-slate-400">{fmt(row.currentVal)}</td>
-                    <td className="text-right py-3 px-4 font-semibold">{fmt(row.suggestedVal)}</td>
-                    <td className="text-right py-3 pl-4 font-semibold">
+                  <tr key={row.label} className="border-b border-slate-50 last:border-0">
+                    <td className="py-3 pr-4 text-slate-600">{row.label}</td>
+                    <td className="text-right py-3 px-4 text-slate-400 tabular-nums">{fmt(row.currentVal)}</td>
+                    <td className="text-right py-3 px-4 font-semibold text-[#111827] tabular-nums">{fmt(row.suggestedVal)}</td>
+                    <td className="text-right py-3 pl-4 font-semibold tabular-nums">
                       {d ? (
-                        <span className={d.better ? "text-green-600" : "text-red-500"}>
+                        <span className={d.better ? "text-[#16A34A]" : "text-red-500"}>
                           {d.diff > 0 ? "▲" : "▼"} {Math.abs(d.diff).toFixed(2)}%
                         </span>
-                      ) : <span className="text-slate-400">–</span>}
+                      ) : <span className="text-slate-300">–</span>}
                     </td>
                   </tr>
                 );
@@ -2055,72 +2200,43 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
         </div>
       </div>
 
-      {/* SEK profit estimate */}
-      <div className="bg-green-50 border border-green-100 rounded-xl p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-bold text-green-900">Uppskattad vinst per år</p>
-          {!assumed && (
-            <span className="text-xs text-slate-500 italic">
-              Beräknat på din investering av {pv.toLocaleString("sv-SE")} kr
-            </span>
-          )}
-          {assumed && (
-            <span className="text-xs text-slate-500 italic">Beräknat på en investering av 100 000 kr</span>
-          )}
-        </div>
-        <div className="grid grid-cols-3 gap-3">
-        <div>
-          <p className="text-xs text-slate-500 mb-0.5">Avgiftsskillnad</p>
-          <p
-            className={`font-bold text-sm ${
-              feeSavingsKr !== null
-                ? feeSavingsKr >= 0
-                  ? "text-green-700"
-                  : "text-red-600"
-                : "text-slate-400"
-            }`}
-          >
-            {feeSavingsKr !== null
-              ? `${feeSavingsKr >= 0 ? "+" : ""}${Math.round(feeSavingsKr).toLocaleString("sv-SE")} kr`
-              : "–"}
+      {(feeSavingsKr !== null || returnGainKr !== null) && (
+        <div className="bg-slate-50 rounded-xl p-5 space-y-4">
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-sm font-semibold text-[#111827]">Beräknad effekt per år</p>
+            <p className="text-xs text-slate-400 text-right">
+              {assumed ? "vid 100 000 kr investerat" : `vid ${pv.toLocaleString("sv-SE")} kr investerat`}
+            </p>
+          </div>
+          <div className="space-y-3">
+            {feeSavingsKr !== null && (
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-[#111827]">Avgiftsbesparing</p>
+                  <p className="text-xs text-slate-400">Garanterad vid fondbyte</p>
+                </div>
+                <p className={`text-base font-bold tabular-nums ${feeSavingsKr >= 0 ? "text-[#16A34A]" : "text-red-500"}`}>
+                  {`${feeSavingsKr >= 0 ? "+" : ""}${Math.round(feeSavingsKr).toLocaleString("sv-SE")} kr`}
+                </p>
+              </div>
+            )}
+            {returnGainKr !== null && (
+              <div className="flex items-center justify-between border-t border-slate-200 pt-3">
+                <div>
+                  <p className="text-sm font-medium text-[#111827]">Historisk avkastningsskillnad</p>
+                  <p className="text-xs text-slate-400">Baserat på 3-årsavkastning, annualiserad</p>
+                </div>
+                <p className={`text-base font-bold tabular-nums ${returnGainKr >= 0 ? "text-[#16A34A]" : "text-red-500"}`}>
+                  {`${returnGainKr >= 0 ? "+" : ""}${Math.round(returnGainKr).toLocaleString("sv-SE")} kr`}
+                </p>
+              </div>
+            )}
+          </div>
+          <p className="text-[10px] text-slate-400 leading-snug border-t border-slate-200 pt-3">
+            Avgiftsbesparing realiseras vid fondbyte. Historisk avkastning är ingen garanti för framtida resultat — avkastningssiffran ska ses som referens, inte som en prognos.
           </p>
         </div>
-
-        <div>
-          <p className="text-xs text-slate-500 mb-0.5">Avkastningsskillnad</p>
-          <p
-            className={`font-bold text-sm ${
-              returnGainKr !== null
-                ? returnGainKr >= 0
-                  ? "text-green-700"
-                  : "text-red-600"
-                : "text-slate-400"
-            }`}
-          >
-            {returnGainKr !== null
-              ? `${returnGainKr >= 0 ? "+" : ""}${Math.round(returnGainKr).toLocaleString("sv-SE")} kr`
-              : "–"}
-          </p>
-        </div>
-
-        <div>
-          <p className="text-xs text-slate-500 mb-0.5">Totalt</p>
-          <p
-            className={`font-bold text-base ${
-              totalGainKr !== null
-                ? totalGainKr >= 0
-                  ? "text-green-700"
-                  : "text-red-600"
-                : "text-slate-400"
-            }`}
-          >
-            {totalGainKr !== null
-              ? `${totalGainKr >= 0 ? "+" : ""}${Math.round(totalGainKr).toLocaleString("sv-SE")} kr`
-              : "–"}
-          </p>
-        </div>
-        </div>
-      </div>
+      )}
     </section>
   );
 }
@@ -2128,52 +2244,52 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
 function OptimalPortfolioProjection({ current, portfolioValue }: { current: CurrentMetrics; portfolioValue: number | null }) {
   const assumed = portfolioValue === null;
   const pv = portfolioValue ?? 100_000;
-  const returnKr = current.weightedReturn1yr !== null ? (current.weightedReturn1yr / 100) * pv : null;
+  const returnKr = current.weightedReturn3yr !== null ? (ann3yr(current.weightedReturn3yr) / 100) * pv : null;
   const feeKr = current.avgCost !== null ? (current.avgCost / 100) * pv : null;
   const netKr = returnKr !== null && feeKr !== null ? returnKr - feeKr : null;
 
   return (
-    <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 space-y-4 sm:space-y-5">
-      <div className="flex items-center gap-3">
+    <section className="bg-white rounded-2xl p-6 sm:p-8" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.04)", border: "1px solid #F1F5F9" }}>
+      <div className="flex items-center gap-3 mb-6">
         <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-          <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="w-4 h-4 text-[#16A34A]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
         <div>
-          <h2 className="text-lg font-bold text-slate-900">Din portfölj är redan optimal</h2>
-          <p className="text-sm text-slate-400 mt-0.5">Inga fondbytesförslag — portföljen är väl sammansatt.</p>
+          <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-0.5">Analys</p>
+          <p className="text-lg font-semibold text-[#111827]">Din portfölj är redan optimal</p>
         </div>
       </div>
 
-      <div className="bg-green-50 border border-green-100 rounded-xl p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-bold text-green-900">Uppskattad avkastning per år</p>
-          <span className="text-xs text-slate-500 italic">
-            {assumed ? "Beräknat på en investering av 100 000 kr" : `Beräknat på din investering av ${pv.toLocaleString("sv-SE")} kr`}
-          </span>
+      <div className="bg-slate-50 rounded-xl p-5">
+        <div className="flex items-start justify-between gap-2 mb-4">
+          <p className="text-sm font-semibold text-[#111827]">Uppskattad avkastning per år</p>
+          <p className="text-xs text-slate-400 text-right">
+            {assumed ? "vid 100 000 kr investerat" : `vid ${pv.toLocaleString("sv-SE")} kr investerat`}
+          </p>
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-4">
           <div>
-            <p className="text-xs text-slate-500 mb-0.5">Avkastning 1 år</p>
-            <p className={`font-bold text-sm ${returnKr !== null ? returnKr >= 0 ? "text-green-700" : "text-red-600" : "text-slate-400"}`}>
+            <p className="text-xs text-slate-400 mb-1">Avkastning (3 år, ann.)</p>
+            <p className={`text-base font-bold tabular-nums ${returnKr !== null ? returnKr >= 0 ? "text-[#16A34A]" : "text-red-500" : "text-slate-400"}`}>
               {returnKr !== null ? `${returnKr >= 0 ? "+" : ""}${Math.round(returnKr).toLocaleString("sv-SE")} kr` : "–"}
             </p>
           </div>
           <div>
-            <p className="text-xs text-slate-500 mb-0.5">Avgifter</p>
-            <p className="font-bold text-sm text-red-600">
+            <p className="text-xs text-slate-400 mb-1">Avgifter</p>
+            <p className="text-base font-bold tabular-nums text-red-500">
               {feeKr !== null ? `−${Math.round(feeKr).toLocaleString("sv-SE")} kr` : "–"}
             </p>
           </div>
           <div>
-            <p className="text-xs text-slate-500 mb-0.5">Netto</p>
-            <p className={`font-bold text-base ${netKr !== null ? netKr >= 0 ? "text-green-700" : "text-red-600" : "text-slate-400"}`}>
+            <p className="text-xs text-slate-400 mb-1">Netto</p>
+            <p className={`text-xl font-bold tabular-nums ${netKr !== null ? netKr >= 0 ? "text-[#16A34A]" : "text-red-500" : "text-slate-400"}`}>
               {netKr !== null ? `${netKr >= 0 ? "+" : ""}${Math.round(netKr).toLocaleString("sv-SE")} kr` : "–"}
             </p>
           </div>
         </div>
-        <p className="text-[10px] text-slate-400">Baserat på historisk avkastning senaste 12 månader, exklusive avgifter. Historisk avkastning är ingen garanti för framtida resultat.</p>
+        <p className="text-[10px] text-slate-400 mt-3">Baserat på 3-årsavkastning (annualiserad), exklusive avgifter. Historisk avkastning är ingen garanti för framtida resultat.</p>
       </div>
     </section>
   );
