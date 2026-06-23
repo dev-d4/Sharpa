@@ -1,4 +1,5 @@
 import type { PortfolioAnalysis } from "./analysis";
+import type { ScoreBreakdown } from "./portfolio-score";
 
 export type PortfolioHolding = { isin: string; name: string; weight: string; amount?: string };
 
@@ -9,6 +10,10 @@ export type SavedPortfolio = {
   custodian: string;
   holdings: PortfolioHolding[];
   analysis: PortfolioAnalysis;
+  score: number | null;
+  score_breakdown: ScoreBreakdown | null;
+  score_notified_at: string | null;
+  reminder_sent_at: string | null;
   created_at: string;
   updated_at: string;
 };

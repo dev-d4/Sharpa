@@ -24,6 +24,7 @@ export type SwapSuggestion = {
     return1yr?: number;
   };
   consolidate: boolean;
+  weight: number;
 };
 
 export type SuggestedMetrics = {
@@ -307,6 +308,7 @@ function generateSwaps(
       similarityNote: buildSimilarityNote(current, best),
       improvement,
       consolidate,
+      weight: entry.weight,
     });
   }
 
@@ -387,9 +389,9 @@ function buildSummary(
   }
 
   if (return1yr !== null)
-    lines.push(`Förväntad avkastning (senaste 12 månader, viktad): ${return1yr.toFixed(1)}%.`);
+    lines.push(`Avkastning senaste 12 månader: ${return1yr.toFixed(1)}%.`);
   if (return3yr !== null)
-    lines.push(`Total 3-årsavkastning (viktad): ${return3yr.toFixed(1)}%.`);
+    lines.push(`Total 3-årsavkastning: ${return3yr.toFixed(1)}%.`);
 
   if (sharpe !== null) {
     if (sharpe > 1)

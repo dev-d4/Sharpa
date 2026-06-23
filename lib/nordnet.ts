@@ -268,7 +268,7 @@ function getSupabase() {
 
 const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-export async function fetchNordnetFunds(): Promise<Fund[]> {
+export async function fetchNordnetFunds({ force = false } = {}): Promise<Fund[]> {
   const supabase = getSupabase();
 
   if (supabase) {
@@ -278,7 +278,7 @@ export async function fetchNordnetFunds(): Promise<Fund[]> {
       .limit(1)
       .single();
 
-    if (sample && Date.now() - new Date(sample.fetched_at).getTime() < CACHE_TTL_MS) {
+    if (!force && sample && Date.now() - new Date(sample.fetched_at).getTime() < CACHE_TTL_MS) {
       const all: Fund[] = [];
       const PAGE = 1000;
       for (let from = 0; ; from += PAGE) {
