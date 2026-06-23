@@ -121,9 +121,7 @@ export async function POST(req: NextRequest) {
       dbQuery = dbQuery.eq("category_group", filter.category_group);
     }
 
-    if (filter.max_cost !== null) {
-      dbQuery = dbQuery.lte("ongoing_cost_actual", filter.max_cost);
-    }
+    // Cost filter applied in-memory below — avoids DB-level null exclusion issues
 
     // investment_type values: "ACTIVE", "INDEX", or null (Nordnet funds)
     if (filter.management_type === "active") {
@@ -143,6 +141,12 @@ export async function POST(req: NextRequest) {
       if (data.length < FETCH_PAGE) break;
     }
     console.log(`[fund-search] fetched ${allFunds.length} funds from ${view}`);
+
+    function matchesCost(f: typeof allFunds[0]): boolean {
+      if (filter.max_cost === null) return true;
+      const cost = f.ongoing_cost_actual ?? f.ongoing_cost_estimated;
+      return cost === null || cost <= filter.max_cost;
+    }
 
     function matchesManagementType(f: typeof allFunds[0]): boolean {
       if (!filter.management_type) return true;
@@ -175,7 +179,7 @@ export async function POST(req: NextRequest) {
     // Primary: category + management_type match (most important, never narrowed by name)
     const categoryMatched = allFunds.filter((f) => {
       const catOk = filter.categories.length === 0 || (f.category != null && filter.categories.includes(f.category));
-      return catOk && matchesManagementType(f) && matchesNameExcludes(f);
+      return catOk && matchesManagementType(f) && matchesNameExcludes(f) && matchesCost(f);
     });
 
     // Additive: name_all catches funds with wrong/missing category (e.g. Nordnet funds)
@@ -186,7 +190,8 @@ export async function POST(req: NextRequest) {
           !categoryMatchedIsins.has(f.isin) &&
           matchesNameAll(f) &&
           matchesManagementType(f) &&
-          matchesNameExcludes(f)
+          matchesNameExcludes(f) &&
+          matchesCost(f)
         )
       : [];
 

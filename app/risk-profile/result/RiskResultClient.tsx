@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase-browser";
 import { RISK_LABELS, RISK_EQUITY, type RiskLevel } from "@/lib/risk";
@@ -26,6 +26,8 @@ export default function RiskResultClient() {
   const [profile, setProfile] = useState<{ score: RiskLevel; label: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextParam = searchParams.get("next");
 
   useEffect(() => {
     const supabase = createClient();
@@ -119,19 +121,31 @@ export default function RiskResultClient() {
           className="flex flex-col sm:flex-row gap-3 animate-fade-in-up"
           style={{ animationDelay: "0.17s" }}
         >
-          <Link
-            href="/bygg-portfolj"
-            className="inline-flex items-center justify-center gap-2.5 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-8 py-4 rounded-2xl text-sm transition-all duration-200 shadow-lg shadow-blue-500/25 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0"
-          >
-            Bygg min portfölj nu
-            <ArrowForward />
-          </Link>
-          <Link
-            href="/analyze"
-            className="inline-flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-700 text-white font-semibold px-8 py-4 rounded-2xl text-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg active:translate-y-0"
-          >
-            Analysera befintlig portfölj →
-          </Link>
+          {nextParam ? (
+            <Link
+              href={nextParam}
+              className="inline-flex items-center justify-center gap-2.5 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-8 py-4 rounded-2xl text-sm transition-all duration-200 shadow-lg shadow-blue-500/25 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0"
+            >
+              Fortsätt
+              <ArrowForward />
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/bygg-portfolj"
+                className="inline-flex items-center justify-center gap-2.5 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-8 py-4 rounded-2xl text-sm transition-all duration-200 shadow-lg shadow-blue-500/25 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0"
+              >
+                Bygg min portfölj nu
+                <ArrowForward />
+              </Link>
+              <Link
+                href="/analyze"
+                className="inline-flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-700 text-white font-semibold px-8 py-4 rounded-2xl text-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg active:translate-y-0"
+              >
+                Analysera befintlig portfölj →
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Back link */}

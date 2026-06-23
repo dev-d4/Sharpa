@@ -28,7 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Header />
 
         <Prefetch hrefs={["/analyze", "/risk-profile"]} />
-        <main className="pb-16 sm:pb-0">{children}</main>
+        <main className="pb-nav-safe sm:pb-0">{children}</main>
 
         <Footer />
         <CookieBanner />

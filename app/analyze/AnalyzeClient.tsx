@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { Search, Sparkles, X } from "lucide-react"
 import type { SavedPortfolio } from "@/lib/portfolio"
 import DonutChart from "@/components/ui/DonutChart"
+import { computePortfolioScore } from "@/lib/portfolio-score"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -113,11 +114,13 @@ function getNextScreen(current: QuizScreen, a: QuizAnswers): QuizScreen | "done"
 function FundQuiz({
   custodian,
   onAdd,
+  onClose: onCloseProp,
   existingIsins,
   autoOpen = false,
 }: {
   custodian: string;
   onAdd: (isin: string, name: string) => void;
+  onClose?: () => void;
   existingIsins: string[];
   autoOpen?: boolean;
 }) {
@@ -182,6 +185,7 @@ function FundQuiz({
     setAnswers({ assetClass: null, market: null, sector: null, management: null, maxCost: null, sortBy: null });
     setAllResults([]);
     setError(null);
+    onCloseProp?.();
   }
 
   function resetQuiz() {
@@ -215,21 +219,11 @@ function FundQuiz({
   }
 
   if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="ai-shimmer-btn flex items-center gap-2 text-sm font-medium"
-      >
-        <Sparkles className="w-4 h-4 text-indigo-400" />
-        <span className="ai-shimmer-text">Hitta fonder med AI</span>
-      </button>
-    );
+    return null;
   }
 
-  // Step progress (only for non-results screens)
   const steps = getSteps(answers);
-  const stepIdx = steps.indexOf(screen); // -1 on results screen
+  const stepIdx = steps.indexOf(screen);
   const isResults = screen === "results";
 
   const STEP_QUESTIONS: Record<QuizScreen, string> = {
@@ -239,47 +233,46 @@ function FundQuiz({
     management: "Förvaltningsstil?",
     cost: "Maximal avgift?",
     sort: "Vad prioriterar du?",
-    results: "Resultat",
+    results: "",
   };
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-blue-100 shadow-sm">
-      {/* Coloured header bar */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-4 pt-4 pb-3">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-white text-sm font-semibold tracking-wide">
-            {isResults ? "Dina fonder" : "AI-fondssökning"}
+    <div className="rounded-xl border border-slate-200 overflow-hidden">
+
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 bg-slate-50/60 border-b border-slate-100">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+          <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+            Sök med AI
           </span>
-          <button type="button" onClick={handleClose} className="text-white/70 hover:text-white transition-colors">
+        </div>
+        <div className="flex items-center gap-3">
+          {!isResults && (
+            <span className="text-xs text-slate-400">{stepIdx + 1} / {steps.length}</span>
+          )}
+          <button type="button" onClick={handleClose} className="text-slate-400 hover:text-slate-600 transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
-
-        {/* Progress dots */}
-        {!isResults && (
-          <div className="flex items-center gap-1.5">
-            {steps.map((s, i) => (
-              <div
-                key={s}
-                className={`h-1.5 rounded-full transition-all duration-300 ${
-                  i < stepIdx ? "bg-white w-5" :
-                  i === stepIdx ? "bg-white w-8" :
-                  "bg-white/30 w-3"
-                }`}
-              />
-            ))}
-            <span className="ml-auto text-white/80 text-xs font-medium">
-              {stepIdx + 1} / {steps.length}
-            </span>
-          </div>
-        )}
       </div>
 
+      {/* Progress bar */}
+      {!isResults && (
+        <div className="h-0.5 bg-slate-100">
+          <div
+            className="h-full bg-blue-500 transition-all duration-300"
+            style={{ width: `${((stepIdx + 1) / steps.length) * 100}%` }}
+          />
+        </div>
+      )}
+
       {/* Body */}
-      <div className="bg-white p-4 space-y-3">
+      <div className="p-4 space-y-3">
+
         {/* Question heading */}
         {!isResults && (
-          <p className="text-base font-bold text-slate-800">{STEP_QUESTIONS[screen]}</p>
+          <p className="text-sm font-semibold text-slate-800">{STEP_QUESTIONS[screen]}</p>
         )}
 
         {/* Asset class */}
@@ -290,11 +283,11 @@ function FundQuiz({
                 key={o.value}
                 type="button"
                 onClick={() => pick("assetClass", o.value)}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-slate-100 bg-slate-50 hover:border-blue-400 hover:bg-blue-50 transition-all text-left group"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/40 transition-all text-left group"
               >
-                <span className="text-2xl">{o.emoji}</span>
+                <span className="text-xl">{o.emoji}</span>
                 <div>
-                  <p className="text-sm font-semibold text-slate-800 group-hover:text-blue-700">{o.label}</p>
+                  <p className="text-sm font-medium text-slate-800 group-hover:text-blue-700">{o.label}</p>
                   <p className="text-xs text-slate-400">{o.desc}</p>
                 </div>
               </button>
@@ -310,10 +303,10 @@ function FundQuiz({
                 key={o.value}
                 type="button"
                 onClick={() => pick("market", o.value)}
-                className="flex flex-col items-center gap-1 px-3 py-3 rounded-xl border-2 border-slate-100 bg-slate-50 hover:border-blue-400 hover:bg-blue-50 transition-all group"
+                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/40 transition-all text-left group"
               >
-                <span className="text-2xl">{o.emoji}</span>
-                <span className="text-sm font-semibold text-slate-700 group-hover:text-blue-700">{o.label}</span>
+                <span className="text-base leading-none">{o.emoji}</span>
+                <span className="text-sm font-medium text-slate-700 group-hover:text-blue-700">{o.label}</span>
               </button>
             ))}
           </div>
@@ -327,10 +320,10 @@ function FundQuiz({
                 key={o.value}
                 type="button"
                 onClick={() => pick("sector", o.value)}
-                className="flex flex-col items-center gap-1 px-3 py-3 rounded-xl border-2 border-slate-100 bg-slate-50 hover:border-blue-400 hover:bg-blue-50 transition-all group"
+                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/40 transition-all text-left group"
               >
-                <span className="text-2xl">{o.emoji}</span>
-                <span className="text-sm font-semibold text-slate-700 group-hover:text-blue-700">{o.label}</span>
+                <span className="text-base leading-none">{o.emoji}</span>
+                <span className="text-sm font-medium text-slate-700 group-hover:text-blue-700">{o.label}</span>
               </button>
             ))}
           </div>
@@ -344,11 +337,11 @@ function FundQuiz({
                 key={o.value}
                 type="button"
                 onClick={() => pick("management", o.value)}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-slate-100 bg-slate-50 hover:border-blue-400 hover:bg-blue-50 transition-all text-left group"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/40 transition-all text-left group"
               >
-                <span className="text-2xl">{o.emoji}</span>
+                <span className="text-xl">{o.emoji}</span>
                 <div>
-                  <p className="text-sm font-semibold text-slate-800 group-hover:text-blue-700">{o.label}</p>
+                  <p className="text-sm font-medium text-slate-800 group-hover:text-blue-700">{o.label}</p>
                   <p className="text-xs text-slate-400">{o.desc}</p>
                 </div>
               </button>
@@ -364,10 +357,9 @@ function FundQuiz({
                 key={String(o.value)}
                 type="button"
                 onClick={() => pick("maxCost", o.value)}
-                className="flex flex-col items-center gap-1 px-3 py-3 rounded-xl border-2 border-slate-100 bg-slate-50 hover:border-blue-400 hover:bg-blue-50 transition-all group"
+                className="flex flex-col gap-0.5 px-4 py-3 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/40 transition-all text-left group"
               >
-                <span className="text-2xl">{o.emoji}</span>
-                <span className="text-sm font-semibold text-slate-700 group-hover:text-blue-700">{o.label}</span>
+                <span className="text-sm font-semibold text-slate-800 group-hover:text-blue-700">{o.label}</span>
                 <span className="text-xs text-slate-400">{o.desc}</span>
               </button>
             ))}
@@ -382,11 +374,11 @@ function FundQuiz({
                 key={o.value}
                 type="button"
                 onClick={() => pick("sortBy", o.value)}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-slate-100 bg-slate-50 hover:border-blue-400 hover:bg-blue-50 transition-all text-left group"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/40 transition-all text-left group"
               >
-                <span className="text-2xl">{o.emoji}</span>
+                <span className="text-xl">{o.emoji}</span>
                 <div>
-                  <p className="text-sm font-semibold text-slate-800 group-hover:text-blue-700">{o.label}</p>
+                  <p className="text-sm font-medium text-slate-800 group-hover:text-blue-700">{o.label}</p>
                   <p className="text-xs text-slate-400">{o.desc}</p>
                 </div>
               </button>
@@ -397,11 +389,11 @@ function FundQuiz({
         {/* Results */}
         {isResults && (
           <>
-            {/* Filter summary pills */}
+            {/* Filter pills */}
             {getSummaryPills(answers).length > 0 && (
-              <div className="flex items-center gap-1.5 flex-wrap pb-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 {getSummaryPills(answers).map((pill) => (
-                  <span key={pill} className="text-xs bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-1 rounded-full font-medium">
+                  <span key={pill} className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">
                     {pill}
                   </span>
                 ))}
@@ -409,46 +401,54 @@ function FundQuiz({
             )}
 
             {loading && (
-              <div className="flex flex-col items-center gap-3 py-8 text-center">
-                <div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+              <div className="flex items-center justify-center gap-2.5 py-8">
+                <div className="w-4 h-4 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
                 <p className="text-sm text-slate-500">Söker bland alla fonder…</p>
               </div>
             )}
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-red-500">{error}</p>}
             {!loading && !error && allResults.length === 0 && (
               <div className="text-center py-6">
-                <p className="text-2xl mb-2">🤔</p>
-                <p className="text-sm text-slate-600 font-medium">Inga fonder hittades</p>
-                <p className="text-xs text-slate-400 mt-1">Försök med andra kriterier</p>
+                <p className="text-sm font-medium text-slate-700">Inga fonder hittades</p>
+                <p className="text-xs text-slate-400 mt-1">Prova att ta bort avgiftsgränsen eller byta marknad</p>
               </div>
             )}
             {!loading && allResults.length > 0 && (
-              <p className="text-xs text-slate-400 font-medium">{allResults.length} fonder hittades</p>
+              <p className="text-xs text-slate-400">{allResults.length} fonder hittades</p>
             )}
+
             {results.length > 0 && (
-              <div className="grid gap-2">
+              <div className="divide-y divide-slate-100">
                 {results.map((f) => {
                   const cost = f.ongoing_cost_actual ?? f.ongoing_cost_estimated;
                   const alreadyAdded = existingIsins.includes(f.isin);
                   return (
-                    <div
-                      key={f.isin}
-                      className="flex items-center justify-between gap-3 border border-slate-100 rounded-xl px-4 py-3 hover:border-blue-200 hover:bg-blue-50/30 transition-colors"
-                    >
+                    <div key={f.isin} className="flex items-center justify-between gap-3 py-3">
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-900 truncate">{f.name}</p>
-                        <div className="flex items-center gap-3 mt-0.5 text-xs text-slate-400">
-                          {f.category && <span>{f.category}</span>}
-                          {f.sharpe_3yr !== null && <span>Sharpe {f.sharpe_3yr.toFixed(2)}</span>}
-                          {f.return_1yr !== null && <span>{f.return_1yr.toFixed(1)}% 1 år</span>}
-                          {cost !== null && <span>{cost.toFixed(2)}% avgift</span>}
+                        <p className="text-sm font-medium text-slate-900 truncate">{f.name}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5 text-xs text-slate-400">
+                          {f.category && <span className="truncate max-w-[120px]">{f.category}</span>}
+                          {f.return_1yr !== null && (
+                            <>
+                              <span>·</span>
+                              <span className={f.return_1yr >= 0 ? "text-emerald-600" : "text-red-500"}>
+                                {f.return_1yr > 0 ? "+" : ""}{f.return_1yr.toFixed(1)}%
+                              </span>
+                            </>
+                          )}
+                          {cost !== null && (
+                            <>
+                              <span>·</span>
+                              <span>{cost.toFixed(2)}% avgift</span>
+                            </>
+                          )}
                         </div>
                       </div>
                       <button
                         type="button"
                         disabled={alreadyAdded}
                         onClick={() => onAdd(f.isin, f.name)}
-                        className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-blue-600 text-white hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-500"
+                        className="shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed border-blue-200 text-blue-600 hover:bg-blue-50 disabled:border-slate-200 disabled:text-slate-400"
                       >
                         {alreadyAdded ? "Tillagd" : "+ Lägg till"}
                       </button>
@@ -457,25 +457,25 @@ function FundQuiz({
                 })}
               </div>
             )}
+
             {hasMore && (
               <button
                 type="button"
                 onClick={() => setVisibleCount((c) => c + PAGE)}
-                className="w-full text-sm text-blue-600 hover:text-blue-700 font-medium py-2 border border-blue-100 rounded-xl hover:bg-blue-50 transition-colors"
+                className="w-full text-xs font-medium text-slate-500 hover:text-blue-600 py-2 transition-colors"
               >
                 Visa fler ({allResults.length - visibleCount} kvar)
               </button>
             )}
 
-            {/* Ny sökning — appears as soon as results are loaded */}
-            {!loading && allResults.length > 0 && (
-              <div className="pt-1 border-t border-slate-100">
+            {!loading && (
+              <div className="border-t border-slate-100 pt-3">
                 <button
                   type="button"
                   onClick={resetQuiz}
-                  className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold bg-indigo-600 text-white px-3 py-2.5 rounded-xl hover:bg-indigo-700 transition-colors"
+                  className="w-full flex items-center justify-center gap-1.5 text-xs font-medium text-slate-500 hover:text-blue-600 py-1.5 rounded-lg hover:bg-slate-50 transition-colors"
                 >
-                  <Sparkles className="w-3.5 h-3.5" />
+                  <Sparkles className="w-3 h-3" />
                   Ny sökning
                 </button>
               </div>
@@ -671,6 +671,8 @@ export default function AnalyzeClient() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [savedPortfolios, setSavedPortfolios] = useState<SavedPortfolio[]>([]);
   const [savedPortfoliosLoading, setSavedPortfoliosLoading] = useState(false);
+  const [portfolioDropdownOpen, setPortfolioDropdownOpen] = useState(false);
+  const portfolioDropdownRef = useRef<HTMLDivElement>(null);
   const [portfolioLoading, setPortfolioLoading] = useState(() =>
     new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").has("portfolio")
   );
@@ -755,6 +757,16 @@ export default function AnalyzeClient() {
       setUser(session?.user ?? null);
     });
     return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (portfolioDropdownRef.current && !portfolioDropdownRef.current.contains(e.target as Node)) {
+        setPortfolioDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
   function loadPortfolio(p: SavedPortfolio) {
@@ -1121,56 +1133,65 @@ export default function AnalyzeClient() {
         </div>
       )}
 
-      {/* Saved portfolios switcher — only shown when logged in with saved portfolios */}
+      {/* Saved portfolios switcher — dropdown, shown when logged in with saved portfolios */}
       {savedPortfoliosLoading && (
-        <div className="no-print flex items-center gap-2 flex-wrap animate-pulse">
-          <div className="h-4 w-24 rounded bg-slate-100" />
-          <div className="flex gap-2">
-            <div className="h-8 w-28 rounded-lg bg-slate-100" />
-            <div className="h-8 w-24 rounded-lg bg-slate-100" />
-            <div className="h-8 w-20 rounded-lg bg-slate-100" />
-          </div>
+        <div className="no-print flex items-center gap-2 animate-pulse">
+          <div className="h-4 w-20 rounded bg-slate-100" />
+          <div className="h-8 w-36 rounded-lg bg-slate-100" />
         </div>
       )}
       {!savedPortfoliosLoading && savedPortfolios.length > 0 && (
-        <div className="no-print flex items-center gap-2 sm:gap-3 flex-wrap">
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide w-full sm:w-auto">Mina portföljer</span>
-          <div className="flex items-center gap-2 flex-wrap">
-            {savedPortfolios.map((p) => {
-              const differentCustodian = custodian && p.custodian !== custodian;
-              const custodianLabel = p.custodian === "nordnet" ? "Nordnet" : p.custodian === "övrigt" ? "Övrigt" : "Avanza";
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => loadPortfolio(p)}
-                  className={cn(
-                    "text-sm px-3 py-1.5 rounded-lg border transition-all flex items-baseline gap-1.5",
-                    portfolioId === p.id
-                      ? "bg-blue-50 border-blue-200 text-blue-700 font-medium"
-                      : "bg-white border-slate-200 text-slate-600 hover:border-blue-200 hover:text-blue-600"
-                  )}
-                >
-                  {p.name}
-                  <span className="text-xs opacity-70">
-                    {custodianLabel}
-                  </span>
-                </button>
-              );
-            })}
+        <div className="no-print flex items-center gap-2 sm:gap-3">
+          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide shrink-0">Portfölj</span>
+          <div className="relative" ref={portfolioDropdownRef}>
             <button
-              onClick={() => { setPortfolioId(null); setEntries([{ isin: "", name: "", weight: "" }]); setAnalysis(null); setError(null); setInputMethod(null); }}
-              className={cn(
-                "text-sm px-3 py-1.5 rounded-lg border transition-all",
-                !portfolioId
-                  ? "bg-blue-50 border-blue-200 text-blue-700 font-medium"
-                  : "bg-white border-slate-200 text-slate-600 hover:border-blue-200 hover:text-blue-600"
-              )}
+              type="button"
+              onClick={() => setPortfolioDropdownOpen(o => !o)}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg border border-slate-200 bg-white hover:border-blue-300 transition-all"
             >
-              + Ny portfölj
+              <span className={portfolioId ? "font-medium text-slate-900" : "text-slate-500"}>
+                {portfolioId ? (savedPortfolios.find(p => p.id === portfolioId)?.name ?? "Portfölj") : "Ny portfölj"}
+              </span>
+              <svg className={`w-3.5 h-3.5 text-slate-400 transition-transform shrink-0 ${portfolioDropdownOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
             </button>
+            {portfolioDropdownOpen && (
+              <div className="absolute z-20 top-full left-0 mt-1 min-w-[180px] bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+                {savedPortfolios.map((p) => {
+                  const custodianLabel = p.custodian === "nordnet" ? "Nordnet" : p.custodian === "övrigt" ? "Övrigt" : "Avanza";
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => { loadPortfolio(p); setPortfolioDropdownOpen(false); }}
+                      className={cn(
+                        "w-full text-left px-3 py-2.5 text-sm flex items-baseline gap-1.5 transition-colors hover:bg-blue-50",
+                        portfolioId === p.id ? "bg-blue-50 text-blue-700 font-medium" : "text-slate-700"
+                      )}
+                    >
+                      {p.name}
+                      <span className="text-xs opacity-60 font-normal">{custodianLabel}</span>
+                    </button>
+                  );
+                })}
+                <div className="border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => { setPortfolioId(null); setEntries([{ isin: "", name: "", weight: "" }]); setAnalysis(null); setError(null); setInputMethod(null); setPortfolioDropdownOpen(false); }}
+                    className={cn(
+                      "w-full text-left px-3 py-2.5 text-sm transition-colors hover:bg-blue-50",
+                      !portfolioId ? "text-blue-700 font-medium bg-blue-50" : "text-slate-500"
+                    )}
+                  >
+                    + Ny portfölj
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-          {portfolioId && (
-            <span className="text-xs text-slate-400 ml-auto">
+          {portfolioId && saveStatus !== "idle" && (
+            <span className="text-xs text-slate-400">
               {saveStatus === "saving" && "Sparar…"}
               {saveStatus === "saved" && "Sparad ✓"}
               {saveStatus === "error" && "Kunde inte spara"}
@@ -1261,28 +1282,25 @@ export default function AnalyzeClient() {
 
             {/* Method selector */}
             <div className="grid grid-cols-3 gap-2">
-              {/* AI */}
+              {/* Manual */}
               <button
                 type="button"
-                onClick={() => {
-                  if (!user) { router.push("/login"); return; }
-                  setInputMethod("ai");
-                }}
+                onClick={() => setInputMethod("manual")}
                 className={cn(
                   "flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition-all",
-                  inputMethod === "ai"
-                    ? "border-indigo-200 bg-indigo-50"
-                    : "border-slate-200 bg-white hover:border-indigo-200 hover:bg-slate-50"
+                  inputMethod === "manual"
+                    ? "border-blue-200 bg-blue-50"
+                    : "border-slate-200 bg-white hover:border-blue-200 hover:bg-slate-50"
                 )}
               >
                 <div className="flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                  <span className="text-xs font-semibold ai-shimmer-text">
-                    Sök med AI
+                  <Search className={cn("w-3.5 h-3.5", inputMethod === "manual" ? "text-blue-500" : "text-slate-400")} />
+                  <span className={cn("text-xs font-semibold", inputMethod === "manual" ? "text-blue-700" : "text-slate-700")}>
+                    Sök manuellt
                   </span>
                 </div>
                 <span className="text-[11px] text-slate-400 leading-tight hidden sm:block">
-                  {user ? "Beskriv vad du letar efter" : "Kräver inloggning"}
+                  Sök på fondnamn eller ISIN
                 </span>
               </button>
 
@@ -1315,25 +1333,28 @@ export default function AnalyzeClient() {
                 </span>
               </button>
 
-              {/* Manual */}
+              {/* AI */}
               <button
                 type="button"
-                onClick={() => setInputMethod("manual")}
+                onClick={() => {
+                  if (!user) { router.push("/login"); return; }
+                  setInputMethod("ai");
+                }}
                 className={cn(
                   "flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition-all",
-                  inputMethod === "manual"
-                    ? "border-blue-200 bg-blue-50"
-                    : "border-slate-200 bg-white hover:border-blue-200 hover:bg-slate-50"
+                  inputMethod === "ai"
+                    ? "border-indigo-200 bg-indigo-50"
+                    : "border-slate-200 bg-white hover:border-indigo-200 hover:bg-slate-50"
                 )}
               >
                 <div className="flex items-center gap-1.5">
-                  <Search className={cn("w-3.5 h-3.5", inputMethod === "manual" ? "text-blue-500" : "text-slate-400")} />
-                  <span className={cn("text-xs font-semibold", inputMethod === "manual" ? "text-blue-700" : "text-slate-700")}>
-                    Sök manuellt
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                  <span className="text-xs font-semibold ai-shimmer-text">
+                    Sök med AI
                   </span>
                 </div>
                 <span className="text-[11px] text-slate-400 leading-tight hidden sm:block">
-                  Sök på fondnamn eller ISIN
+                  {user ? "Beskriv vad du letar efter" : "Kräver inloggning"}
                 </span>
               </button>
             </div>
@@ -1343,6 +1364,7 @@ export default function AnalyzeClient() {
               <FundQuiz
                 custodian={custodian}
                 autoOpen
+                onClose={() => setInputMethod(null)}
                 existingIsins={entries.map((e) => e.isin).filter(Boolean)}
                 onAdd={(isin: string, name: string) => {
                   setInputMethod("ai");
@@ -1376,26 +1398,21 @@ export default function AnalyzeClient() {
                   <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide sm:hidden">Fond {i + 1}</p>
                   <FundSearchInput isin={entry.isin} name={entry.name} custodian={custodian} excludeIsins={entries.filter((_, idx) => idx !== i).map((e) => e.isin).filter(Boolean)} onSelect={(isin, name) => selectFund(i, isin, name)} onClear={() => clearFund(i)} />
                   <div className="flex items-center gap-2 sm:contents">
-                    <div className="flex items-center gap-2 flex-1 sm:contents">
-                      <span className="text-xs text-slate-400 sm:hidden shrink-0">
-                        {inputMode === "weight" ? "Vikt:" : "Belopp:"}
-                      </span>
-                      {inputMode === "weight" ? (
-                        <input
-                          type="number" placeholder="%" min={0} max={100}
-                          value={entry.weight} onChange={(e) => updateWeight(i, e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRow(); } }}
-                          className="w-20 sm:w-auto flex-none border border-slate-300 rounded-lg px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      ) : (
-                        <input
-                          type="number" placeholder="kr" min={0}
-                          value={entry.amount ?? ""} onChange={(e) => updateAmount(i, e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRow(); } }}
-                          className="flex-1 sm:flex-none border border-slate-300 rounded-lg px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      )}
-                    </div>
+                    {inputMode === "weight" ? (
+                      <input
+                        type="number" placeholder="%" min={0} max={100}
+                        value={entry.weight} onChange={(e) => updateWeight(i, e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRow(); } }}
+                        className="flex-1 sm:w-auto sm:flex-none border border-slate-300 rounded-lg px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    ) : (
+                      <input
+                        type="number" placeholder="kr" min={0}
+                        value={entry.amount ?? ""} onChange={(e) => updateAmount(i, e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRow(); } }}
+                        className="flex-1 sm:flex-none border border-slate-300 rounded-lg px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    )}
                     <button
                       onClick={() => removeRow(i)} disabled={entries.length === 1}
                       className="h-11 w-11 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-200 disabled:opacity-30 transition-colors shrink-0"
@@ -1632,31 +1649,9 @@ function ann3yr(total3yr: number): number {
   return ((1 + total3yr / 100) ** (1 / 3) - 1) * 100;
 }
 
-function calcScore(analysis: PortfolioAnalysis): number {
-  let total = 0, count = 0;
-  if (analysis.avgCost !== null) {
-    total += analysis.avgCost < 0.2 ? 10 : analysis.avgCost < 0.4 ? 8 : analysis.avgCost < 0.6 ? 6 : analysis.avgCost < 0.9 ? 4 : 2;
-    count++;
-  }
-  if (analysis.weightedSharpe !== null) {
-    total += analysis.weightedSharpe > 1.2 ? 10 : analysis.weightedSharpe > 0.8 ? 8 : analysis.weightedSharpe > 0.5 ? 6 : analysis.weightedSharpe > 0.2 ? 4 : 2;
-    count++;
-  }
-  if (analysis.weightedReturn3yr !== null) {
-    total += analysis.weightedReturn3yr > 40 ? 10 : analysis.weightedReturn3yr > 25 ? 9 : analysis.weightedReturn3yr > 15 ? 8 : analysis.weightedReturn3yr > 8 ? 7 : analysis.weightedReturn3yr > 3 ? 5 : 2;
-    count++;
-  }
-  if (analysis.categoryBreakdown?.length) {
-    const n = analysis.categoryBreakdown.filter(c => c.weight > 5).length;
-    total += n >= 4 ? 10 : n === 3 ? 8 : n === 2 ? 5 : 2;
-    count++;
-  }
-  return count > 0 ? Math.round((total / count) * 10) / 10 : 5.0;
-}
-
 function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { analysis: PortfolioAnalysis; portfolioValue: number | null; user: User | null | undefined; onLoginClick: () => void }) {
   const showBlur = user === null;
-  const score = calcScore(analysis);
+  const score = computePortfolioScore(analysis).score;
   const [showAllSwaps, setShowAllSwaps] = useState(false);
 
   const pv = portfolioValue ?? 100_000;
@@ -1720,7 +1715,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
           {potentialGainKr !== null && (
             <div className="text-right">
               <p className="text-xs font-semibold tracking-[0.12em] uppercase text-white/40 mb-2">Förbättringspotential</p>
-              <p className="text-3xl font-bold text-green-400">+{Math.round(potentialGainKr).toLocaleString("sv-SE")} kr</p>
+              <p className="text-2xl sm:text-3xl font-bold text-green-400">+{Math.round(potentialGainKr).toLocaleString("sv-SE")} kr</p>
               <p className="text-xs text-white/35 mt-1">per år{assumed ? " (vid 100 000 kr)" : ""}</p>
               <p className="text-[10px] text-white/25 mt-0.5">inkl. historisk avkastningsskillnad</p>
             </div>
@@ -1777,7 +1772,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
       <section className="bg-white rounded-2xl p-6 sm:p-8" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.04)", border: "1px solid #F1F5F9" }}>
         <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-6">Nyckeltal</p>
         <div className="grid lg:grid-cols-[1fr_340px] gap-8 items-start">
-          <div className="grid grid-cols-2 gap-x-8 gap-y-6">
+          <div className="grid grid-cols-2 gap-x-4 sm:gap-x-8 gap-y-6">
             <Metric label="Snittavgift" value={analysis.avgCost !== null ? `${analysis.avgCost.toFixed(2)}%` : "–"} sub="per år" info="Den genomsnittliga årliga avgiften viktat efter din fördelning." />
             <Metric label="Avkastning 1 år" value={analysis.weightedReturn1yr !== null ? `${analysis.weightedReturn1yr.toFixed(1)}%` : "–"} sub="senaste 12 mån" info="Portföljens viktade avkastning de senaste 12 månaderna." />
             <Metric label="Avkastning 3 år" value={analysis.weightedReturn3yr !== null ? `${analysis.weightedReturn3yr.toFixed(1)}%` : "–"} sub="totalt" info="Portföljens viktade totalavkastning de senaste 3 åren." />
@@ -1974,38 +1969,29 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                               </span>
                             </div>
                           )}
-                          <div className="grid grid-cols-[1fr_40px_1fr_20px] items-start gap-2">
-                            <div className="min-w-0">
+                          <div className="flex items-start gap-2">
+                            <div className="flex-1 min-w-0">
                               <p className="text-[10px] font-semibold uppercase tracking-wider text-[#2563EB] mb-1">Nuvarande</p>
                               {group.map((item, si) => (
-                                <p key={si} className="text-sm font-semibold text-[#111827] leading-snug truncate">{item.currentFund.name}</p>
+                                <p key={si} className="text-sm font-semibold text-[#111827] leading-snug break-words">{item.currentFund.name}</p>
                               ))}
                             </div>
-                            <div className="flex justify-center pt-[16px]">
-                              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
-                                <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <div className="flex flex-col items-center justify-start pt-4 shrink-0">
+                              <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center">
+                                <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                                 </svg>
                               </div>
                             </div>
-                            <div className="min-w-0 text-right">
+                            <div className="flex-1 min-w-0 text-right">
                               <p className="text-[10px] font-semibold uppercase tracking-wider text-[#2563EB] mb-1">
                                 {isConsolidate ? "Öka i" : "Föreslagen"}
                               </p>
-                              <p className="text-sm font-semibold text-[#111827] leading-snug truncate">{suggested.name}</p>
+                              <p className="text-sm font-semibold text-[#111827] leading-snug break-words">{suggested.name}</p>
                             </div>
-                            <div className="flex justify-end">
-                              {showInfo && (
-                                <div className="relative group/reason">
-                                  <span className="flex items-center justify-center w-3.5 h-3.5 rounded-full bg-slate-200 text-[9px] text-slate-500 cursor-default select-none">i</span>
-                                  <div className="pointer-events-none absolute bottom-full right-0 mb-2 w-56
-                                    bg-slate-700 text-white text-xs rounded-xl px-3 py-2.5
-                                    opacity-0 group-hover/reason:opacity-100 transition-opacity z-20 leading-relaxed shadow-lg whitespace-normal text-left">
-                                    {tooltipContent}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
+                            {showInfo && (
+                              <InfoButton>{tooltipContent}</InfoButton>
+                            )}
                           </div>
                         </div>
                       );
@@ -2080,20 +2066,52 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
   );
 }
 
+function InfoButton({ children }: { children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative group/reason shrink-0 pt-1">
+      <button
+        type="button"
+        onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
+        className="flex items-center justify-center w-3.5 h-3.5 rounded-full bg-slate-200 text-[9px] text-slate-500 select-none"
+      >i</button>
+      <div className={cn(
+        "absolute bottom-full right-0 mb-2 w-56",
+        "bg-slate-700 text-white text-xs rounded-xl px-3 py-2.5",
+        "transition-opacity z-20 leading-relaxed shadow-lg whitespace-normal text-left",
+        open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none sm:group-hover/reason:opacity-100"
+      )}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function Metric({ label, value, sub, info }: { label: string; value: string; sub: string; info: string }) {
+  const [open, setOpen] = useState(false);
   return (
     <div className="relative group">
+      {/* Desktop: hover tooltip */}
       <span className="pointer-events-none absolute bottom-full left-0 mb-2 w-48
         bg-slate-600 text-white text-xs rounded-xl px-3 py-2
-        opacity-0 group-hover:opacity-100 transition-opacity z-10 leading-snug shadow-lg">
+        opacity-0 group-hover:opacity-100 transition-opacity z-10 leading-snug shadow-lg hidden sm:block">
         {info}
       </span>
       <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-1.5 flex items-center gap-1 cursor-default">
         {label}
-        <span className="flex items-center justify-center w-3.5 h-3.5 rounded-full bg-slate-200 text-[9px] text-slate-500">i</span>
+        {/* Desktop info icon */}
+        <span className="hidden sm:flex items-center justify-center w-3.5 h-3.5 rounded-full bg-slate-200 text-[9px] text-slate-500">i</span>
+        {/* Mobile tap icon */}
+        <button
+          type="button"
+          onClick={() => setOpen(o => !o)}
+          className="sm:hidden flex items-center justify-center w-3.5 h-3.5 rounded-full bg-slate-200 text-[9px] text-slate-500"
+        >i</button>
       </p>
-      <p className="text-3xl font-bold text-[#111827] leading-none tabular-nums">{value}</p>
+      <p className="text-2xl sm:text-3xl font-bold text-[#111827] leading-none tabular-nums">{value}</p>
       <p className="text-xs text-slate-400 mt-1.5">{sub}</p>
+      {/* Mobile: expandable info panel on tap */}
+      {open && <p className="sm:hidden text-[10px] text-slate-500 bg-slate-50 rounded-lg px-2 py-1.5 mt-2 leading-snug">{info}</p>}
     </div>
   );
 }
@@ -2134,12 +2152,12 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
         <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-3">Fondinnehav</p>
         <div className="space-y-0">
           {suggested.funds.map((f, i) => (
-            <div key={i} className="flex items-center justify-between py-2.5 border-b border-slate-50 last:border-0">
-              <div>
-                <span className="text-sm font-medium text-[#111827]">{f.name}</span>
-                <span className="text-xs text-slate-400 ml-2">{f.isin}</span>
+            <div key={i} className="flex items-center justify-between py-2.5 border-b border-slate-50 last:border-0 gap-2">
+              <div className="min-w-0">
+                <span className="text-sm font-medium text-[#111827] break-words">{f.name}</span>
+                <span className="hidden sm:inline text-xs text-slate-400 ml-2">{f.isin}</span>
               </div>
-              <span className="text-sm font-semibold text-slate-500 tabular-nums">{f.weight.toFixed(1)}%</span>
+              <span className="text-sm font-semibold text-slate-500 tabular-nums shrink-0">{f.weight.toFixed(1)}%</span>
             </div>
           ))}
         </div>
@@ -2269,22 +2287,22 @@ function OptimalPortfolioProjection({ current, portfolioValue }: { current: Curr
             {assumed ? "vid 100 000 kr investerat" : `vid ${pv.toLocaleString("sv-SE")} kr investerat`}
           </p>
         </div>
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <p className="text-xs text-slate-400 mb-1">Avkastning (3 år, ann.)</p>
-            <p className={`text-base font-bold tabular-nums ${returnKr !== null ? returnKr >= 0 ? "text-[#16A34A]" : "text-red-500" : "text-slate-400"}`}>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="flex sm:block items-center justify-between sm:justify-start">
+            <p className="text-xs text-slate-400 sm:mb-1">Avkastning (3 år, ann.)</p>
+            <p className={`text-sm sm:text-base font-bold tabular-nums ${returnKr !== null ? returnKr >= 0 ? "text-[#16A34A]" : "text-red-500" : "text-slate-400"}`}>
               {returnKr !== null ? `${returnKr >= 0 ? "+" : ""}${Math.round(returnKr).toLocaleString("sv-SE")} kr` : "–"}
             </p>
           </div>
-          <div>
-            <p className="text-xs text-slate-400 mb-1">Avgifter</p>
-            <p className="text-base font-bold tabular-nums text-red-500">
+          <div className="flex sm:block items-center justify-between sm:justify-start">
+            <p className="text-xs text-slate-400 sm:mb-1">Avgifter</p>
+            <p className="text-sm sm:text-base font-bold tabular-nums text-red-500">
               {feeKr !== null ? `−${Math.round(feeKr).toLocaleString("sv-SE")} kr` : "–"}
             </p>
           </div>
-          <div>
-            <p className="text-xs text-slate-400 mb-1">Netto</p>
-            <p className={`text-xl font-bold tabular-nums ${netKr !== null ? netKr >= 0 ? "text-[#16A34A]" : "text-red-500" : "text-slate-400"}`}>
+          <div className="flex sm:block items-center justify-between sm:justify-start border-t border-slate-200/60 sm:border-0 pt-3 sm:pt-0">
+            <p className="text-xs text-slate-400 sm:mb-1 font-semibold">Netto</p>
+            <p className={`text-base sm:text-xl font-bold tabular-nums ${netKr !== null ? netKr >= 0 ? "text-[#16A34A]" : "text-red-500" : "text-slate-400"}`}>
               {netKr !== null ? `${netKr >= 0 ? "+" : ""}${Math.round(netKr).toLocaleString("sv-SE")} kr` : "–"}
             </p>
           </div>

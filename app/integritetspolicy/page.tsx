@@ -43,7 +43,6 @@ export default function IntegritetspolicyPage() {
           <ul className="list-disc pl-5 space-y-1">
             <li><strong>Tillhandahålla tjänsten</strong> — för att du ska kunna logga in, spara portföljer och se din riskprofil.</li>
             <li><strong>Autentisering</strong> — sessionskakor krävs tekniskt för att hålla dig inloggad.</li>
-            <li><strong>Förbättra tjänsten</strong> — aggregerad, anonym användningsdata kan användas för att förbättra funktioner.</li>
           </ul>
           <p>Rättslig grund: <em>berättigat intresse</em> och <em>fullgörande av avtal</em> (tjänstens tillhandahållande).</p>
         </section>
@@ -92,7 +91,7 @@ export default function IntegritetspolicyPage() {
           <h2 className="text-lg font-bold text-slate-900">8. Kontakt</h2>
           <p>
             Har du frågor om din integritet eller vill utöva dina rättigheter, hör av dig via
-            e-post till kontakt@fondanalys.se.
+            e-post (kontaktuppgifter publiceras inom kort).
           </p>
         </section>
 

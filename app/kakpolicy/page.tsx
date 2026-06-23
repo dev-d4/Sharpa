@@ -64,8 +64,7 @@ export default function KakpolicyPage() {
           <h2 className="text-lg font-bold text-slate-900">Samtycke</h2>
           <p>
             Eftersom vi enbart använder tekniskt nödvändiga cookies krävs inget aktivt samtycke
-            enligt GDPR och lagen om elektronisk kommunikation (LEK). Vi informerar ändå om detta
-            i vår cookie-banner första gången du besöker sidan.
+            enligt GDPR och lagen om elektronisk kommunikation (LEK).
           </p>
         </section>
 

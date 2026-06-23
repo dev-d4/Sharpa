@@ -135,3 +135,21 @@ INNER JOIN nordnet_offerings no ON f.isin = no.isin;
 
 -- Step 4: After running the SQL above, run the classification script:
 --   NEXT_PUBLIC_SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... npx tsx scripts/classify-funds.ts
+
+-- ── Portfolio health score (migration 2024-06) ────────────────────────────────
+ALTER TABLE portfolios ADD COLUMN IF NOT EXISTS score             INTEGER;
+ALTER TABLE portfolios ADD COLUMN IF NOT EXISTS score_breakdown   JSONB;
+ALTER TABLE portfolios ADD COLUMN IF NOT EXISTS score_notified_at TIMESTAMPTZ;
+ALTER TABLE portfolios ADD COLUMN IF NOT EXISTS reminder_sent_at  TIMESTAMPTZ;
+
+-- ── Notification preferences ──────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS notification_preferences (
+  user_id            UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email_score_alerts BOOLEAN NOT NULL DEFAULT TRUE,
+  email_reminders    BOOLEAN NOT NULL DEFAULT TRUE,
+  updated_at         TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE notification_preferences ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "select own" ON notification_preferences FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "insert own" ON notification_preferences FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "update own" ON notification_preferences FOR UPDATE USING (auth.uid() = user_id);

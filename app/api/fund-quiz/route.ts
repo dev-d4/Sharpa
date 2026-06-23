@@ -26,7 +26,7 @@ type FundRow = {
   name: string | null;
   category: string | null;
   category_group: string | null;
-  selection_id: string | null;   // pre-classified in DB
+  selection_id: string | null;
   sharpe_3yr: number | null;
   return_1yr: number | null;
   return_3yr: number | null;
@@ -34,6 +34,27 @@ type FundRow = {
   ongoing_cost_estimated: number | null;
   investment_type: string | null;
 };
+
+// Category prefix → selection_id mapping (mirrors classify-funds.ts logic)
+// Used as fallback when selection_id is null in DB
+function inferSelectionId(category: string | null): string | null {
+  if (!category) return null;
+  const cat = category.trim();
+  if (cat.startsWith("Global") || cat === "Global & Sverige") return "global";
+  if (cat.startsWith("Sverige")) return "sweden";
+  if (cat.startsWith("USA")) return "usa";
+  if (cat.startsWith("Europa") || cat.startsWith("Euroland")) return "europe";
+  if (cat.startsWith("Norden") || cat.startsWith("Nordic")) return "nordic";
+  if (cat.startsWith("Tillväxtmarknader") || cat.startsWith("Emerging")) return "emerging";
+  if (cat.startsWith("Asien") || cat.startsWith("Japan") || cat.startsWith("Kina") || cat.startsWith("Indien")) return "asia";
+  if (cat.startsWith("Branschfond, Ny teknik") || cat.includes("Teknik")) return "tech";
+  if (cat.startsWith("Branschfond, Hälsa") || cat.includes("Hälso")) return "health";
+  if (cat.startsWith("Branschfond, Fastigheter") || cat.includes("Fastighet")) return "real-estate";
+  if (cat.startsWith("Branschfond, Energi") || cat.startsWith("Branschfond, Råvaror")) return "energy";
+  if (cat.startsWith("Branschfond, Finans")) return "finance";
+  if (cat.startsWith("Branschfond")) return "other-sector";
+  return null;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -64,12 +85,7 @@ export async function POST(req: NextRequest) {
       dbQuery = dbQuery.eq("category_group", "Alternative");
     }
 
-    // Max cost filter (DB-level)
-    if (maxCost !== null && maxCost !== undefined) {
-      dbQuery = dbQuery.lte("ongoing_cost_actual", maxCost);
-    }
-
-    // Fetch all matching rows with pagination
+    // Fetch all matching rows with pagination (cost filter applied in-memory)
     const FETCH_PAGE = 1000;
     const allFunds: FundRow[] = [];
     const orderedQuery = dbQuery.order("isin");
@@ -81,23 +97,33 @@ export async function POST(req: NextRequest) {
       if (data.length < FETCH_PAGE) break;
     }
 
-    // Market / sector filter — applied at DB level via selection_id.
-    // selection_id is pre-classified by scripts/classify-funds.ts and is
-    // authoritative: no string matching, no edge-case bugs.
-    let results = allFunds;
+    // In-memory cost filter — uses estimated cost as fallback when actual is null
+    let results = (maxCost !== null && maxCost !== undefined)
+      ? allFunds.filter((f) => {
+          const cost = f.ongoing_cost_actual ?? f.ongoing_cost_estimated;
+          return cost === null || cost <= maxCost;
+        })
+      : allFunds;
 
+    // Market / sector filter — uses selection_id with category-based fallback
     if (assetClass === "equity" && market) {
       if (market === "sector") {
         if (sector && sector !== "other-sector") {
-          // Specific sector requested (tech, health, real-estate, energy, finance, consumer, industry)
-          results = results.filter((f) => f.selection_id === sector);
+          results = results.filter((f) => {
+            const sid = f.selection_id ?? inferSelectionId(f.category);
+            return sid === sector;
+          });
         } else {
-          // "other-sector" or no sector specified — return all sector funds
-          results = results.filter((f) => (ALL_SECTOR_IDS as readonly string[]).includes(f.selection_id ?? ""));
+          results = results.filter((f) => {
+            const sid = f.selection_id ?? inferSelectionId(f.category);
+            return (ALL_SECTOR_IDS as readonly string[]).includes(sid ?? "");
+          });
         }
       } else {
-        // Geographic market (global, sweden, usa, europe, nordic, emerging, asia, etc.)
-        results = results.filter((f) => f.selection_id === market);
+        results = results.filter((f) => {
+          const sid = f.selection_id ?? inferSelectionId(f.category);
+          return sid === market;
+        });
       }
     }
 
@@ -128,7 +154,6 @@ export async function POST(req: NextRequest) {
         return ca - cb;
       });
     } else {
-      // Default composite score
       results.sort((a, b) => {
         const sa = (a.sharpe_3yr ?? 0) * 3 + (a.return_3yr ?? 0) * 0.05 - (a.ongoing_cost_actual ?? a.ongoing_cost_estimated ?? 0) * 1.5;
         const sb = (b.sharpe_3yr ?? 0) * 3 + (b.return_3yr ?? 0) * 0.05 - (b.ongoing_cost_actual ?? b.ongoing_cost_estimated ?? 0) * 1.5;

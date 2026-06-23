@@ -3,7 +3,7 @@ import Image from "next/image";
 
 export default function Footer() {
   return (
-    <footer className="bg-slate-50 border-t border-slate-200 mt-24">
+    <footer className="bg-slate-50 border-t border-slate-200">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-4">
         <div className="flex items-center gap-1">
           <Image src="/logo.svg" alt="Fondanalys" width={24} height={24} />
@@ -18,7 +18,6 @@ export default function Footer() {
           <Link href="/villkor" className="text-xs text-slate-300 hover:text-slate-500 transition-colors">Användarvillkor</Link>
           <Link href="/kakpolicy" className="text-xs text-slate-300 hover:text-slate-500 transition-colors">Kakpolicy</Link>
           <Link href="/faq" className="text-xs text-slate-300 hover:text-slate-500 transition-colors">FAQ</Link>
-          <Link href="/integration" className="text-xs text-slate-400 hover:text-slate-600 font-medium transition-colors">För företag →</Link>
         </div>
       </div>
     </footer>

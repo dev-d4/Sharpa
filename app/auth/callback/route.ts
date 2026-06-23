@@ -30,7 +30,9 @@ export async function GET(request: Request) {
     if (!error) {
       const { data: { user } } = await supabase.auth.getUser();
       const isFirstLogin = !user?.user_metadata?.onboarding_completed;
-      const destination = isFirstLogin ? "/valkomst" : next;
+      const destination = isFirstLogin
+        ? `/valkomst?next=${encodeURIComponent(next)}`
+        : next;
       return NextResponse.redirect(`${origin}${destination}`);
     }
   }

@@ -118,7 +118,20 @@ export default function AccountPage() {
       {/* Risk profile */}
       <section className="space-y-3">
         <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Din riskprofil</p>
-        {riskProfile === undefined ? null : riskProfile === null ? (
+        {riskProfile === undefined ? (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 animate-pulse space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <div className="h-6 w-32 rounded bg-slate-100" />
+                <div className="h-4 w-48 rounded bg-slate-100" />
+              </div>
+              <div className="h-4 w-16 rounded bg-slate-100" />
+            </div>
+            <div className="flex gap-1.5">
+              {[1,2,3,4,5].map((i) => <div key={i} className="flex-1 h-2 rounded-full bg-slate-100" />)}
+            </div>
+          </div>
+        ) : riskProfile === null ? (
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-4 sm:px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <p className="font-semibold text-slate-900 text-sm">Du har ingen riskprofil ännu</p>
@@ -169,10 +182,10 @@ export default function AccountPage() {
           <div>
             <p className="text-sm font-semibold text-slate-900">Mina portföljer</p>
             <p className="text-xs text-slate-400 mt-0.5">
-              {portfolios.length === 0 ? "Inga sparade portföljer än" : `${portfolios.length} sparade portföljer`}
+              {portfolios.length > 0 ? `${portfolios.length} ${portfolios.length === 1 ? "sparad portfölj" : "sparade portföljer"}` : "Inga sparade portföljer än"}
             </p>
           </div>
-          <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="w-4 h-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
           </svg>
         </button>

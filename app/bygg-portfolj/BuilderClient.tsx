@@ -75,7 +75,7 @@ type BuildResult = {
 
 // ── Option data ───────────────────────────────────────────────────────────────
 
-const STEPS: Step[] = ["platform", "goal", "horizon", "reaction", "selections", "management"];
+const STEPS: Step[] = ["goal", "horizon", "reaction", "selections", "management", "platform"];
 
 const PLATFORM_OPTIONS: { value: Platform; label: string; desc: string }[] = [
   { value: "avanza",  label: "Avanza",  desc: "Jag handlar fonder via Avanza" },
@@ -84,10 +84,10 @@ const PLATFORM_OPTIONS: { value: Platform; label: string; desc: string }[] = [
 ];
 
 const GOAL_OPTIONS: { value: Goal; label: string; desc: string }[] = [
-  { value: "pension",  label: "Pension och långsiktigt sparande", desc: "Sparar för pensionen eller på mycket lång sikt" },
-  { value: "wealth",   label: "Bygga förmögenhet",               desc: "Vill växa kapitalet utan ett specifikt slutmål" },
-  { value: "specific", label: "Specifikt mål",                   desc: "Bostad, bil, studier eller liknande" },
   { value: "preserve", label: "Bevara kapital",                  desc: "Viktigast är att inte förlora pengar" },
+  { value: "specific", label: "Specifikt mål",                   desc: "Bostad, bil, studier eller liknande" },
+  { value: "wealth",   label: "Bygga förmögenhet",               desc: "Vill växa kapitalet utan ett specifikt slutmål" },
+  { value: "pension",  label: "Pension och långsiktigt sparande", desc: "Sparar för pensionen eller på mycket lång sikt" },
 ];
 
 const HORIZON_OPTIONS: { value: Horizon; label: string; desc: string }[] = [
@@ -142,7 +142,7 @@ const MANAGEMENT_OPTIONS: { value: Management; label: string; desc: string }[] =
 
 
 const STEP_META: Record<Step, { title: string; subtitle: string }> = {
-  platform:   { title: "Vilken plattform använder du?",                    subtitle: "Vi anpassar fondvalen till tillgängliga fonder" },
+  platform:   { title: "Sista steget — var handlar du fonder?",            subtitle: "Vi anpassar fondvalen till tillgängliga fonder på din plattform" },
   goal:       { title: "Vad är ditt sparmål?",                             subtitle: "Målet påverkar hur vi balanserar risk och avkastning" },
   horizon:    { title: "Hur länge planerar du att spara?",                  subtitle: "Längre horisont ger utrymme för mer risk" },
   reaction:   { title: "Portföljen faller 20% — vad gör du?",              subtitle: "Din faktiska reaktion avslöjar din verkliga risktolerans" },
@@ -218,42 +218,6 @@ const RATIONALE_SHORT: Record<string, string> = {
   "Lägre risk och volatilitet":                 "Räntor",
 };
 
-// ── Blur gate (logged-out teaser) ─────────────────────────────────────────────
-
-function BuilderBlurGate({
-  children,
-  unlocked,
-  onLoginClick,
-}: {
-  children: React.ReactNode;
-  unlocked: boolean;
-  onLoginClick: () => void;
-}) {
-  if (unlocked) return <>{children}</>;
-  return (
-    <div className="relative">
-      <div className="blur-sm pointer-events-none select-none">{children}</div>
-      <div className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl p-8 text-center bg-white/85 backdrop-blur-[2px]">
-        <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center mb-4">
-          <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-          </svg>
-        </div>
-        <h3 className="text-base font-bold text-slate-900 mb-1">Din portfölj är klar</h3>
-        <p className="text-sm text-slate-500 mb-5 max-w-xs leading-relaxed">
-          Logga in för att se dina fondförslag och spara portföljen.
-        </p>
-        <button
-          onClick={onLoginClick}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-xl text-sm transition-colors"
-        >
-          Logga in — det är gratis
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function OptionCard({ label, desc, onClick }: {
@@ -289,6 +253,7 @@ export default function BuilderClient() {
   const [expandedFunds, setExpandedFunds]     = useState<Set<number>>(new Set());
   const [showAdvanced, setShowAdvanced]       = useState(false);
   const [autoExplanation, setAutoExplanation] = useState<string | null>(null);
+  const [showManualSelections, setShowManualSelections] = useState(false);
   const [user, setUser]             = useState<User | null>(null);
   const [prefilled, setPrefilled]   = useState<Set<keyof Answers>>(new Set());
   const [showSaveForm, setShowSaveForm] = useState(false);
@@ -299,7 +264,9 @@ export default function BuilderClient() {
     const Q1_TO_HORIZON: Record<number, Horizon> = { 1: "short", 2: "short", 3: "medium", 4: "long", 5: "verylong" };
     const Q2_TO_REACTION: Record<number, Reaction> = { 1: "sell", 2: "sell", 3: "wait", 4: "buy", 5: "buy" };
 
-    createClient().auth.getUser().then(async ({ data }) => {
+    const supabase = createClient();
+
+    supabase.auth.getUser().then(async ({ data }) => {
       setUser(data.user);
       if (data.user) {
         try {
@@ -331,7 +298,49 @@ export default function BuilderClient() {
         if (r) { setResult(r); setLocalEquity(le ?? r.equityPct); setStep("results"); setShowSaveForm(true); }
       }
     } catch { /* ignore */ }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+      if (event === "SIGNED_OUT") {
+        setStep("platform");
+        setAnswers(EMPTY);
+        setPending([]);
+        setPriorities({});
+        setResult(null);
+        setError(null);
+        setShowSaveForm(false);
+        setSavingName("");
+        setSaveStatus("idle");
+      }
+    });
+
+    const handlePageShow = (e: PageTransitionEvent) => { if (e.persisted) resetQuiz(); };
+    window.addEventListener("pageshow", handlePageShow);
+
+    const handlePopState = () => {
+      if (window.location.pathname === "/bygg-portfolj") resetQuiz();
+    };
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener("pageshow", handlePageShow);
+      window.removeEventListener("popstate", handlePopState);
+    };
   }, []);
+
+  // Auto-apply selections when entering that step (if not already set)
+  useEffect(() => {
+    if (step === "selections" && pending.length === 0) {
+      const score = computeRiskScoreClient(answers);
+      const { sels, prios } = AUTO_SELECTIONS[score];
+      setPending(sels);
+      setPriorities(prios);
+      setAutoExplanation(AUTO_EXPLANATION[score]);
+      setShowManualSelections(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
 
   const stepIdx    = STEPS.indexOf(step);
   const totalSteps = STEPS.length;
@@ -342,7 +351,7 @@ export default function BuilderClient() {
     const next = { ...answers, [field]: value };
     setAnswers(next);
     setDirection(1);
-    if (field === "management") {
+    if (field === "platform") {
       submit(next);
     } else {
       setStep(STEPS[STEPS.indexOf(step) + 1]);
@@ -402,7 +411,7 @@ export default function BuilderClient() {
 
   function goBack() {
     setDirection(-1);
-    if (isResults) { setStep("management"); return; }
+    if (isResults) { setStep("platform"); return; }
     const idx = STEPS.indexOf(step);
     if (idx > 0) setStep(STEPS[idx - 1]);
   }
@@ -448,9 +457,29 @@ export default function BuilderClient() {
       setSaveStatus("saved");
       setShowSaveForm(false);
       setSavingName("");
+      setTimeout(resetQuiz, 1500);
     } catch {
       setSaveStatus("error");
     }
+  }
+
+  function resetQuiz() {
+    setStep("platform");
+    setAnswers(EMPTY);
+    setPending([]);
+    setPriorities({});
+    setResult(null);
+    setError(null);
+    setDirection(1);
+    setLocalEquity(60);
+    setSlotIndices([]);
+    setExpandedFunds(new Set());
+    setShowAdvanced(false);
+    setAutoExplanation(null);
+    setShowManualSelections(false);
+    setShowSaveForm(false);
+    setSavingName("");
+    setSaveStatus("idle");
   }
 
   function sendToAnalyze() {
@@ -463,6 +492,7 @@ export default function BuilderClient() {
     }));
     const custodian = answers.platform === "avanza" ? "avanza" : answers.platform === "nordnet" ? "nordnet" : "övrigt";
     try { sessionStorage.setItem("fondanalys_builder", JSON.stringify({ custodian, entries })); } catch { /* ignore */ }
+    resetQuiz();
     router.push("/analyze");
   }
 
@@ -481,8 +511,14 @@ export default function BuilderClient() {
     return acc;
   }, {});
 
+  // Live preview panel data
+  const previewRiskScore = computeRiskScoreClient(answers);
+  const previewEquity = previewRiskScore === 1 ? 20 : previewRiskScore === 2 ? 35 : previewRiskScore === 3 ? 55 : previewRiskScore === 4 ? 75 : 90;
+  const RISK_LABELS: Record<number, string> = { 1: "Mycket defensiv", 2: "Defensiv", 3: "Balanserad", 4: "Tillväxt", 5: "Offensiv" };
+  const showPreview = !isResults && stepIdx >= 1;
+
   return (
-    <div className={`${isResults ? "max-w-4xl" : step === "selections" ? "max-w-2xl" : "max-w-lg"} mx-auto px-4 py-10 sm:py-16 transition-all duration-200`}>
+    <div className={`${isResults ? "max-w-4xl" : step === "selections" ? "max-w-3xl" : showPreview ? "max-w-3xl" : "max-w-lg"} mx-auto px-4 py-10 sm:py-16 transition-all duration-200`}>
 
       {/* Page header */}
       <div className="text-center mb-8">
@@ -508,6 +544,10 @@ export default function BuilderClient() {
           </div>
         </div>
       )}
+
+      {/* Layout: quiz card + live preview panel */}
+      <div className={showPreview ? "lg:grid lg:grid-cols-[1fr_210px] lg:gap-5 lg:items-start" : ""}>
+      <div>
 
       {/* Step card */}
       <AnimatePresence mode="wait" custom={direction}>
@@ -608,132 +648,137 @@ export default function BuilderClient() {
               </>
             )}
 
-            {/* Selections — two-column layout */}
+            {/* Selections — auto-suggested by default */}
             {step === "selections" && (
               <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const score = computeRiskScoreClient(answers);
-                    const { sels, prios } = AUTO_SELECTIONS[score];
-                    setPending(sels);
-                    setPriorities(prios);
-                    setAutoExplanation(AUTO_EXPLANATION[score]);
-                  }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-blue-200 bg-blue-50/50 text-blue-600 text-xs font-semibold hover:bg-blue-50 hover:border-blue-400 transition-all mb-1"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.347.347a3.75 3.75 0 01-1.035 2.37 1.875 1.875 0 01-2.661 0 3.75 3.75 0 01-1.035-2.37l-.347-.347z"/></svg>
-                  Föreslå kategorier åt mig
-                </button>
-                {autoExplanation && (
-                  <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5 mb-1">
-                    <svg className="w-3.5 h-3.5 text-blue-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                {/* Auto-suggestion explanation */}
+                {autoExplanation && !showManualSelections && (
+                  <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-1">
+                    <svg className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     <p className="text-xs text-blue-700 leading-relaxed">{autoExplanation}</p>
                   </div>
                 )}
 
-                {/* Mobil: 1-kolumn lista. Desktop: 2-kolumn med priority-panel */}
-                <div className="flex flex-col sm:grid sm:grid-cols-2 sm:gap-4 sm:items-start gap-0">
-
-                  {/* Alternativlista */}
-                  <div className="space-y-3">
-                    {Object.entries(selectionGroups).map(([group, opts]) => {
-                      const isAdvanced = group !== "Marknader";
-                      if (isAdvanced && !showAdvanced) return null;
-                      return (
-                        <div key={group} className="space-y-1.5">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{group}</p>
-                          {opts.map((o) => {
-                            const selected = pending.includes(o.value);
-                            return (
-                              <button
-                                key={o.value}
-                                type="button"
-                                onClick={() => toggleSelection(o.value)}
-                                className={`w-full px-4 py-3 rounded-xl border-2 text-left transition-all active:scale-[0.99] ${
-                                  selected
-                                    ? "border-blue-500 bg-blue-50"
-                                    : "border-slate-100 bg-slate-50 hover:border-blue-300 hover:bg-blue-50/50"
-                                }`}
-                              >
-                                <p className={`text-sm font-semibold leading-snug ${selected ? "text-blue-700" : "text-slate-800"}`}>{o.label}</p>
-                                <p className="text-xs text-slate-400 mt-0.5 leading-tight">{o.desc}</p>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      );
-                    })}
-                    <button
-                      type="button"
-                      onClick={() => setShowAdvanced((v) => !v)}
-                      className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-slate-600 border border-dashed border-slate-200 rounded-xl py-3 transition-colors"
-                    >
-                      <svg className={`w-3.5 h-3.5 transition-transform ${showAdvanced ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/></svg>
-                      {showAdvanced ? "Dölj avancerade val" : "Branscher, stil & räntor"}
-                    </button>
-                  </div>
-
-                  {/* Priority-panel — sticky på desktop, accordion på mobil */}
-                  {pending.length > 0 && (
-                    <div className="sm:sticky sm:top-4 space-y-2 mt-4 sm:mt-0 border-t border-slate-100 pt-4 sm:border-0 sm:pt-0">
-                      <div className="mb-2">
-                        <p className="text-sm font-semibold text-slate-800">Vikta dina val</p>
-                        <p className="text-xs text-slate-400 mt-0.5">Hög prioritet får störst andel</p>
-                      </div>
-
+                {/* Auto-selected chips — shown when not in manual mode */}
+                {!showManualSelections && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Föreslagna kategorier</p>
+                    <div className="flex flex-wrap gap-2">
                       {pending.map((id) => {
-                        const opt  = SELECTION_OPTIONS.find((o) => o.value === id)!;
+                        const opt = SELECTION_OPTIONS.find((o) => o.value === id)!;
                         const prio = priorities[id] ?? 2;
                         return (
-                          <div key={id} className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl">
-                            <p className="text-xs font-semibold text-slate-700 truncate mb-1.5">{opt.label}</p>
-                            {pending.length > 1 ? (
-                              <div className="flex items-center gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() => adjustPriority(id, 1)}
-                                  disabled={prio >= 3}
-                                  className="w-8 h-8 rounded-md bg-white border border-slate-200 text-slate-500 text-xs font-bold disabled:opacity-25 flex items-center justify-center hover:border-slate-300 transition-colors"
-                                >−</button>
-                                <span className="text-xs font-semibold text-slate-600 flex-1 text-center">
-                                  {TIER_LABELS[prio]}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => adjustPriority(id, -1)}
-                                  disabled={prio <= 1}
-                                  className="w-8 h-8 rounded-md bg-white border border-slate-200 text-slate-500 text-xs font-bold disabled:opacity-25 flex items-center justify-center hover:border-slate-300 transition-colors"
-                                >+</button>
-                              </div>
-                            ) : (
-                              <p className="text-xs text-slate-400">Enda valet — full vikt</p>
-                            )}
+                          <div key={id} className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded-full pl-3 pr-2 py-1.5">
+                            <span className="text-xs font-semibold text-blue-700">{opt.label}</span>
+                            <span className="text-[10px] text-blue-400">· {TIER_LABELS[prio]}</span>
+                            <button type="button" onClick={() => toggleSelection(id)} className="w-4 h-4 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-500 flex items-center justify-center transition-colors shrink-0">
+                              <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
                           </div>
                         );
                       })}
-
-                      <button
-                        type="button"
-                        onClick={() => { setPending([]); setPriorities({}); }}
-                        className="text-xs text-slate-400 hover:text-slate-600 transition-colors py-1"
-                      >
-                        Rensa alla
-                      </button>
                     </div>
-                  )}
-                </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowManualSelections(true)}
+                      className="text-xs text-slate-400 hover:text-slate-600 transition-colors underline underline-offset-2 pt-1"
+                    >
+                      Anpassa manuellt
+                    </button>
+                  </div>
+                )}
 
-                {/* Desktop-knapp — dold på mobil (sticky bar hanterar det) */}
+                {/* Manual mode */}
+                {showManualSelections && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setShowManualSelections(false)}
+                      className="text-xs text-blue-600 hover:text-blue-800 transition-colors mb-1"
+                    >
+                      ← Tillbaka till föreslagen mix
+                    </button>
+
+                    <div className="flex flex-col sm:grid sm:grid-cols-2 sm:gap-4 sm:items-start gap-0">
+                      <div className="space-y-3">
+                        {Object.entries(selectionGroups).map(([group, opts]) => {
+                          const isAdvanced = group !== "Marknader";
+                          if (isAdvanced && !showAdvanced) return null;
+                          return (
+                            <div key={group} className="space-y-1.5">
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{group}</p>
+                              {opts.map((o) => {
+                                const selected = pending.includes(o.value);
+                                return (
+                                  <button
+                                    key={o.value}
+                                    type="button"
+                                    onClick={() => toggleSelection(o.value)}
+                                    className={`w-full px-4 py-3 rounded-xl border-2 text-left transition-all active:scale-[0.99] ${
+                                      selected
+                                        ? "border-blue-500 bg-blue-50"
+                                        : "border-slate-100 bg-slate-50 hover:border-blue-300 hover:bg-blue-50/50"
+                                    }`}
+                                  >
+                                    <p className={`text-sm font-semibold leading-snug ${selected ? "text-blue-700" : "text-slate-800"}`}>{o.label}</p>
+                                    <p className="text-xs text-slate-400 mt-0.5 leading-tight">{o.desc}</p>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          );
+                        })}
+                        <button
+                          type="button"
+                          onClick={() => setShowAdvanced((v) => !v)}
+                          className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-slate-600 border border-dashed border-slate-200 rounded-xl py-3 transition-colors"
+                        >
+                          <svg className={`w-3.5 h-3.5 transition-transform ${showAdvanced ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                          {showAdvanced ? "Dölj avancerade val" : "Branscher, stil & räntor"}
+                        </button>
+                      </div>
+
+                      {pending.length > 0 && (
+                        <div className="sm:sticky sm:top-4 space-y-2 mt-4 sm:mt-0 border-t border-slate-100 pt-4 sm:border-0 sm:pt-0">
+                          <div className="mb-2">
+                            <p className="text-sm font-semibold text-slate-800">Vikta dina val</p>
+                            <p className="text-xs text-slate-400 mt-0.5">Hög prioritet får störst andel</p>
+                          </div>
+                          {pending.map((id) => {
+                            const opt  = SELECTION_OPTIONS.find((o) => o.value === id)!;
+                            const prio = priorities[id] ?? 2;
+                            return (
+                              <div key={id} className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                                <p className="text-xs font-semibold text-slate-700 truncate mb-1.5">{opt.label}</p>
+                                {pending.length > 1 ? (
+                                  <div className="flex items-center gap-1.5">
+                                    <button type="button" onClick={() => adjustPriority(id, 1)} disabled={prio >= 3} className="w-8 h-8 rounded-md bg-white border border-slate-200 text-slate-500 text-xs font-bold disabled:opacity-25 flex items-center justify-center hover:border-slate-300 transition-colors">−</button>
+                                    <span className="text-xs font-semibold text-slate-600 flex-1 text-center">{TIER_LABELS[prio]}</span>
+                                    <button type="button" onClick={() => adjustPriority(id, -1)} disabled={prio <= 1} className="w-8 h-8 rounded-md bg-white border border-slate-200 text-slate-500 text-xs font-bold disabled:opacity-25 flex items-center justify-center hover:border-slate-300 transition-colors">+</button>
+                                  </div>
+                                ) : (
+                                  <p className="text-xs text-slate-400">Enda valet — full vikt</p>
+                                )}
+                              </div>
+                            );
+                          })}
+                          <button type="button" onClick={() => { setPending([]); setPriorities({}); }} className="text-xs text-slate-400 hover:text-slate-600 transition-colors py-1">Rensa alla</button>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {/* Continue button */}
                 <div className="hidden sm:flex pt-3 items-center justify-between gap-3">
-                  <span className="text-xs text-slate-400">{pending.length > 0 ? `${pending.length} valda` : "Inga valda"}</span>
+                  <span className="text-xs text-slate-400">{pending.length > 0 ? `${pending.length} kategorier` : "Inga valda"}</span>
                   <button
                     type="button"
                     onClick={confirmSelections}
                     disabled={pending.length === 0}
                     className="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-6 py-2.5 rounded-xl transition-colors text-sm"
                   >
-                    Fortsätt {pending.length > 0 && `(${pending.length})`}
+                    Fortsätt →
                   </button>
                 </div>
               </>
@@ -765,10 +810,10 @@ export default function BuilderClient() {
                 )}
 
                 {!loading && !error && result && (
-                  <div className="lg:grid lg:grid-cols-5 lg:gap-8 space-y-4 lg:space-y-0">
+                  <div className="space-y-4">
 
-                    {/* ── Fondlista — ALLTID FÖRST, både på mobil och desktop (vänster col) ── */}
-                    <div className="lg:col-span-3 space-y-3">
+                    {/* ── Fondlista & slider — alltid synliga ── */}
+                    <div className="space-y-3">
 
                       {result.droppedSelections?.length > 0 && (
                         <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 space-y-1">
@@ -829,174 +874,201 @@ export default function BuilderClient() {
                         )}
                       </div>
 
-                      {/* Portfolio analysis — blurred if not logged in */}
-                      {((result.reasoning?.length > 0) || (result.fundExplanations?.length > 0)) && (
-                        <BuilderBlurGate
-                          unlocked={!!user}
-                          onLoginClick={() => {
-                            try { sessionStorage.setItem("fondanalys_builder_quiz", JSON.stringify({ answers, result, priorities, localEquity })); } catch { /* ignore */ }
-                            router.push("/login?next=/bygg-portfolj");
-                          }}
-                        >
-                          <div className="space-y-2">
-
-                            {/* Box 1: Portföljanalys — all reasoning lines as one block */}
-                            {result.reasoning?.length > 0 && (
-                              <div className="border border-slate-100 rounded-xl overflow-hidden">
-                                <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
-                                  <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Portföljanalys</p>
-                                </div>
-                                <div className="px-4 py-3 space-y-2">
-                                  {result.reasoning.map((line, i) => (
-                                    line.startsWith("⚠") ? (
-                                      <p key={i} className="text-xs leading-relaxed text-amber-700 bg-amber-50 rounded-lg px-3 py-2">{line}</p>
-                                    ) : (
-                                      <p key={i} className="text-xs leading-relaxed text-slate-600">{line}</p>
-                                    )
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Box 2: Per-fond förklaringar */}
-                            {result.fundExplanations?.length > 0 && (
-                              <div className="border border-slate-100 rounded-xl overflow-hidden">
-                                <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
-                                  <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Varför valdes varje fond?</p>
-                                </div>
-                                <div className="divide-y divide-slate-100">
-                                  {result.fundExplanations.map((f, i) => {
-                                    const open = expandedFunds.has(i);
-                                    const parts: string[] = [];
-                                    if (f.sharpe != null) parts.push(`Sharpe ${f.sharpe.toFixed(2)}`);
-                                    if (f.cost   != null) parts.push(`avgift ${f.cost.toFixed(2)}%/år`);
-                                    const explanation = (() => {
-                                      const isVeryLowCost = f.cost  != null && f.cost  < 0.05;
-                                      const isLowCost     = f.cost  != null && f.cost  < 0.20;
-                                      const isHighSharpe  = f.sharpe != null && f.sharpe > 0.7;
-                                      const isGoodSharpe  = f.sharpe != null && f.sharpe > 0.4;
-                                      const sharpeStr = f.sharpe != null ? `Sharpe ${f.sharpe.toFixed(2)}` : null;
-                                      const costStr   = f.cost   != null ? `avgift ${f.cost.toFixed(2)}%/år` : null;
-                                      if (isVeryLowCost && !isHighSharpe) return ["Exceptionellt låg avgift", sharpeStr].filter(Boolean).join(" · ");
-                                      if (isHighSharpe && isLowCost) return ["Stark riskjusterad avkastning och låg avgift", sharpeStr, costStr].filter(Boolean).join(" · ");
-                                      if (isHighSharpe) return ["Stark riskjusterad avkastning", costStr].filter(Boolean).join(" · ");
-                                      if (isLowCost) return ["Låg avgift", sharpeStr].filter(Boolean).join(" · ");
-                                      if (isGoodSharpe) return ["God riskjusterad avkastning", costStr].filter(Boolean).join(" · ");
-                                      return ["Rankad i sin kategori", sharpeStr, costStr].filter(Boolean).join(" · ");
-                                    })();
-                                    return (
-                                      <div key={i}>
-                                        <button type="button" onClick={() => setExpandedFunds((prev) => { const n = new Set(prev); open ? n.delete(i) : n.add(i); return n; })} className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-50 transition-colors">
-                                          <div className="flex items-center gap-2 min-w-0">
-                                            <span className="text-xs font-semibold text-indigo-600 shrink-0">{f.weight}%</span>
-                                            <span className="text-xs font-semibold text-slate-800 truncate">{f.name}</span>
-                                          </div>
-                                          <svg className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/></svg>
-                                        </button>
-                                        {open && (
-                                          <div className="px-4 pb-3 space-y-1">
-                                            <p className="text-xs text-slate-500">Kategori: <span className="font-medium text-slate-700">{f.rationale}</span></p>
-                                            {parts.length > 0 && <p className="text-xs text-slate-500">{parts.join(" · ")}</p>}
-                                            <p className="text-xs text-slate-400 leading-relaxed">{explanation}</p>
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            )}
-
-                          </div>
-                        </BuilderBlurGate>
-                      )}
-
-                      <button onClick={restart} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 py-1 transition-colors">
-                        <RotateCcw className="w-3 h-3" />
-                        Börja om
-                      </button>
-                    </div>
-
-                    {/* ── Summary + Save (desktop: right col, mobil: efter fondlistan) ── */}
-                    <div className="lg:col-span-2">
-                      <div className="lg:sticky lg:top-20 space-y-3">
-
-                        {/* Summary card */}
-                        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm bg-indigo-50 text-indigo-700 border border-indigo-100 px-3 py-1 rounded-full font-semibold">{result.riskLabel}</span>
-                          </div>
-                          <DonutChart
-                            slices={result.portfolio.map((slot) => ({
-                              label: RATIONALE_SHORT[slot.rationale] ?? slot.rationale.split(" ")[0],
-                              weight: slot.weight,
-                            }))}
-                            centerLabel={`${result.equityPct}%`}
-                            centerSub="Aktier"
-                            size={120}
-                            thickness={18}
-                            horizontal
-                          />
-                          <p className="text-[10px] text-slate-400 leading-snug">* Fördelning baseras på fondkategori, inte underliggande innehav.</p>
-                          {result.summary && (
-                            <p className="text-xs text-slate-600 leading-relaxed border-t border-slate-100 pt-3">
-                              {result.summary}
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Save — primary CTA */}
-                        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
-                          {saveStatus === "saved" ? (
-                            <p className="text-sm text-green-700 font-semibold text-center py-1">Portföljen sparad ✓</p>
-                          ) : !user ? (
-                            <>
-                              <div>
-                                <p className="text-sm font-semibold text-slate-900">Spara din portfölj</p>
-                                <p className="text-xs text-slate-400 mt-0.5">Logga in för att komma åt den när som helst.</p>
-                              </div>
-                              <button
-                                onClick={() => {
-                                  try { sessionStorage.setItem("fondanalys_builder_quiz", JSON.stringify({ answers, result, priorities, localEquity })); } catch { /* ignore */ }
-                                  router.push("/login?next=/bygg-portfolj");
-                                }}
-                                className="w-full bg-slate-900 hover:bg-slate-700 text-white text-sm font-semibold py-3.5 rounded-xl transition-colors"
-                              >
-                                Logga in för att spara
-                              </button>
-                            </>
-                          ) : !showSaveForm ? (
-                            <>
-                              <div>
-                                <p className="text-sm font-semibold text-slate-900">Spara din portfölj</p>
-                                <p className="text-xs text-slate-400 mt-0.5">Kom åt den när som helst från Mina portföljer.</p>
-                              </div>
-                              <button onClick={() => setShowSaveForm(true)} className="w-full bg-slate-900 hover:bg-slate-700 text-white text-sm font-semibold py-3.5 rounded-xl transition-colors">
-                                Spara portfölj
-                              </button>
-                            </>
-                          ) : (
-                            <div className="space-y-2">
-                              <input autoFocus type="text" placeholder="t.ex. ISK, Pension, Barnspar…" value={savingName} onChange={(e) => setSavingName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSave()} className="w-full border border-slate-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                              <div className="flex gap-2">
-                                <button onClick={handleSave} disabled={!savingName.trim() || saveStatus === "saving"} className="flex-1 bg-slate-900 hover:bg-slate-700 disabled:opacity-40 text-white text-sm font-semibold py-3 rounded-xl transition-colors">
-                                  {saveStatus === "saving" ? "Sparar…" : "Spara"}
-                                </button>
-                                <button onClick={() => { setShowSaveForm(false); setSavingName(""); setSaveStatus("idle"); }} className="text-sm text-slate-400 hover:text-slate-600 px-3 transition-colors">
-                                  Avbryt
-                                </button>
-                              </div>
-                              {saveStatus === "error" && <p className="text-xs text-red-500">Kunde inte spara. Försök igen.</p>}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Analyze — secondary */}
-                        <button onClick={sendToAnalyze} className="w-full flex items-center justify-center gap-1.5 text-sm font-medium text-blue-600 border border-blue-200 rounded-xl py-3 hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700 transition-all">
-                          Se nyckeltal — analysera portföljen
-                          <ChevronRight className="w-3.5 h-3.5" />
+                      {/* Restart buttons */}
+                      <div className="flex items-center justify-between pt-1">
+                        <button onClick={restart} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 transition-colors">
+                          <RotateCcw className="w-3 h-3" />
+                          Börja om
+                        </button>
+                        <button onClick={resetQuiz} className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
+                          Börja om med nya svar
                         </button>
                       </div>
+                    </div>
+
+                    {/* ── Blurrbar sektion: analys + spara ── */}
+                    <div className="relative">
+                      <div className={!user ? "blur-sm pointer-events-none select-none" : undefined}>
+                        <div className="lg:grid lg:grid-cols-5 lg:gap-8 space-y-4 lg:space-y-0">
+
+                          {((result.reasoning?.length > 0) || (result.fundExplanations?.length > 0)) && (
+                            <div className="lg:col-span-3 space-y-2">
+
+                              {result.reasoning?.length > 0 && (
+                                <div className="border border-slate-100 rounded-xl overflow-hidden">
+                                  <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
+                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Portföljanalys</p>
+                                  </div>
+                                  <div className="px-4 py-3 space-y-2">
+                                    {result.reasoning.map((line, i) => (
+                                      line.startsWith("⚠") ? (
+                                        <p key={i} className="text-xs leading-relaxed text-amber-700 bg-amber-50 rounded-lg px-3 py-2">{line}</p>
+                                      ) : (
+                                        <p key={i} className="text-xs leading-relaxed text-slate-600">{line}</p>
+                                      )
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {result.fundExplanations?.length > 0 && (
+                                <div className="border border-slate-100 rounded-xl overflow-hidden">
+                                  <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
+                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Varför valdes varje fond?</p>
+                                  </div>
+                                  <div className="divide-y divide-slate-100">
+                                    {result.fundExplanations.map((f, i) => {
+                                      const open = expandedFunds.has(i);
+                                      const parts: string[] = [];
+                                      if (f.sharpe != null) parts.push(`Sharpe ${f.sharpe.toFixed(2)}`);
+                                      if (f.cost   != null) parts.push(`avgift ${f.cost.toFixed(2)}%/år`);
+                                      const explanation = (() => {
+                                        const isVeryLowCost = f.cost  != null && f.cost  < 0.05;
+                                        const isLowCost     = f.cost  != null && f.cost  < 0.20;
+                                        const isHighSharpe  = f.sharpe != null && f.sharpe > 0.7;
+                                        const isGoodSharpe  = f.sharpe != null && f.sharpe > 0.4;
+                                        const sharpeStr = f.sharpe != null ? `Sharpe ${f.sharpe.toFixed(2)}` : null;
+                                        const costStr   = f.cost   != null ? `avgift ${f.cost.toFixed(2)}%/år` : null;
+                                        if (isVeryLowCost && !isHighSharpe) return ["Exceptionellt låg avgift", sharpeStr].filter(Boolean).join(" · ");
+                                        if (isHighSharpe && isLowCost) return ["Stark riskjusterad avkastning och låg avgift", sharpeStr, costStr].filter(Boolean).join(" · ");
+                                        if (isHighSharpe) return ["Stark riskjusterad avkastning", costStr].filter(Boolean).join(" · ");
+                                        if (isLowCost) return ["Låg avgift", sharpeStr].filter(Boolean).join(" · ");
+                                        if (isGoodSharpe) return ["God riskjusterad avkastning", costStr].filter(Boolean).join(" · ");
+                                        return ["Rankad i sin kategori", sharpeStr, costStr].filter(Boolean).join(" · ");
+                                      })();
+                                      return (
+                                        <div key={i}>
+                                          <button type="button" onClick={() => setExpandedFunds((prev) => { const n = new Set(prev); open ? n.delete(i) : n.add(i); return n; })} className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-50 transition-colors">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                              <span className="text-xs font-semibold text-indigo-600 shrink-0">{f.weight}%</span>
+                                              <span className="text-xs font-semibold text-slate-800 truncate">{f.name}</span>
+                                            </div>
+                                            <svg className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                                          </button>
+                                          {open && (
+                                            <div className="px-4 pb-3 space-y-1">
+                                              <p className="text-xs text-slate-500">Kategori: <span className="font-medium text-slate-700">{f.rationale}</span></p>
+                                              {parts.length > 0 && <p className="text-xs text-slate-500">{parts.join(" · ")}</p>}
+                                              <p className="text-xs text-slate-400 leading-relaxed">{explanation}</p>
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          <div className={((result.reasoning?.length > 0) || (result.fundExplanations?.length > 0)) ? "lg:col-span-2" : "lg:col-span-5"}>
+                            <div className="lg:sticky lg:top-20 space-y-3">
+
+                              {/* Summary card */}
+                              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-sm bg-indigo-50 text-indigo-700 border border-indigo-100 px-3 py-1 rounded-full font-semibold">{result.riskLabel}</span>
+                                </div>
+                                <DonutChart
+                                  slices={result.portfolio.map((slot) => ({
+                                    label: RATIONALE_SHORT[slot.rationale] ?? slot.rationale.split(" ")[0],
+                                    weight: slot.weight,
+                                  }))}
+                                  centerLabel={`${result.equityPct}%`}
+                                  centerSub="Aktier"
+                                  size={120}
+                                  thickness={18}
+                                  horizontal
+                                />
+                                <p className="text-[10px] text-slate-400 leading-snug">* Fördelning baseras på fondkategori, inte underliggande innehav.</p>
+                                {result.summary && (
+                                  <p className="text-xs text-slate-600 leading-relaxed border-t border-slate-100 pt-3">
+                                    {result.summary}
+                                  </p>
+                                )}
+                              </div>
+
+                              {/* Save — primary CTA */}
+                              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
+                                {saveStatus === "saved" ? (
+                                  <p className="text-sm text-green-700 font-semibold text-center py-1">Portföljen sparad ✓</p>
+                                ) : !user ? (
+                                  <>
+                                    <div>
+                                      <p className="text-sm font-semibold text-slate-900">Spara din portfölj</p>
+                                      <p className="text-xs text-slate-400 mt-0.5">Logga in för att komma åt den när som helst.</p>
+                                    </div>
+                                    <button
+                                      onClick={() => {
+                                        try { sessionStorage.setItem("fondanalys_builder_quiz", JSON.stringify({ answers, result, priorities, localEquity })); } catch { /* ignore */ }
+                                        router.push("/login?next=/bygg-portfolj");
+                                      }}
+                                      className="w-full bg-slate-900 hover:bg-slate-700 text-white text-sm font-semibold py-3.5 rounded-xl transition-colors"
+                                    >
+                                      Logga in för att spara
+                                    </button>
+                                  </>
+                                ) : !showSaveForm ? (
+                                  <>
+                                    <div>
+                                      <p className="text-sm font-semibold text-slate-900">Spara din portfölj</p>
+                                      <p className="text-xs text-slate-400 mt-0.5">Kom åt den när som helst från Mina portföljer.</p>
+                                    </div>
+                                    <button onClick={() => setShowSaveForm(true)} className="w-full bg-slate-900 hover:bg-slate-700 text-white text-sm font-semibold py-3.5 rounded-xl transition-colors">
+                                      Spara portfölj
+                                    </button>
+                                  </>
+                                ) : (
+                                  <div className="space-y-2">
+                                    <input autoFocus type="text" placeholder="t.ex. ISK, Pension, Barnspar…" value={savingName} onChange={(e) => setSavingName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSave()} className="w-full border border-slate-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                    <div className="flex gap-2">
+                                      <button onClick={handleSave} disabled={!savingName.trim() || saveStatus === "saving"} className="flex-1 bg-slate-900 hover:bg-slate-700 disabled:opacity-40 text-white text-sm font-semibold py-3 rounded-xl transition-colors">
+                                        {saveStatus === "saving" ? "Sparar…" : "Spara"}
+                                      </button>
+                                      <button onClick={() => { setShowSaveForm(false); setSavingName(""); setSaveStatus("idle"); }} className="text-sm text-slate-400 hover:text-slate-600 px-3 transition-colors">
+                                        Avbryt
+                                      </button>
+                                    </div>
+                                    {saveStatus === "error" && <p className="text-xs text-red-500">Kunde inte spara. Försök igen.</p>}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Analyze — secondary */}
+                              <button onClick={sendToAnalyze} className="w-full flex items-center justify-center gap-1.5 text-sm font-medium text-blue-600 border border-blue-200 rounded-xl py-3 hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700 transition-all">
+                                Se nyckeltal — analysera portföljen
+                                <ChevronRight className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                        </div>
+                      </div>
+
+                      {!user && (
+                        <div className="absolute inset-0 flex items-center justify-center z-10">
+                          <div className="bg-white rounded-2xl p-6 shadow-xl border border-slate-100 max-w-sm w-full mx-4 text-center space-y-4">
+                            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto">
+                              <svg className="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                              </svg>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-sm font-semibold text-slate-900">Logga in för att se portföljanalysen och spara din portfölj</p>
+                              <p className="text-xs text-slate-400">Gratis · Klart på under en minut</p>
+                            </div>
+                            <button
+                              onClick={() => {
+                                try { sessionStorage.setItem("fondanalys_builder_quiz", JSON.stringify({ answers, result, priorities, localEquity })); } catch { /* ignore */ }
+                                router.push("/login?next=/bygg-portfolj");
+                              }}
+                              className="w-full bg-slate-900 hover:bg-slate-700 text-white font-semibold py-3 rounded-xl transition-colors text-sm"
+                            >
+                              Logga in
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                   </div>
@@ -1008,15 +1080,90 @@ export default function BuilderClient() {
       </AnimatePresence>
 
       {/* Back button */}
-      {step !== "platform" && (
+      {step !== "goal" && (
         <button onClick={goBack} className="mt-4 text-xs text-slate-400 hover:text-slate-600 transition-colors">
           ← Tillbaka
         </button>
       )}
 
+      </div>{/* end quiz col */}
+
+      {/* Live preview panel — only on desktop, from step 2 onward */}
+      {showPreview && (
+        <div className="hidden lg:block sticky top-20 space-y-3">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Din profil hittills</p>
+
+            {/* Risk score bar */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-slate-500">Risknivå</span>
+                <span className="text-xs font-semibold text-slate-700">{RISK_LABELS[previewRiskScore]}</span>
+              </div>
+              <div className="flex gap-1">
+                {[1,2,3,4,5].map(i => (
+                  <div key={i} className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${i <= previewRiskScore ? "bg-blue-500" : "bg-slate-100"}`} />
+                ))}
+              </div>
+            </div>
+
+            {/* Equity / bond split */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-xs text-slate-500">
+                <span>Aktier</span>
+                <span className="font-semibold text-slate-700">{previewEquity}%</span>
+              </div>
+              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500 rounded-full transition-all duration-500" style={{ width: `${previewEquity}%` }} />
+              </div>
+              <div className="flex justify-between text-xs text-slate-500">
+                <span>Räntor</span>
+                <span className="font-semibold text-slate-700">{100 - previewEquity}%</span>
+              </div>
+            </div>
+
+            {/* Selected categories */}
+            {pending.length > 0 && (
+              <div className="space-y-1.5 border-t border-slate-100 pt-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Kategorier</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {pending.map(id => {
+                    const opt = SELECTION_OPTIONS.find(o => o.value === id);
+                    return opt ? (
+                      <span key={id} className="text-[10px] font-medium bg-blue-50 text-blue-600 border border-blue-100 px-2 py-0.5 rounded-full">{opt.label}</span>
+                    ) : null;
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Goal & horizon summary */}
+            <div className="border-t border-slate-100 pt-3 space-y-1">
+              {answers.goal && (
+                <p className="text-[10px] text-slate-400 leading-snug">
+                  <span className="font-semibold text-slate-500">Mål:</span>{" "}
+                  {GOAL_OPTIONS.find(o => o.value === answers.goal)?.label}
+                </p>
+              )}
+              {answers.horizon && (
+                <p className="text-[10px] text-slate-400 leading-snug">
+                  <span className="font-semibold text-slate-500">Horisont:</span>{" "}
+                  {HORIZON_OPTIONS.find(o => o.value === answers.horizon)?.label}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      </div>{/* end grid wrapper */}
+
       {/* Sticky bottom CTA för selections-steget på mobil */}
       {step === "selections" && (
-        <div className="sm:hidden fixed bottom-16 left-0 right-0 px-4 pb-3 pt-2 bg-white/95 backdrop-blur-sm border-t border-slate-100 z-50">
+        <div
+          className="sm:hidden fixed left-0 right-0 px-4 pb-3 pt-2 bg-white/95 backdrop-blur-sm border-t border-slate-100 z-50"
+          style={{ bottom: "calc(52px + max(8px, env(safe-area-inset-bottom, 0px)))" }}
+        >
           <button
             type="button"
             onClick={confirmSelections}

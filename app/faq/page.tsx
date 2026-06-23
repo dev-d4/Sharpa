@@ -14,7 +14,11 @@ const SECTIONS = [
       },
       {
         q: "Hur aktuella är fonddata?",
-        a: "Fonddata hämtas löpande från Avanza och Nordnet. Nyckeltal som avkastning och avgifter uppdateras regelbundet och speglar i normalfallet data från de senaste veckorna. Exakt tidsstämpel visas inte, men data är aldrig äldre än 30 dagar.",
+        a: "Fonddata hämtas automatiskt från Avanza och Nordnet en gång i veckan (varje måndag). Nyckeltal som avgifter, avkastning och Sharpe-kvot speglar därför i normalfallet data som är högst 7 dagar gamla. Observera att historiska nyckeltal (t.ex. 3-årsavkastning) i sig baseras på historiska kursdata och inte förändras dagligen.",
+      },
+      {
+        q: "Är analyserna finansiell rådgivning?",
+        a: "Nej. Allt innehåll på den här sidan är enbart informativt och utgör inte finansiell rådgivning. Historisk avkastning är ingen garanti för framtida resultat. Investeringar i fonder innebär alltid en risk och du kan förlora hela eller delar av det investerade kapitalet. Rådfråga en auktoriserad finansiell rådgivare innan du fattar investeringsbeslut.",
       },
       {
         q: "Vilka plattformar stöds?",
@@ -90,23 +94,6 @@ const SECTIONS = [
       },
     ],
   },
-  {
-    heading: "Dela och exportera",
-    items: [
-      {
-        q: "Hur delar jag rapporten med en kund?",
-        a: "Klicka på 'Dela länk' i rapporthuvudet. Länken som kopieras innehåller parametern kund=1, vilket innebär att mottagaren ser en förenklad, skrivskyddad version av rapporten utan interaktiva verktyg som Fondguiden och Scenarioanalysen.",
-      },
-      {
-        q: "Hur laddar jag ner rapporten som PDF?",
-        a: "Klicka på 'PDF'-knappen i rapporthuvudet. En ny flik öppnas med en utskriftsoptimerad version av rapporten. Klicka på 'Ladda ner / Skriv ut' i den fliken, välj 'Spara som PDF' i utskriftsdialogens destinationsmeny. Det ger ett dokument med korrekt sidbrytning och typografi.",
-      },
-      {
-        q: "Sparas rapporten automatiskt?",
-        a: "Nej — rapporten är avsiktligt efemär. Den genereras i realtid från URL-parametrarna och sparas inte på servern. Det innebär inga GDPR-bekymmer kring kunddata, men det betyder också att du behöver generera en ny länk om portföljinnehållet förändras.",
-      },
-    ],
-  },
 ];
 
 function AccordionItem({ q, a }: { q: string; a: string }) {
@@ -173,12 +160,6 @@ export default function FAQPage() {
           ))}
         </div>
 
-        {/* Footer note */}
-        <div className="mt-16 pt-8 border-t border-slate-100">
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Hittar du inte svaret på din fråga? Kontakta oss så hjälper vi dig.
-          </p>
-        </div>
       </div>
     </div>
   );

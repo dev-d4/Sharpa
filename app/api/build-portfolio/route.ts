@@ -269,7 +269,17 @@ function buildReasoning(
       wealth:   "förmögenhetsbyggande ger neutral riskbedömning",
       pension:  "pensionssparande höjer risktolerans",
     };
-    lines.push(`Din risknivå är ${riskScore} av 5 (${riskLabel}), beräknad utifrån tre faktorer: ${horizonMap[a.horizon]}, ${reactionMap[a.reaction]}, och ${goalMap[a.goal]}.`);
+    const factors = [
+      a.horizon ? horizonMap[a.horizon] : null,
+      a.reaction ? reactionMap[a.reaction] : null,
+      a.goal ? goalMap[a.goal] : null,
+    ].filter(Boolean) as string[];
+    if (factors.length > 0) {
+      const factorCount = factors.length === 1 ? "faktorn" : `${factors.length} faktorer`;
+      lines.push(`Din risknivå är ${riskScore} av 5 (${riskLabel}), beräknad utifrån ${factorCount}: ${factors.join(", ")}.`);
+    } else {
+      lines.push(`Din risknivå är ${riskScore} av 5 (${riskLabel}).`);
+    }
   }
 
   // 2. Asset allocation context

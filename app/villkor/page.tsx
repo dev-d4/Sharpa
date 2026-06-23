@@ -76,9 +76,8 @@ export default function VillkorPage() {
         <section className="space-y-3">
           <h2 className="text-lg font-bold text-slate-900">7. Ändringar</h2>
           <p>
-            Vi kan uppdatera dessa villkor när som helst. Vid väsentliga ändringar informerar vi
-            inloggade användare via e-post. Fortsatt användning efter att ändringar trätt i kraft
-            innebär att du accepterar de nya villkoren.
+            Vi kan uppdatera dessa villkor när som helst. Fortsatt användning efter att ändringar
+            trätt i kraft innebär att du accepterar de nya villkoren.
           </p>
         </section>
 

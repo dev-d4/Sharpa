@@ -15,14 +15,14 @@ export default function IntegrationLogin() {
     setLoading(true);
     setError("");
 
-    const res = await fetch("/api/integration/auth", {
+    const res = await fetch("/api/radgivning/fundguide/auth", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password }),
     });
 
     if (res.ok) {
-      router.push("/integration");
+      router.push("/radgivning/fundguide");
       router.refresh();
     } else {
       setError("Fel lösenord. Försök igen.");

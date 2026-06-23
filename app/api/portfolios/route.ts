@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { computePortfolioScore } from "@/lib/portfolio-score";
 
 export async function GET() {
   const supabase = await createServerSupabaseClient();
@@ -26,9 +27,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
 
+  const { score } = computePortfolioScore(analysis);
+
   const { data, error } = await supabase
     .from("portfolios")
-    .insert({ user_id: user.id, name, custodian, holdings, analysis })
+    .insert({ user_id: user.id, name, custodian, holdings, analysis, score })
     .select()
     .single();
 

@@ -197,7 +197,7 @@ async function upsertAvanza(raw) {
     alpha_3yr: null, beta_3yr: null,
     sri_value: f.esgScore != null ? Math.round(f.esgScore) : null,
     ongoing_cost_actual: f.totalFee ?? null, ongoing_cost_estimated: f.managementFee ?? null,
-    selection_id: null, source: "avanza", fetched_at: now,
+    source: "avanza", fetched_at: now,
   }));
 
   // funds table
@@ -263,7 +263,7 @@ async function upsertNordnet(raw, avanzaIsins) {
       sri_value: null,
       ongoing_cost_actual: fi.fund_calculated_fee ?? null,
       ongoing_cost_estimated: fi.fund_yearly_fee ?? null,
-      selection_id: null, source: "nordnet", fetched_at: now,
+      source: "nordnet", fetched_at: now,
     };
   }).filter(r => r.isin);
 

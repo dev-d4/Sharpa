@@ -23,8 +23,7 @@ function BuildCard() {
       transition={{ duration: 0.5 }}
       className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col"
     >
-      <div className="h-1.5 bg-gradient-to-r from-blue-500 to-blue-400" />
-      <div className="p-7 flex flex-col flex-1 space-y-5">
+      <div className="p-5 sm:p-7 flex flex-col flex-1 space-y-5">
         <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
           <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -40,7 +39,7 @@ function BuildCard() {
         </div>
 
         <div className="bg-slate-50 rounded-xl p-3 w-fit">
-          <DonutChart slices={BUILD_SLICES} centerLabel="70%" centerSub="Aktier" size={88} thickness={14} horizontal />
+          <DonutChart slices={BUILD_SLICES} centerLabel="70%" centerSub="Aktier" size={88} thickness={14} horizontal disableHover />
         </div>
 
         <ul className="space-y-2.5">
@@ -61,7 +60,7 @@ function BuildCard() {
         <div className="pt-2 mt-auto">
           <Link
             href="/bygg-portfolj"
-            className="items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all duration-200 shadow-md shadow-blue-500/25"
+            className="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all duration-200 shadow-md shadow-blue-500/25"
           >
             Bygg din portfölj gratis →
           </Link>
@@ -80,8 +79,7 @@ function AnalyzeCard() {
       transition={{ duration: 0.5, delay: 0.1 }}
       className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col"
     >
-      <div className="h-1.5 bg-gradient-to-r from-emerald-500 to-emerald-400" />
-      <div className="p-7 flex flex-col flex-1 space-y-5">
+      <div className="p-5 sm:p-7 flex flex-col flex-1 space-y-5">
         <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center">
           <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
@@ -187,6 +185,116 @@ const TRUST_ITEMS = [
   },
 ];
 
+// ── Kalkylator ────────────────────────────────────────────────────────────────
+
+function PortfolioCalculator() {
+  const [capital, setCapital]     = useState(200000);
+  const [grossReturn, setGrossReturn] = useState(8.0);
+  const [fee, setFee]             = useState(0.80);
+  const YEARS = 10;
+  const TARGET_FEE = 0.15;
+
+  const net         = grossReturn - fee;
+  const netOpt      = grossReturn - TARGET_FEE;
+  const endValue    = capital * Math.pow(1 + net / 100, YEARS);
+  const endValueOpt = capital * Math.pow(1 + netOpt / 100, YEARS);
+  const diff        = Math.round(endValueOpt - endValue);
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-8">
+      <div className="grid sm:grid-cols-2 gap-8 sm:gap-10 items-start">
+
+        {/* Inputs */}
+        <div className="space-y-6">
+          <div>
+            <div className="flex justify-between items-baseline mb-2">
+              <label className="text-sm font-semibold text-slate-700">Ditt sparkapital</label>
+              <span className="text-sm font-bold text-slate-900 tabular-nums">{capital.toLocaleString("sv-SE")} kr</span>
+            </div>
+            <input type="range" min={10000} max={2000000} step={10000} value={capital}
+              onChange={e => setCapital(Number(e.target.value))} className="w-full accent-blue-500" />
+            <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+              <span>10 000 kr</span><span>2 000 000 kr</span>
+            </div>
+          </div>
+
+          <div>
+            <div className="flex justify-between items-baseline mb-2">
+              <label className="text-sm font-semibold text-slate-700">Din förväntade avkastning</label>
+              <span className="text-sm font-bold text-slate-900 tabular-nums">{grossReturn.toFixed(1)}% / år</span>
+            </div>
+            <input type="range" min={1} max={15} step={0.5} value={grossReturn}
+              onChange={e => setGrossReturn(Number(e.target.value))} className="w-full accent-blue-500" />
+            <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+              <span>1%</span><span>15%</span>
+            </div>
+          </div>
+
+          <div>
+            <div className="flex justify-between items-baseline mb-2">
+              <label className="text-sm font-semibold text-slate-700">Dina fonders avgift</label>
+              <span className="text-sm font-bold text-slate-900 tabular-nums">{fee.toFixed(2)}% / år</span>
+            </div>
+            <input type="range" min={0.00} max={2.00} step={0.05} value={fee}
+              onChange={e => setFee(Number(e.target.value))} className="w-full accent-blue-500" />
+            <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+              <span>0%</span>
+              <span className="text-amber-500 font-medium">Snitt ~0.80%</span>
+              <span>2%</span>
+            </div>
+          </div>
+
+          {/* Net return display */}
+          <div className="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-3">
+            <span className="text-xs text-slate-500">Nettoavkastning</span>
+            <span className={`text-sm font-bold tabular-nums ${net < 1 ? "text-red-500" : "text-slate-800"}`}>
+              {net.toFixed(2)}% / år
+            </span>
+          </div>
+        </div>
+
+        {/* Output */}
+        <div className="space-y-3">
+          <div className="rounded-xl border border-slate-200 p-5">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">Efter {YEARS} år</p>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-slate-500">Nuvarande portfölj</p>
+                  <p className="text-[10px] text-slate-400">{net.toFixed(2)}% netto/år</p>
+                </div>
+                <p className="text-xl font-bold text-slate-800 tabular-nums">{Math.round(endValue).toLocaleString("sv-SE")} kr</p>
+              </div>
+
+              <div className="h-px bg-slate-100" />
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-blue-600">Optimerad avgift</p>
+                  <p className="text-[10px] text-slate-400">{netOpt.toFixed(2)}% netto/år ({TARGET_FEE}% avgift)</p>
+                </div>
+                <p className="text-xl font-bold text-blue-600 tabular-nums">{Math.round(endValueOpt).toLocaleString("sv-SE")} kr</p>
+              </div>
+            </div>
+          </div>
+
+          {diff > 0 && (
+            <div className="bg-green-50 border border-green-100 rounded-xl p-5 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-green-700/60 mb-1">Skillnad efter {YEARS} år</p>
+              <p className="text-3xl sm:text-4xl font-bold text-green-700 tabular-nums">+{diff.toLocaleString("sv-SE")} kr</p>
+              <p className="text-xs text-green-700/50 mt-1">med lägre avgift, samma avkastning</p>
+            </div>
+          )}
+
+          <p className="text-[10px] text-slate-300 leading-relaxed">
+            Illustration av ränta-på-ränta-effekten. Inte en finansiell prognos.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── FAQ ───────────────────────────────────────────────────────────────────────
 
 const FAQS = [
@@ -218,7 +326,7 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 
 export default function HowItWorks() {
   return (
-    <section className="space-y-24 sm:space-y-32">
+    <section className="space-y-16 sm:space-y-32">
 
       {/* Section header + cards — grouped tightly together */}
       <div className="space-y-10 sm:space-y-12">
@@ -276,6 +384,31 @@ export default function HowItWorks() {
             </motion.div>
           ))}
         </div>
+      </div>
+
+      {/* Kalkylator */}
+      <div>
+        <motion.div
+          className="text-center mb-10"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+        >
+          <p className="text-xs font-bold text-blue-500 uppercase tracking-widest mb-3">Räkna själv</p>
+          <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 leading-tight">Vad är skillnaden egentligen?</h2>
+          <p className="text-slate-400 mt-3 text-base max-w-md mx-auto">
+            Ränta-på-ränta gör att även en liten förbättring i avkastning eller avgift ger stor skillnad på lång sikt.
+          </p>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          <PortfolioCalculator />
+        </motion.div>
       </div>
 
       {/* FAQ */}

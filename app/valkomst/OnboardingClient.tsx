@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 
 function ArrowForward() {
@@ -42,6 +42,9 @@ export default function OnboardingClient() {
   const [userName, setUserName] = useState("");
   const [ready, setReady] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextParam = searchParams.get("next");
+  const returnTo = nextParam ?? "/portfolios";
 
   useEffect(() => {
     const supabase = createClient();
@@ -84,7 +87,7 @@ export default function OnboardingClient() {
             className="text-base sm:text-lg text-slate-500 leading-relaxed max-w-[480px] mb-8 sm:mb-10 animate-fade-in-up"
             style={{ animationDelay: "0.07s" }}
           >
-            Innan vi sätter ihop din portfölj vill vi förstå din risknivå. Det tar under 2 minuter och säkerställer att du får fondförslag som är anpassade just efter dig.
+            Innan vi fortsätter vill vi förstå din risknivå. Det tar under 2 minuter och säkerställer att du får fondförslag som är anpassade just efter dig.
           </p>
 
           {/* Stats — dölj på mobil för att hålla fokus på CTA */}
@@ -113,7 +116,7 @@ export default function OnboardingClient() {
             style={{ animationDelay: "0.17s" }}
           >
             <button
-              onClick={() => complete("/risk-profile")}
+              onClick={() => complete(`/risk-profile?next=${encodeURIComponent(returnTo)}`)}
               className="inline-flex items-center justify-center gap-2.5 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-8 py-4 rounded-2xl text-sm transition-all duration-200 shadow-lg shadow-blue-500/25 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0"
             >
               Besvara riskfrågorna
@@ -121,7 +124,7 @@ export default function OnboardingClient() {
             </button>
 
             <button
-              onClick={() => setStep(2)}
+              onClick={() => nextParam ? complete(returnTo) : setStep(2)}
               className="text-sm text-slate-400 hover:text-slate-600 transition-colors py-2 text-center sm:text-left"
             >
               Hoppa över för nu →

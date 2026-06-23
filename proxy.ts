@@ -2,8 +2,8 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 const SITE_COOKIE  = "integration_auth";
-const LOGIN_PAGE   = "/integration/login";
-const LOGIN_API    = "/api/integration/auth";
+const LOGIN_PAGE   = "/radgivning/fundguide/login";
+const LOGIN_API    = "/api/radgivning/fundguide/auth";
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
