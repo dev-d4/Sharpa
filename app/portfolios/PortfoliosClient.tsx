@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase-browser";
 import type { SavedPortfolio } from "@/lib/portfolio";
 import { portfolioRiskLevel, riskMatch, type RiskLevel } from "@/lib/risk";
 import type { SwapSuggestion } from "@/lib/analysis";
+import { computePortfolioScore, SCORE_COLOR_CLASSES } from "@/lib/portfolio-score";
 
 export default function PortfoliosClient() {
   const [portfolios, setPortfolios] = useState<SavedPortfolio[]>([]);
@@ -112,7 +113,7 @@ export default function PortfoliosClient() {
       {portfolios.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-6 py-20 text-center space-y-5">
           <p className="text-slate-900 font-semibold text-lg">Du har inga sparade portföljer än</p>
-          <p className="text-slate-400 text-sm max-w-xs mx-auto">Bygg din första portfölj på 2 minuter — vi ställer 6 frågor och sätter ihop en komplett portfölj åt dig.</p>
+          <p className="text-slate-400 text-sm max-w-sm mx-auto">Bygg din första portfölj på 2 minuter — vi ställer 6 frågor och sätter ihop en komplett portfölj åt dig. Eller lägg in din befintliga portfölj, analysera den och spara den här.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/bygg-portfolj" className="inline-block bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-semibold px-6 py-3 rounded-xl transition-all shadow-sm shadow-blue-200">
               Bygg din första portfölj →
@@ -144,17 +145,24 @@ export default function PortfoliosClient() {
               );
             }
 
+            const scoreResult = computePortfolioScore(p.analysis);
+            const scoreColors = SCORE_COLOR_CLASSES[scoreResult.color];
+
             return (
               <div key={p.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                 {/* Header */}
                 <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-100">
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1.5 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h2 className="font-bold text-slate-900 break-words">{p.name}</h2>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <h2 className="font-bold text-slate-900 break-words w-full sm:w-auto">{p.name}</h2>
                         <span className="text-xs bg-blue-50 text-blue-600 font-medium px-2 py-0.5 rounded-full">{custodianLabel}</span>
                         <span className="text-xs text-slate-400">{p.holdings.length} fonder</span>
                         {riskBadge}
+                        <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border ${scoreColors.pill}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${scoreColors.dot}`} />
+                          {scoreResult.score.toFixed(1)}/10 · {scoreResult.label}
+                        </span>
                       </div>
                       <div className="flex gap-3 flex-wrap">
                         {p.analysis.avgCost !== null && (
@@ -171,13 +179,13 @@ export default function PortfoliosClient() {
                     <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                       <button
                         onClick={() => router.push(`/analyze?portfolio=${p.id}`)}
-                        className="text-xs font-medium text-blue-600 hover:text-blue-700 border border-blue-200 hover:border-blue-300 px-3 py-2.5 rounded-lg transition-colors whitespace-nowrap"
+                        className="text-xs font-medium text-blue-600 hover:text-blue-700 border border-blue-200 hover:border-blue-300 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg transition-colors whitespace-nowrap min-h-[36px]"
                       >
                         Redigera
                       </button>
                       <button
                         onClick={() => handleDelete(p.id)}
-                        className="text-xs font-medium text-slate-400 hover:text-red-500 border border-slate-200 hover:border-red-200 px-3 py-2.5 rounded-lg transition-colors whitespace-nowrap"
+                        className="text-xs font-medium text-slate-400 hover:text-red-500 border border-slate-200 hover:border-red-200 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg transition-colors whitespace-nowrap min-h-[36px]"
                       >
                         Ta bort
                       </button>

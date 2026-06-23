@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { RISK_LABELS, RISK_EQUITY, calcRiskScore, type RiskLevel } from "@/lib/risk";
 
@@ -40,6 +40,8 @@ const QUESTIONS = [
 
 export default function RiskProfileClient() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextParam = searchParams.get("next");
   const [loading, setLoading] = useState(true);
   const [authed, setAuthed] = useState(true);
   const [existing, setExisting] = useState<{ score: RiskLevel; label: string } | null>(null);
@@ -78,7 +80,10 @@ export default function RiskProfileClient() {
         body: JSON.stringify(answers),
       });
       if (res.ok) {
-        router.push("/risk-profile/result");
+        const resultUrl = nextParam
+          ? `/risk-profile/result?next=${encodeURIComponent(nextParam)}`
+          : "/risk-profile/result";
+        router.push(resultUrl);
       }
     } finally {
       setSaving(false);
@@ -171,8 +176,13 @@ export default function RiskProfileClient() {
 
   // Questionnaire
   const allAnswered = QUESTIONS.every((q) => answers[q.key]);
-  return (
-    <div className="max-w-xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8">
+  const isOnboarding = !!nextParam;
+
+  const questionnaire = (
+    <div className={isOnboarding
+      ? "w-full max-w-xl py-12 sm:py-16 space-y-6 sm:space-y-8"
+      : "max-w-xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8"
+    }>
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Ta fram din riskprofil</h1>
         <p className="text-sm text-slate-500 mt-1">Svara på 4 frågor — tar under en minut.</p>
@@ -190,41 +200,41 @@ export default function RiskProfileClient() {
         const q = QUESTIONS[currentStep];
         const qi = currentStep;
         return (
-        <section key={q.key} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 space-y-4">
-          <div>
-            <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">Fråga {qi + 1} av {QUESTIONS.length}</p>
-            <h2 className="font-bold text-slate-900 text-[17px] leading-snug">{q.question}</h2>
-            <p className="text-sm text-slate-500 mt-1">{q.description}</p>
-          </div>
-          <div className="space-y-2">
-            {q.options.map((opt, i) => {
-              const value = i + 1;
-              const selected = answers[q.key] === value;
-              return (
-                <button
-                  key={opt}
-                  type="button"
-                  onClick={() => {
-                    setAnswers((prev) => ({ ...prev, [q.key]: value }));
-                    // Auto-advance till nästa fråga efter 200ms
-                    if (currentStep < QUESTIONS.length - 1) {
-                      setTimeout(() => setCurrentStep((s) => s + 1), 200);
-                    }
-                  }}
-                  className={`w-full text-left px-4 py-4 rounded-xl border-2 text-[15px] font-medium transition-all active:scale-[0.99] ${
-                    selected
-                      ? "border-blue-500 bg-blue-50 text-blue-800"
-                      : "border-slate-200 text-slate-700 hover:border-blue-300 hover:bg-blue-50/30"
-                  }`}
-                >
-                  {opt}
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      );
-    })()}
+          <section key={q.key} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 space-y-4">
+            <div>
+              <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">Fråga {qi + 1} av {QUESTIONS.length}</p>
+              <h2 className="font-bold text-slate-900 text-[17px] leading-snug">{q.question}</h2>
+              <p className="text-sm text-slate-500 mt-1">{q.description}</p>
+            </div>
+            <div className="space-y-2">
+              {q.options.map((opt, i) => {
+                const value = i + 1;
+                const selected = answers[q.key] === value;
+                return (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => {
+                      setAnswers((prev) => ({ ...prev, [q.key]: value }));
+                      // Auto-advance till nästa fråga efter 200ms
+                      if (currentStep < QUESTIONS.length - 1) {
+                        setTimeout(() => setCurrentStep((s) => s + 1), 200);
+                      }
+                    }}
+                    className={`w-full text-left px-4 py-4 rounded-xl border-2 text-[15px] font-medium transition-all active:scale-[0.99] ${
+                      selected
+                        ? "border-blue-500 bg-blue-50 text-blue-800"
+                        : "border-slate-200 text-slate-700 hover:border-blue-300 hover:bg-blue-50/30"
+                    }`}
+                  >
+                    {opt}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })()}
 
       {allAnswered && (
         <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-sm text-blue-800">
@@ -235,15 +245,34 @@ export default function RiskProfileClient() {
         </div>
       )}
 
-    {currentStep === QUESTIONS.length - 1 && (
-      <button
-        onClick={handleSubmit}
-        disabled={!allAnswered || saving}
-        className="w-full bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 disabled:from-blue-300 disabled:to-blue-300 text-white font-medium rounded-xl py-4 text-[15px] transition-all shadow-md shadow-blue-200"
-      >
-        {saving ? "Sparar…" : "Spara riskprofil"}
-      </button>
-    )}
+      {currentStep === QUESTIONS.length - 1 && (
+        <button
+          onClick={handleSubmit}
+          disabled={!allAnswered || saving}
+          className="w-full bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 disabled:from-blue-300 disabled:to-blue-300 text-white font-medium rounded-xl py-4 text-[15px] transition-all shadow-md shadow-blue-200"
+        >
+          {saving ? "Sparar…" : "Spara riskprofil"}
+        </button>
+      )}
+
+      {isOnboarding && (
+        <button
+          onClick={() => router.push(nextParam)}
+          className="w-full text-sm text-slate-400 hover:text-slate-600 transition-colors py-2 text-center"
+        >
+          Hoppa över riskprofilen och fortsätt →
+        </button>
+      )}
     </div>
   );
+
+  if (isOnboarding) {
+    return (
+      <div className="fixed inset-0 z-[200] bg-white overflow-y-auto flex items-center justify-center px-6">
+        {questionnaire}
+      </div>
+    );
+  }
+
+  return questionnaire;
 }
