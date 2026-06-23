@@ -1580,7 +1580,7 @@ export default function AnalyzeClient() {
                           </svg>
                         </div>
                         <p className="font-medium text-slate-700 text-sm">Dra och släpp eller klicka</p>
-                        <p className="text-xs text-slate-400">CSV-format (från Nordnet)</p>
+                        <p className="text-xs text-slate-400">CSV-format (från Nordnet eller Avanza)</p>
                       </div>
                     )}
                   </div>
@@ -1653,6 +1653,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
   const showBlur = user === null;
   const score = computePortfolioScore(analysis).score;
   const [showAllSwaps, setShowAllSwaps] = useState(false);
+  const [openSwapTooltip, setOpenSwapTooltip] = useState<number | null>(null);
 
   const pv = portfolioValue ?? 100_000;
   const assumed = portfolioValue === null;
@@ -1691,13 +1692,60 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
   return (
     <div className="space-y-5">
 
-      {/* Print-only header */}
-      <div className="print-only hidden border-b border-slate-200 pb-4 mb-2">
-        <div className="flex items-center justify-between">
-          <p className="text-lg font-bold text-slate-900">Fondanalys</p>
+      {/* Print-only header + score card */}
+      <div className="print-only hidden">
+        <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
+          <p className="text-base font-bold text-slate-900">Fondanalys</p>
           <p className="text-sm text-slate-400">{new Date().toLocaleDateString("sv-SE")}</p>
         </div>
-        <p className="text-sm text-slate-500 mt-1">Portföljanalys — fondanalys.se</p>
+
+        <div className="border border-slate-200 rounded-xl p-5 mb-4">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-slate-400 mb-1">Portföljbetyg</p>
+              <div className="flex items-baseline gap-1">
+                <span className="text-5xl font-bold tabular-nums" style={{ color: scoreColor }}>
+                  {score.toFixed(1).replace(".", ",")}
+                </span>
+                <span className="text-xl text-slate-300 font-light">/10</span>
+              </div>
+            </div>
+            {potentialGainKr !== null && (
+              <div className="text-right">
+                <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-slate-400 mb-1">Förbättringspotential</p>
+                <p className="text-2xl font-bold text-green-700">+{Math.round(potentialGainKr).toLocaleString("sv-SE")} kr</p>
+                <p className="text-xs text-slate-400 mt-0.5">per år{assumed ? " (vid 100 000 kr)" : ""}</p>
+              </div>
+            )}
+          </div>
+
+          {analysis.summaryText && (
+            <p className="mt-4 pt-4 border-t border-slate-100 text-slate-600 leading-relaxed text-sm">
+              {analysis.summaryText}
+            </p>
+          )}
+
+          {(strengths.length > 0 || warnings.length > 0) && (
+            <div className="mt-4 grid grid-cols-2 gap-4">
+              {strengths.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-2">Styrkor</p>
+                  {strengths.map(s => (
+                    <p key={s} className="text-sm text-green-700 flex items-center gap-1.5 mb-1">✓ {s}</p>
+                  ))}
+                </div>
+              )}
+              {warnings.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-2">Förbättringsområden</p>
+                  {warnings.map(w => (
+                    <p key={w} className="text-sm text-amber-700 flex items-center gap-1.5 mb-1">⚠ {w}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Hero card */}
@@ -1763,7 +1811,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            Ladda ner PDF
+            Spara som PDF
           </button>
         </div>
       </section>
@@ -1896,12 +1944,12 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
               const groups = Array.from(groupMap.values()).sort((a, b) => b.length - a.length);
 
               const VISIBLE = 3;
-              const visibleGroups = showAllSwaps ? groups : groups.slice(0, VISIBLE);
               const total = groupMap.size;
               return (
                 <>
                   <div className="divide-y divide-slate-200">
-                    {visibleGroups.map((group, gi) => {
+                    {groups.map((group, gi) => {
+                      const hidden = !showAllSwaps && gi >= VISIBLE;
                       const suggested = group[0].suggestedFund;
                       const isConsolidate = group[0].consolidate;
                       const s = group[0];
@@ -1961,7 +2009,11 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                       }
 
                       return (
-                        <div key={gi} className="py-4 first:pt-0 last:pb-0">
+                        <div
+                          key={gi}
+                          className={`py-4 first:pt-0 last:pb-0 cursor-pointer select-none${hidden ? " swap-hidden" : ""}`}
+                          onClick={() => setOpenSwapTooltip(prev => prev === gi ? null : gi)}
+                        >
                           {isConsolidate && isMultiGroup && (
                             <div className="mb-2">
                               <span className="inline-flex text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-[#2563EB]">
@@ -1990,7 +2042,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                               <p className="text-sm font-semibold text-[#111827] leading-snug break-words">{suggested.name}</p>
                             </div>
                             {showInfo && (
-                              <InfoButton>{tooltipContent}</InfoButton>
+                              <InfoButton open={openSwapTooltip === gi}>{tooltipContent}</InfoButton>
                             )}
                           </div>
                         </div>
@@ -2029,7 +2081,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
         </div>
 
         {showBlur && (
-          <div className="absolute inset-0 flex items-center justify-center z-10">
+          <div className="no-print absolute inset-0 flex items-center justify-center z-10">
             <div className="bg-white rounded-2xl p-6 shadow-xl border border-slate-100 max-w-sm w-full mx-4 text-center space-y-4">
               <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto">
                 <svg className="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -2062,27 +2114,24 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
           </p>
         </section>
       )}
+      {/* Print footer */}
+      <div className="print-footer hidden">
+        fondanalys.se — Historisk avkastning är ingen garanti för framtida resultat. Ej finansiell rådgivning.
+      </div>
+
     </div>
   );
 }
 
-function InfoButton({ children }: { children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
+function InfoButton({ children, open }: { children: React.ReactNode; open: boolean }) {
   return (
-    <div className="relative group/reason shrink-0 pt-1">
-      <button
-        type="button"
-        onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
-        className="flex items-center justify-center w-3.5 h-3.5 rounded-full bg-slate-200 text-[9px] text-slate-500 select-none"
-      >i</button>
-      <div className={cn(
-        "absolute bottom-full right-0 mb-2 w-56",
-        "bg-slate-700 text-white text-xs rounded-xl px-3 py-2.5",
-        "transition-opacity z-20 leading-relaxed shadow-lg whitespace-normal text-left",
-        open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none sm:group-hover/reason:opacity-100"
-      )}>
-        {children}
-      </div>
+    <div className="relative shrink-0 pt-1">
+      <span className="flex items-center justify-center w-3.5 h-3.5 rounded-full bg-slate-200 text-[9px] normal-case text-slate-500 pointer-events-none">i</span>
+      {open && (
+        <div className="absolute bottom-full right-0 mb-2 w-56 bg-slate-700 text-white text-xs rounded-xl px-3 py-2.5 z-20 leading-relaxed shadow-lg whitespace-normal text-left pointer-events-none">
+          {children}
+        </div>
+      )}
     </div>
   );
 }
@@ -2090,28 +2139,24 @@ function InfoButton({ children }: { children: React.ReactNode }) {
 function Metric({ label, value, sub, info }: { label: string; value: string; sub: string; info: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="relative group">
-      {/* Desktop: hover tooltip */}
-      <span className="pointer-events-none absolute bottom-full left-0 mb-2 w-48
-        bg-slate-600 text-white text-xs rounded-xl px-3 py-2
-        opacity-0 group-hover:opacity-100 transition-opacity z-10 leading-snug shadow-lg hidden sm:block">
+    <div
+      className="relative group cursor-pointer select-none"
+      onClick={() => setOpen(o => !o)}
+    >
+      <div className={cn(
+        "absolute bottom-full left-0 mb-2 w-52 z-20",
+        "bg-slate-700 text-white text-xs rounded-xl px-3 py-2.5",
+        "leading-snug shadow-lg pointer-events-none transition-opacity",
+        open ? "opacity-100" : "opacity-0 sm:group-hover:opacity-100",
+      )}>
         {info}
-      </span>
-      <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-1.5 flex items-center gap-1 cursor-default">
+      </div>
+      <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-1.5 flex items-center gap-1">
         {label}
-        {/* Desktop info icon */}
-        <span className="hidden sm:flex items-center justify-center w-3.5 h-3.5 rounded-full bg-slate-200 text-[9px] text-slate-500">i</span>
-        {/* Mobile tap icon */}
-        <button
-          type="button"
-          onClick={() => setOpen(o => !o)}
-          className="sm:hidden flex items-center justify-center w-3.5 h-3.5 rounded-full bg-slate-200 text-[9px] text-slate-500"
-        >i</button>
+        <span className="flex items-center justify-center w-3.5 h-3.5 rounded-full bg-slate-200 text-[9px] normal-case text-slate-500">i</span>
       </p>
       <p className="text-2xl sm:text-3xl font-bold text-[#111827] leading-none tabular-nums">{value}</p>
       <p className="text-xs text-slate-400 mt-1.5">{sub}</p>
-      {/* Mobile: expandable info panel on tap */}
-      {open && <p className="sm:hidden text-[10px] text-slate-500 bg-slate-50 rounded-lg px-2 py-1.5 mt-2 leading-snug">{info}</p>}
     </div>
   );
 }

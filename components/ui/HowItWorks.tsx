@@ -90,7 +90,7 @@ function AnalyzeCard() {
           <p className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Analysera portfölj</p>
           <h3 className="text-xl font-bold text-slate-900">Förbättra det du redan har</h3>
           <p className="text-sm text-slate-500 leading-relaxed">
-            Lägg in dina befintliga fonder och se direkt hur de presterar — avgifter, risk och konkreta bytesförslag.
+            Lägg in dina befintliga fonder och se direkt om du kan få mer för pengarna — rätt fonder för din risknivå och dina mål.
           </p>
         </div>
 
@@ -100,7 +100,7 @@ function AnalyzeCard() {
             <div className="flex-1 min-w-0">
               <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Nuvarande</p>
               <p className="text-xs font-semibold text-slate-700 truncate">SEB Sverige Index</p>
-              <p className="text-[10px] text-slate-400">Avgift 0.40%/år</p>
+              <p className="text-[10px] text-slate-400">Avgift 0,40%/år · 5 år: +64%</p>
             </div>
             <svg className="w-4 h-4 text-slate-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
@@ -108,19 +108,19 @@ function AnalyzeCard() {
             <div className="flex-1 min-w-0">
               <p className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wide mb-0.5">Föreslagen</p>
               <p className="text-xs font-semibold text-slate-700 truncate">Avanza Zero</p>
-              <p className="text-[10px] text-emerald-600">Avgift 0.00%/år</p>
+              <p className="text-[10px] text-emerald-600">Avgift 0,00%/år · 5 år: +68%</p>
             </div>
           </div>
           <div className="border-t border-slate-200 pt-2">
-            <p className="text-[10px] font-semibold text-emerald-600">▲ Sparar 0.40% per år i avgifter</p>
+            <p className="text-[10px] font-semibold text-emerald-600">▲ Lägre avgift och bättre avkastning</p>
           </div>
         </div>
 
         <ul className="space-y-2.5">
           {[
-            "Avgiftsanalys och jämförelse",
-            "Riskbedömning och Sharpe-kvot",
-            "Konkreta fondbytesförslag",
+            "Hur bra presterar dina fonder faktiskt?",
+            "Vad kostar de och finns det bättre alternativ?",
+            "Konkreta förslag på fonder som passar dig bättre",
           ].map((item) => (
             <li key={item} className="flex items-start gap-2.5 text-sm text-slate-600">
               <svg className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

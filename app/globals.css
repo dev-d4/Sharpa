@@ -128,27 +128,92 @@ body.dashboard-mode > main {
 /* ── Print / PDF export ──────────────────────────────────────────────────── */
 
 @media print {
-  header, footer, .no-print {
+  /* Page setup */
+  @page {
+    size: A4;
+    margin: 1.8cm 2cm 2cm;
+  }
+
+  /* Hide screen-only chrome */
+  header, footer, nav,
+  .no-print, button {
     display: none !important;
   }
 
-  body {
+  /* Base */
+  html, body {
     background: white !important;
     background-image: none !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    font-size: 10.5pt;
+    color: #1E293B;
   }
 
+  /* Show print-only blocks */
   .print-only {
     display: block !important;
   }
 
-  /* Remove shadows and borders that don't render well */
-  section {
+  /* Remove all shadows */
+  * {
     box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Sections */
+  section {
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 8px !important;
+    padding: 16px 20px !important;
+    margin-bottom: 14pt !important;
     break-inside: avoid;
   }
 
-  /* Make sure links aren't underlined in print */
+  /* Swap rows: show all (including .swap-hidden) */
+  .swap-hidden {
+    display: block !important;
+  }
+
+  /* Remove blur from swap section for non-logged-in print */
+  .blur-sm {
+    filter: none !important;
+  }
+
+  /* SuggestedPortfolio: force table view, hide mobile list */
+  .sm\:hidden {
+    display: none !important;
+  }
+  .hidden.sm\:block {
+    display: block !important;
+  }
+
+  /* Avoid splitting swap rows across pages */
+  .divide-y > * {
+    break-inside: avoid;
+  }
+
+  /* Avoid orphaned headings */
+  p + section, h2, h3 {
+    break-after: avoid;
+  }
+
   a {
     text-decoration: none !important;
+    color: inherit !important;
+  }
+
+  /* Print footer — fixed at page bottom */
+  .print-footer {
+    display: block !important;
+    position: fixed;
+    bottom: 0.5cm;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 7.5pt;
+    color: #94A3B8;
+    border-top: 1px solid #F1F5F9;
+    padding-top: 6pt;
   }
 }

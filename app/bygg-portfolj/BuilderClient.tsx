@@ -240,7 +240,7 @@ function OptionCard({ label, desc, onClick }: {
 export default function BuilderClient() {
   const router = useRouter();
 
-  const [step, setStep]             = useState<Step>("platform");
+  const [step, setStep]             = useState<Step>("goal");
   const [answers, setAnswers]       = useState<Answers>(EMPTY);
   const [pending, setPending]       = useState<SelectionId[]>([]);
   const [priorities, setPriorities] = useState<Record<string, number>>({});

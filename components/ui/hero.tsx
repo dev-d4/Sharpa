@@ -103,7 +103,7 @@ function BeforeAfterCard() {
       </div>
 
       <p className="text-[10px] text-slate-300 mt-4 text-center tracking-wide">
-        Exempelbyten · dina fonder analyseras individuellt
+        Baserat på avkastning, risk och kostnad · dina fonder analyseras individuellt
       </p>
     </div>
   );
@@ -194,12 +194,11 @@ export default async function Hero() {
                 className="text-[42px] sm:text-[54px] lg:text-[64px] leading-[1.05] tracking-[-0.02em] text-slate-900"
                 style={{ fontFamily: "var(--font-dm-serif), Georgia, serif" }}
               >
-                Betalar du<br />
-                <span className="hero-accent">för mycket</span>{" "}
-                för dina fonder?
+                Hur bra är dina<br />
+                fonder <span className="hero-accent">egentligen</span>?
               </h1>
               <p className="text-base sm:text-lg text-slate-500 leading-loose max-w-[430px] mx-auto lg:mx-0">
-                Lägg in dina fonder och se på 2 minuter vad de kostar dig — och vilka byten som sänker avgiften. Gratis och oberoende.
+                Sök upp dina fonder och se på 2 minuter hur bra de egentligen presterar — och vilka byten som kan ge dig mer för pengarna. Gratis och oberoende.
               </p>
             </div>
 
@@ -293,7 +292,7 @@ export default async function Hero() {
                 <span>
                   Redan{" "}
                   <span className="font-semibold text-slate-700">{portfolioCount}</span>{" "}
-                  portföljer har fått förbättrade fondbytesförslag
+                  portföljer har analyserats och optimerats
                 </span>
               </div>
             )}

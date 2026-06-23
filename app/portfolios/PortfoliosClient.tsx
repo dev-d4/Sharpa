@@ -15,6 +15,8 @@ export default function PortfoliosClient() {
   const [loading, setLoading] = useState(true);
   const [expandedSwaps, setExpandedSwaps] = useState<Set<string>>(new Set());
   const [expandedDetails, setExpandedDetails] = useState<Set<string>>(new Set());
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -33,8 +35,14 @@ export default function PortfoliosClient() {
   }, [router]);
 
   async function handleDelete(id: string) {
-    await fetch(`/api/portfolios/${id}`, { method: "DELETE" });
+    setDeleteError(null);
+    const res = await fetch(`/api/portfolios/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      setDeleteError("Kunde inte ta bort portföljen. Försök igen.");
+      return;
+    }
     setPortfolios((prev) => prev.filter((p) => p.id !== id));
+    setDeleteConfirm(null);
   }
 
   function toggle(set: React.Dispatch<React.SetStateAction<Set<string>>>, id: string) {
@@ -183,13 +191,33 @@ export default function PortfoliosClient() {
                       >
                         Redigera
                       </button>
-                      <button
-                        onClick={() => handleDelete(p.id)}
-                        className="text-xs font-medium text-slate-400 hover:text-red-500 border border-slate-200 hover:border-red-200 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg transition-colors whitespace-nowrap min-h-[36px]"
-                      >
-                        Ta bort
-                      </button>
+                      {deleteConfirm === p.id ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => handleDelete(p.id)}
+                            className="text-xs font-medium text-white bg-red-500 hover:bg-red-600 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg transition-colors whitespace-nowrap min-h-[36px]"
+                          >
+                            Ja, ta bort
+                          </button>
+                          <button
+                            onClick={() => { setDeleteConfirm(null); setDeleteError(null); }}
+                            className="text-xs font-medium text-slate-500 hover:text-slate-700 border border-slate-200 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg transition-colors whitespace-nowrap min-h-[36px]"
+                          >
+                            Avbryt
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setDeleteConfirm(p.id)}
+                          className="text-xs font-medium text-slate-400 hover:text-red-500 border border-slate-200 hover:border-red-200 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg transition-colors whitespace-nowrap min-h-[36px]"
+                        >
+                          Ta bort
+                        </button>
+                      )}
                     </div>
+                    {deleteError && deleteConfirm === null && (
+                      <p className="text-xs text-red-500 mt-1 text-right">{deleteError}</p>
+                    )}
                   </div>
                 </div>
 

@@ -15,9 +15,37 @@ export const dmSerif = DM_Serif_Display({
   display: "swap",
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://fondanalys.se";
+const OG_DESCRIPTION = "Sök upp dina fonder och se på 2 minuter hur bra de egentligen presterar — och vilka byten som kan ge dig mer för pengarna. Gratis och oberoende.";
+
 export const metadata: Metadata = {
-  title: "Fondanalys – Optimera din fondportfölj",
-  description: "Analysera din fondportfölj med relevanta nyckeltal och få personliga fondbytesförslag.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "Fondanalys – Hur bra är dina fonder egentligen?",
+    template: "%s – Fondanalys",
+  },
+  description: OG_DESCRIPTION,
+  openGraph: {
+    title: "Fondanalys – Hur bra är dina fonder egentligen?",
+    description: OG_DESCRIPTION,
+    url: SITE_URL,
+    siteName: "Fondanalys",
+    locale: "sv_SE",
+    type: "website",
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "Fondanalys" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Fondanalys – Hur bra är dina fonder egentligen?",
+    description: OG_DESCRIPTION,
+    images: ["/og.png"],
+  },
+  icons: {
+    icon: "/logo.svg",
+    shortcut: "/logo.svg",
+    apple: "/logo.svg",
+  },
+  robots: { index: true, follow: true },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
