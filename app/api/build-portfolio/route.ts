@@ -12,9 +12,10 @@ const BOND_IDS = new Set<SelectionId>(["bond-sek", "bond-global", "bond-highyiel
 
 type Answers = {
   platform:      "avanza" | "nordnet" | "both";
-  goal:          "pension" | "wealth" | "specific" | "preserve";
   horizon:       "short" | "medium" | "long" | "verylong";
   reaction:      "sell" | "wait" | "buy";
+  q3:            number | null;   // 1–5: Hur viktig är investeringen?
+  q4:            number | null;   // 1–5: Vad är viktigast?
   selections:    SelectionId[];
   priorities:    Record<string, number> | null;
   management:    "passive" | "mixed" | "active";
@@ -49,60 +50,98 @@ const EQUITY_PCT: Record<number, number> = {
   1: 20, 2: 40, 3: 60, 4: 80, 5: 100,
 };
 
+// Same formula as calcRiskScore in lib/risk.ts — round((q1+q2+q3+q4)/4).
+// Builder and risk profile now ask identical questions so scores are always in sync.
 function computeRiskScore(a: Answers): number {
-  let score = 3;
-  if (a.horizon === "short")         score -= 1;
-  else if (a.horizon === "long")     score += 1;
-  else if (a.horizon === "verylong") score += 2;
-  if (a.reaction === "sell")         score -= 1;
-  else if (a.reaction === "buy")     score += 1;
-  if (a.goal === "preserve")         score -= 2;
-  else if (a.goal === "specific")    score -= 1;
-  else if (a.goal === "pension")     score += 1;
-  return Math.max(1, Math.min(5, score));
+  const q1Map: Record<string, number> = { short: 2, medium: 3, long: 4, verylong: 5 };
+  const q2Map: Record<string, number> = { sell: 1, wait: 3, buy: 5 };
+  const v1 = q1Map[a.horizon]  ?? 3;
+  const v2 = q2Map[a.reaction] ?? 3;
+  const v3 = a.q3 ?? 3;
+  const v4 = a.q4 ?? 3;
+  return Math.max(1, Math.min(5, Math.round((v1 + v2 + v3 + v4) / 4)));
+}
+
+// ── Live classification (mirrors scripts/classify-funds.ts) ──────────────────
+// Using the fund's `category` field directly avoids depending on the pre-classified
+// `selection_id` column in the DB, which gets wiped to null whenever the cron job
+// refreshes fund data via fetchAvanzaFunds/fetchNordnetFunds upserts.
+
+function classifyFund(category: string | null, categoryGroup: string | null): SelectionId | null {
+  if (!category) return null;
+  const cat = category.trim();
+  const low = cat.toLowerCase();
+
+  if (cat.startsWith("Ränte") || categoryGroup === "Money Market") {
+    if (low.includes("tillväxtmark") || low.includes("tillväxtm")) return "bond-highyield";
+    if (low.includes("högrisk"))                                    return "bond-highyield";
+    if (low.includes("kina") || low.includes("china"))              return "bond-highyield";
+    if (low.includes("sek"))                                        return "bond-sek";
+    return "bond-global";
+  }
+
+  if (cat.startsWith("Branschfond,")) {
+    if (low.includes("teknik") || low.includes("tech") || low.includes("kommunikation")) return "tech";
+    if (low.includes("läkemedel") || low.includes("bioteknik") || low.includes("hälsa")) return "health";
+    if (low.includes("fastighetsbolag") || low.includes("fastighet"))                    return "real-estate";
+    if (low.includes("ny energi") || low.includes("energi") || low.includes("råvaror") ||
+        low.includes("ädelmetaller") || low.includes("vattenresurser") || low.includes("miljö")) return "energy";
+    if (low.includes("finans") || low.includes("bank"))   return "finance";
+    if (low.includes("konsument"))                        return "consumer";
+    if (low.includes("infrastruktur") || low.includes("industrimaterial")) return "industry";
+    return null;
+  }
+
+  if (cat.startsWith("Råvaror"))                                           return "energy";
+  if (cat.startsWith("Global") || cat === "Global & Sverige")              return "global";
+  if (cat.startsWith("Sverige"))                                            return "sweden";
+  if (cat.startsWith("USA"))                                                return "usa";
+  if (cat.startsWith("Europa") || cat.startsWith("Euroland"))              return "europe";
+  if (["Spanien","Italien","Hongkong"].includes(cat) ||
+      cat.startsWith("Tyskland") || cat.startsWith("Storbritannien"))      return "europe";
+  if (cat.startsWith("Norden") || ["Norge","Finland","Danmark"].includes(cat)) return "nordic";
+  if (cat.startsWith("Tillväxtmarknader") ||
+      cat === "Afrika och Mellanöstern" || cat === "Östeuropa ex Ryssland") return "emerging";
+  if (cat.startsWith("Asien"))                                              return "asia";
+  if (["ASEAN","Taiwan","Korea","Australien & Nya Zeeland","Indonesien","Vietnam"].includes(cat)) return "asia";
+  if (cat.startsWith("Japan"))                                              return "japan";
+  if (cat.startsWith("Kina"))                                               return "china";
+  if (cat.startsWith("Indien"))                                             return "india";
+  if (cat === "Latinamerika" || cat === "Brasilien")                        return "latam";
+
+  return null;
 }
 
 // ── Selection → fund category mapping ────────────────────────────────────────
-
-// Geographic, sector and bond filters use the pre-classified `selection_id` column
-// written by scripts/classify-funds.ts. This eliminates all category string-matching
-// and makes fund routing deterministic and auditable.
-//
-// Style filters (growth / value / smallcap) continue to use `equity_style_box`
-// because style crosses geographic boundaries — a growth fund can be global,
-// Swedish or US — and equity_style_box is already structured, reliable data.
 const SELECTION_FILTER: Record<SelectionId, (f: FundRow) => boolean> = {
-  // Geographic — pure DB lookup
-  global:        (f) => f.selection_id === "global",
-  sweden:        (f) => f.selection_id === "sweden",
-  usa:           (f) => f.selection_id === "usa",
-  europe:        (f) => f.selection_id === "europe",
-  nordic:        (f) => f.selection_id === "nordic",
-  emerging:      (f) => f.selection_id === "emerging",
-  asia:          (f) => f.selection_id === "asia",
-  japan:         (f) => f.selection_id === "japan",
-  china:         (f) => f.selection_id === "china",
-  india:         (f) => f.selection_id === "india",
-  latam:         (f) => f.selection_id === "latam",
+  global:        (f) => classifyFund(f.category, f.category_group) === "global",
+  sweden:        (f) => classifyFund(f.category, f.category_group) === "sweden",
+  usa:           (f) => classifyFund(f.category, f.category_group) === "usa",
+  europe:        (f) => classifyFund(f.category, f.category_group) === "europe",
+  nordic:        (f) => classifyFund(f.category, f.category_group) === "nordic",
+  emerging:      (f) => classifyFund(f.category, f.category_group) === "emerging",
+  asia:          (f) => classifyFund(f.category, f.category_group) === "asia",
+  japan:         (f) => classifyFund(f.category, f.category_group) === "japan",
+  china:         (f) => classifyFund(f.category, f.category_group) === "china",
+  india:         (f) => classifyFund(f.category, f.category_group) === "india",
+  latam:         (f) => classifyFund(f.category, f.category_group) === "latam",
 
-  // Sector — pure DB lookup
-  tech:          (f) => f.selection_id === "tech",
-  health:        (f) => f.selection_id === "health",
-  "real-estate": (f) => f.selection_id === "real-estate",
-  energy:        (f) => f.selection_id === "energy",
-  finance:       (f) => f.selection_id === "finance",
-  consumer:      (f) => f.selection_id === "consumer",
-  industry:      (f) => f.selection_id === "industry",
+  tech:          (f) => classifyFund(f.category, f.category_group) === "tech",
+  health:        (f) => classifyFund(f.category, f.category_group) === "health",
+  "real-estate": (f) => classifyFund(f.category, f.category_group) === "real-estate",
+  energy:        (f) => classifyFund(f.category, f.category_group) === "energy",
+  finance:       (f) => classifyFund(f.category, f.category_group) === "finance",
+  consumer:      (f) => classifyFund(f.category, f.category_group) === "consumer",
+  industry:      (f) => classifyFund(f.category, f.category_group) === "industry",
 
-  // Style — equity_style_box is structured data, no ambiguity here
+  // Style uses equity_style_box — crosses geographic boundaries, so category alone isn't enough
   growth:        (f) => !!(f.equity_style_box?.toLowerCase().includes("growth")),
   value:         (f) => !!(f.equity_style_box?.toLowerCase().includes("value")),
   smallcap:      (f) => !!(f.equity_style_box?.toLowerCase().includes("small")),
 
-  // Bond — pure DB lookup
-  "bond-sek":       (f) => f.selection_id === "bond-sek",
-  "bond-global":    (f) => f.selection_id === "bond-global",
-  "bond-highyield": (f) => f.selection_id === "bond-highyield",
+  "bond-sek":       (f) => classifyFund(f.category, f.category_group) === "bond-sek",
+  "bond-global":    (f) => classifyFund(f.category, f.category_group) === "bond-global",
+  "bond-highyield": (f) => classifyFund(f.category, f.category_group) === "bond-highyield",
 };
 
 const SELECTION_RATIONALE: Record<SelectionId, string> = {
@@ -154,10 +193,13 @@ function scoreF(f: FundRow): number {
 }
 
 function pickTop(pool: FundRow[], exclude: string[] = [], n = 6): FundRow[] {
-  return pool
-    .filter((f) => !exclude.includes(f.isin))
-    .sort((a, b) => scoreF(b) - scoreF(a))
-    .slice(0, n);
+  const withData = pool.filter(
+    (f) => !exclude.includes(f.isin) &&
+    (f.sharpe_3yr !== null || f.return_1yr !== null || f.return_3yr !== null)
+  );
+  // Fall back to all funds (including data-less) if the filtered pool is empty
+  const candidates = withData.length > 0 ? withData : pool.filter((f) => !exclude.includes(f.isin));
+  return candidates.sort((a, b) => scoreF(b) - scoreF(a)).slice(0, n);
 }
 
 function distributeWeights(total: number, count: number): number[] {
@@ -211,23 +253,32 @@ async function fetchAllFunds(supabase: SupabaseClient<any, any, any>, view: stri
 
 // ── Reasoning builder ─────────────────────────────────────────────────────────
 
-type Slot = { name: string; weight: number; sharpe_3yr: number | null; ongoing_cost: number | null; rationale: string };
+type Slot = {
+  name: string; weight: number; sharpe_3yr: number | null; ongoing_cost: number | null; rationale: string;
+  poolSize: number; avgPoolSharpe: number | null; avgPoolCost: number | null;
+};
 
 export type FundExplanation = {
-  name:     string;
-  weight:   number;
-  rationale: string;
-  sharpe:   number | null;
-  cost:     number | null;
+  name:          string;
+  weight:        number;
+  rationale:     string;
+  sharpe:        number | null;
+  cost:          number | null;
+  poolSize:      number;
+  avgPoolSharpe: number | null;
+  avgPoolCost:   number | null;
 };
 
 function buildFundExplanations(portfolio: Slot[]): FundExplanation[] {
   return portfolio.map((f) => ({
-    name:     f.name,
-    weight:   f.weight,
-    rationale: f.rationale,
-    sharpe:   f.sharpe_3yr,
-    cost:     f.ongoing_cost,
+    name:          f.name,
+    weight:        f.weight,
+    rationale:     f.rationale,
+    sharpe:        f.sharpe_3yr,
+    cost:          f.ongoing_cost,
+    poolSize:      f.poolSize,
+    avgPoolSharpe: f.avgPoolSharpe,
+    avgPoolCost:   f.avgPoolCost,
   }));
 }
 
@@ -248,7 +299,7 @@ function buildReasoning(
     lines.push(
       `Du valde fördelningen manuellt till ${equityPct}% aktier och ${bondPct}% räntor.` +
       (equityPct !== computed
-        ? ` Quizet beräknade ursprungligen ${computed}% aktier baserat på dina quizsvar.`
+        ? ` Quizet beräknade ursprungligen ${computed}% aktier baserat på dina svar.`
         : "")
     );
   } else {
@@ -263,16 +314,25 @@ function buildReasoning(
       wait: "du avvaktar vid nedgång — neutral riskbedömning",
       buy:  "du köper mer vid nedgång — höjer risknivån",
     };
-    const goalMap: Record<string, string> = {
-      preserve: "kapitalbevaringsmål drar kraftigt ner risken",
-      specific: "specifikt sparmål (t.ex. bostad) drar ner risken",
-      wealth:   "förmögenhetsbyggande ger neutral riskbedömning",
-      pension:  "pensionssparande höjer risktolerans",
-    };
+    const q3Label = a.q3 != null ? (
+      a.q3 <= 1 ? "investeringen är kritisk — kan inte förlora något, sänker risknivån kraftigt" :
+      a.q3 <= 2 ? "investeringen är viktig — tål bara lite förlust, sänker risknivån" :
+      a.q3 === 3 ? "investeringen är måttligt viktig — neutral riskbedömning" :
+      a.q3 === 4 ? "investeringen är flexibel — tål stor förlust, höjer risknivån" :
+                  "investeringen spelar minimal roll för din ekonomi — höjer risknivån"
+    ) : null;
+    const q4Label = a.q4 != null ? (
+      a.q4 <= 1 ? "trygghet prioriteras framför avkastning, sänker risknivån kraftigt" :
+      a.q4 <= 2 ? "stabilitet prioriteras, sänker risknivån" :
+      a.q4 === 3 ? "balans mellan risk och avkastning — neutral riskbedömning" :
+      a.q4 === 4 ? "avkastning prioriteras, höjer risknivån" :
+                  "maximal avkastning prioriteras, höjer risknivån kraftigt"
+    ) : null;
     const factors = [
       a.horizon ? horizonMap[a.horizon] : null,
       a.reaction ? reactionMap[a.reaction] : null,
-      a.goal ? goalMap[a.goal] : null,
+      q3Label,
+      q4Label,
     ].filter(Boolean) as string[];
     if (factors.length > 0) {
       const factorCount = factors.length === 1 ? "faktorn" : `${factors.length} faktorer`;
@@ -368,12 +428,22 @@ export async function POST(req: NextRequest) {
         : distributeWeights(equityPct, keptEquitySels.length);
 
     type CandidateFund = { isin: string; name: string; category: string; ongoing_cost: number | null; sharpe_3yr: number | null };
-    type PortfolioSlot = { isin: string; name: string; weight: number; category: string; rationale: string; ongoing_cost: number | null; sharpe_3yr: number | null; candidates: CandidateFund[] };
+    type PortfolioSlot = { isin: string; name: string; weight: number; category: string; rationale: string; ongoing_cost: number | null; sharpe_3yr: number | null; candidates: CandidateFund[]; poolSize: number; avgPoolSharpe: number | null; avgPoolCost: number | null };
     const portfolio: PortfolioSlot[] = [];
     const usedIsins: string[] = [];
 
     const toCandidates = (funds: FundRow[]): CandidateFund[] =>
       funds.map((f) => ({ isin: f.isin, name: f.name, category: f.category ?? "", ongoing_cost: f.ongoing_cost_actual ?? f.ongoing_cost_estimated ?? null, sharpe_3yr: f.sharpe_3yr }));
+
+    function poolStats(pool: FundRow[]): { poolSize: number; avgPoolSharpe: number | null; avgPoolCost: number | null } {
+      const withSharpe = pool.filter((f) => f.sharpe_3yr != null);
+      const withCost   = pool.filter((f) => (f.ongoing_cost_actual ?? f.ongoing_cost_estimated) != null);
+      return {
+        poolSize:      pool.length,
+        avgPoolSharpe: withSharpe.length > 0 ? withSharpe.reduce((s, f) => s + f.sharpe_3yr!, 0) / withSharpe.length : null,
+        avgPoolCost:   withCost.length   > 0 ? withCost.reduce((s, f) => s + (f.ongoing_cost_actual ?? f.ongoing_cost_estimated)!, 0) / withCost.length : null,
+      };
+    }
 
     // Equity slots
     for (let i = 0; i < keptEquitySels.length; i++) {
@@ -387,11 +457,13 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      const pool = applyMgmt(equityFunds.filter(SELECTION_FILTER[selId]), answers.management);
+      const basePool = equityFunds.filter(SELECTION_FILTER[selId]);
+      const mgmtPool = applyMgmt(basePool, answers.management);
+      const pool     = mgmtPool.length > 0 ? mgmtPool : basePool;
       const top  = pickTop(pool, usedIsins);
       if (top.length === 0) { if (portfolio.length > 0) portfolio[0].weight += weight; continue; }
       const best = top[0];
-      portfolio.push({ isin: best.isin, name: best.name, weight, category: best.category ?? "", rationale: SELECTION_RATIONALE[selId], ongoing_cost: best.ongoing_cost_actual ?? best.ongoing_cost_estimated ?? null, sharpe_3yr: best.sharpe_3yr, candidates: toCandidates(top) });
+      portfolio.push({ isin: best.isin, name: best.name, weight, category: best.category ?? "", rationale: SELECTION_RATIONALE[selId], ongoing_cost: best.ongoing_cost_actual ?? best.ongoing_cost_estimated ?? null, sharpe_3yr: best.sharpe_3yr, candidates: toCandidates(top), ...poolStats(pool) });
       usedIsins.push(best.isin);
     }
 
@@ -406,17 +478,18 @@ export async function POST(req: NextRequest) {
           const weight = bondWeights[i];
           if (weight <= 0) continue;
           const pool = fixedFunds.filter(SELECTION_FILTER[selId]);
-          const top  = pickTop(pool.length ? pool : fixedFunds, usedIsins);
+          const activePool = pool.length ? pool : fixedFunds;
+          const top  = pickTop(activePool, usedIsins);
           if (top.length === 0) { if (portfolio.length > 0) portfolio[0].weight += weight; continue; }
           const best = top[0];
-          portfolio.push({ isin: best.isin, name: best.name, weight, category: best.category ?? "Räntefond", rationale: SELECTION_RATIONALE[selId], ongoing_cost: best.ongoing_cost_actual ?? best.ongoing_cost_estimated ?? null, sharpe_3yr: best.sharpe_3yr, candidates: toCandidates(top) });
+          portfolio.push({ isin: best.isin, name: best.name, weight, category: best.category ?? "Räntefond", rationale: SELECTION_RATIONALE[selId], ongoing_cost: best.ongoing_cost_actual ?? best.ongoing_cost_estimated ?? null, sharpe_3yr: best.sharpe_3yr, candidates: toCandidates(top), ...poolStats(activePool) });
           usedIsins.push(best.isin);
         }
       } else {
         const top = pickTop(fixedFunds, usedIsins);
         if (top.length > 0) {
           const best = top[0];
-          portfolio.push({ isin: best.isin, name: best.name, weight: bondPct, category: best.category ?? "Räntefond", rationale: bondPct <= 20 ? "Stabiliserar portföljen" : "Lägre risk och volatilitet", ongoing_cost: best.ongoing_cost_actual ?? best.ongoing_cost_estimated ?? null, sharpe_3yr: best.sharpe_3yr, candidates: toCandidates(top) });
+          portfolio.push({ isin: best.isin, name: best.name, weight: bondPct, category: best.category ?? "Räntefond", rationale: bondPct <= 20 ? "Stabiliserar portföljen" : "Lägre risk och volatilitet", ongoing_cost: best.ongoing_cost_actual ?? best.ongoing_cost_estimated ?? null, sharpe_3yr: best.sharpe_3yr, candidates: toCandidates(top), ...poolStats(fixedFunds) });
         } else if (portfolio.length > 0) {
           portfolio[0].weight += bondPct;
         }

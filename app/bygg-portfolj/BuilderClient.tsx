@@ -11,11 +11,10 @@ import DonutChart from "@/components/ui/DonutChart";
 // ── Types ────────────────────────────────────────────────────────────────────
 
 type Platform   = "avanza" | "nordnet" | "both";
-type Goal       = "pension" | "wealth" | "specific" | "preserve";
 type Horizon    = "short" | "medium" | "long" | "verylong";
 type Reaction   = "sell" | "wait" | "buy";
 type Management = "passive" | "mixed" | "active";
-type Step       = "platform" | "goal" | "horizon" | "reaction" | "selections" | "management" | "results";
+type Step       = "platform" | "horizon" | "reaction" | "q3" | "q4" | "selections" | "management" | "results";
 
 export type SelectionId =
   | "global" | "sweden" | "usa" | "europe" | "nordic" | "emerging" | "asia"
@@ -26,9 +25,10 @@ export type SelectionId =
 
 type Answers = {
   platform:      Platform    | null;
-  goal:          Goal        | null;
   horizon:       Horizon     | null;
   reaction:      Reaction    | null;
+  q3:            number      | null;   // 1–5: Hur viktig är investeringen?
+  q4:            number      | null;   // 1–5: Vad är viktigast?
   selections:    SelectionId[] | null;
   priorities:    Record<string, number> | null;
   management:    Management  | null;
@@ -55,11 +55,14 @@ type PortfolioFund = {
 };
 
 type FundExplanation = {
-  name:      string;
-  weight:    number;
-  rationale: string;
-  sharpe:    number | null;
-  cost:      number | null;
+  name:          string;
+  weight:        number;
+  rationale:     string;
+  sharpe:        number | null;
+  cost:          number | null;
+  poolSize:      number;
+  avgPoolSharpe: number | null;
+  avgPoolCost:   number | null;
 };
 
 type BuildResult = {
@@ -75,7 +78,7 @@ type BuildResult = {
 
 // ── Option data ───────────────────────────────────────────────────────────────
 
-const STEPS: Step[] = ["goal", "horizon", "reaction", "selections", "management", "platform"];
+const STEPS: Step[] = ["horizon", "reaction", "q3", "q4", "selections", "management", "platform"];
 
 const PLATFORM_OPTIONS: { value: Platform; label: string; desc: string }[] = [
   { value: "avanza",  label: "Avanza",  desc: "Jag handlar fonder via Avanza" },
@@ -83,11 +86,20 @@ const PLATFORM_OPTIONS: { value: Platform; label: string; desc: string }[] = [
   { value: "both",    label: "Övrigt", desc: "Jag använder flera plattformar" },
 ];
 
-const GOAL_OPTIONS: { value: Goal; label: string; desc: string }[] = [
-  { value: "preserve", label: "Bevara kapital",                  desc: "Viktigast är att inte förlora pengar" },
-  { value: "specific", label: "Specifikt mål",                   desc: "Bostad, bil, studier eller liknande" },
-  { value: "wealth",   label: "Bygga förmögenhet",               desc: "Vill växa kapitalet utan ett specifikt slutmål" },
-  { value: "pension",  label: "Pension och långsiktigt sparande", desc: "Sparar för pensionen eller på mycket lång sikt" },
+const Q3_OPTIONS: { value: number; label: string; desc: string }[] = [
+  { value: 1, label: "Kan inte förlora något",  desc: "Det är kritiskt att skydda allt kapital" },
+  { value: 2, label: "Kan förlora lite",          desc: "En liten förlust är acceptabel" },
+  { value: 3, label: "Accepterar viss förlust",  desc: "Jag tål tillfälliga nedgångar" },
+  { value: 4, label: "Accepterar stor förlust",  desc: "Jag tål stora svängningar för bättre avkastning" },
+  { value: 5, label: "Spelar ingen roll",         desc: "Jag fokuserar helt på långsiktig avkastning" },
+];
+
+const Q4_OPTIONS: { value: number; label: string; desc: string }[] = [
+  { value: 1, label: "Minimera risk",           desc: "Trygghet är viktigast, avkastning är sekundär" },
+  { value: 2, label: "Låg risk",                desc: "Föredrar stabilitet med viss tillväxtpotential" },
+  { value: 3, label: "Balans risk/avkastning",  desc: "Jag vill ha balans mellan trygghet och tillväxt" },
+  { value: 4, label: "Hög avkastning",          desc: "Avkastning prioriteras, jag accepterar mer risk" },
+  { value: 5, label: "Maximera avkastning",     desc: "Jag tar maximal risk för maximal avkastning" },
 ];
 
 const HORIZON_OPTIONS: { value: Horizon; label: string; desc: string }[] = [
@@ -142,30 +154,28 @@ const MANAGEMENT_OPTIONS: { value: Management; label: string; desc: string }[] =
 
 
 const STEP_META: Record<Step, { title: string; subtitle: string }> = {
-  platform:   { title: "Sista steget — var handlar du fonder?",            subtitle: "Vi anpassar fondvalen till tillgängliga fonder på din plattform" },
-  goal:       { title: "Vad är ditt sparmål?",                             subtitle: "Målet påverkar hur vi balanserar risk och avkastning" },
-  horizon:    { title: "Hur länge planerar du att spara?",                  subtitle: "Längre horisont ger utrymme för mer risk" },
-  reaction:   { title: "Portföljen faller 20% — vad gör du?",              subtitle: "Din faktiska reaktion avslöjar din verkliga risktolerans" },
-  selections: { title: "Vad vill du investera i?",                         subtitle: "Välj marknader, branscher och stilar — justera sedan viktningen längst ner" },
-  management: { title: "Aktiv eller passiv förvaltning?",                  subtitle: "Indexfonder har generellt lägre avgifter och slår ofta aktiva fonder" },
-  results:    { title: "Din föreslagna portfölj",                          subtitle: "" },
+  platform:   { title: "Sista steget — var handlar du fonder?",             subtitle: "Vi anpassar fondvalen till tillgängliga fonder på din plattform" },
+  horizon:    { title: "Hur länge planerar du att spara?",                   subtitle: "Längre horisont ger utrymme för mer risk" },
+  reaction:   { title: "Portföljen faller 20% — vad gör du?",               subtitle: "Din faktiska reaktion avslöjar din verkliga risktolerans" },
+  q3:         { title: "Hur viktig är den här investeringen för dig?",       subtitle: "Tänk på konsekvenserna om du förlorar en stor del av kapitalet" },
+  q4:         { title: "Vad är viktigast för dig?",                          subtitle: "Välj det alternativ som bäst speglar din inställning till risk och avkastning" },
+  selections: { title: "Vad vill du investera i?",                          subtitle: "Välj marknader, branscher och stilar — justera sedan viktningen längst ner" },
+  management: { title: "Aktiv eller passiv förvaltning?",                   subtitle: "Indexfonder har generellt lägre avgifter och slår ofta aktiva fonder" },
+  results:    { title: "Din föreslagna portfölj",                           subtitle: "" },
 };
 
-const EMPTY: Answers = { platform: null, goal: null, horizon: null, reaction: null, selections: null, priorities: null, management: null, equityOverride: null };
+const EMPTY: Answers = { platform: null, horizon: null, reaction: null, q3: null, q4: null, selections: null, priorities: null, management: null, equityOverride: null };
 
 // ── Auto-suggestion ───────────────────────────────────────────────────────────
 
 function computeRiskScoreClient(a: Answers): number {
-  let score = 3;
-  if (a.horizon === "short")         score -= 1;
-  else if (a.horizon === "long")     score += 1;
-  else if (a.horizon === "verylong") score += 2;
-  if (a.reaction === "sell")         score -= 1;
-  else if (a.reaction === "buy")     score += 1;
-  if (a.goal === "preserve")         score -= 2;
-  else if (a.goal === "specific")    score -= 1;
-  else if (a.goal === "pension")     score += 1;
-  return Math.max(1, Math.min(5, score));
+  const q1Map: Record<string, number> = { short: 2, medium: 3, long: 4, verylong: 5 };
+  const q2Map: Record<string, number> = { sell: 1, wait: 3, buy: 5 };
+  const v1 = (a.horizon  && q1Map[a.horizon])  ? q1Map[a.horizon]  : 3;
+  const v2 = (a.reaction && q2Map[a.reaction]) ? q2Map[a.reaction] : 3;
+  const v3 = a.q3 ?? 3;
+  const v4 = a.q4 ?? 3;
+  return Math.max(1, Math.min(5, Math.round((v1 + v2 + v3 + v4) / 4)));
 }
 
 const AUTO_EXPLANATION: Record<number, string> = {
@@ -240,7 +250,7 @@ function OptionCard({ label, desc, onClick }: {
 export default function BuilderClient() {
   const router = useRouter();
 
-  const [step, setStep]             = useState<Step>("goal");
+  const [step, setStep]             = useState<Step>("horizon");
   const [answers, setAnswers]       = useState<Answers>(EMPTY);
   const [pending, setPending]       = useState<SelectionId[]>([]);
   const [priorities, setPriorities] = useState<Record<string, number>>({});
@@ -259,10 +269,36 @@ export default function BuilderClient() {
   const [showSaveForm, setShowSaveForm] = useState(false);
   const [savingName, setSavingName] = useState("");
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [authModal, setAuthModal]   = useState(false);
+  const [authEmail, setAuthEmail]   = useState("");
+  const [authSent, setAuthSent]     = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError]   = useState<string | null>(null);
 
   useEffect(() => {
     const Q1_TO_HORIZON: Record<number, Horizon> = { 1: "short", 2: "short", 3: "medium", 4: "long", 5: "verylong" };
     const Q2_TO_REACTION: Record<number, Reaction> = { 1: "sell", 2: "sell", 3: "wait", 4: "buy", 5: "buy" };
+
+    // Restore quiz state saved before login redirect — apply immediately for instant UI
+    let savedAnswers: Answers | null = null;
+    let savedRiskScore: number | null = null;
+    try {
+      const saved = sessionStorage.getItem("fondanalys_builder_quiz");
+      if (saved) {
+        sessionStorage.removeItem("fondanalys_builder_quiz");
+        const { answers: a, result: r, priorities: p, localEquity: le } = JSON.parse(saved);
+        if (a) { setAnswers(a); savedAnswers = a; }
+        if (p) setPriorities(p);
+        if (a?.selections) setPending(a.selections);
+        if (r) {
+          setResult(r);
+          setLocalEquity(le ?? r.equityPct);
+          setStep("results");
+          setShowSaveForm(true);
+          savedRiskScore = r.riskScore ?? null;
+        }
+      }
+    } catch { /* ignore */ }
 
     const supabase = createClient();
 
@@ -273,31 +309,30 @@ export default function BuilderClient() {
           const res = await fetch("/api/risk-profile");
           if (res.ok) {
             const profile = await res.json();
-            if (profile?.q1 && profile?.q2) {
+            // Only prefill from risk profile if no saved quiz state
+            if (!savedAnswers && profile?.q1 && profile?.q2) {
               const horizon  = Q1_TO_HORIZON[profile.q1];
               const reaction = Q2_TO_REACTION[profile.q2];
+              const q3 = profile.q3 ?? null;
+              const q4 = profile.q4 ?? null;
               if (horizon && reaction) {
-                setAnswers((prev) => ({ ...prev, horizon, reaction }));
-                setPrefilled(new Set(["horizon", "reaction"]));
+                setAnswers((prev) => ({ ...prev, horizon, reaction, q3, q4 }));
+                const prefilledKeys: (keyof Answers)[] = ["horizon", "reaction"];
+                if (q3) prefilledKeys.push("q3");
+                if (q4) prefilledKeys.push("q4");
+                setPrefilled(new Set(prefilledKeys));
               }
+            }
+            // If the saved result used a different risk score than what we'd now compute,
+            // regenerate so the portfolio reflects the current formula output.
+            if (savedAnswers && savedRiskScore !== null) {
+              const recomputedScore = computeRiskScoreClient(savedAnswers);
+              if (recomputedScore !== savedRiskScore) submit(savedAnswers, true);
             }
           }
         } catch { /* ignore */ }
       }
     });
-
-    // Restore quiz state saved before login redirect
-    try {
-      const saved = sessionStorage.getItem("fondanalys_builder_quiz");
-      if (saved) {
-        sessionStorage.removeItem("fondanalys_builder_quiz");
-        const { answers: a, result: r, priorities: p, localEquity: le } = JSON.parse(saved);
-        if (a) setAnswers(a);
-        if (p) setPriorities(p);
-        if (a?.selections) setPending(a.selections);
-        if (r) { setResult(r); setLocalEquity(le ?? r.equityPct); setStep("results"); setShowSaveForm(true); }
-      }
-    } catch { /* ignore */ }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
@@ -322,12 +357,57 @@ export default function BuilderClient() {
     };
     window.addEventListener("popstate", handlePopState);
 
+    // Next.js App Router caches components in memory between navigations — popstate and
+    // pageshow don't fire for client-side Link navigation. Patch pushState to detect
+    // when the user navigates back to this page so we can reset stale quiz state.
+    const prevPath = { current: window.location.pathname };
+    const origPush = history.pushState.bind(history);
+    history.pushState = function(...args: Parameters<typeof history.pushState>) {
+      origPush(...args);
+      const newPath = window.location.pathname;
+      if (newPath === "/bygg-portfolj" && prevPath.current !== "/bygg-portfolj") {
+        resetQuiz();
+      }
+      prevPath.current = newPath;
+    };
+
     return () => {
       subscription.unsubscribe();
       window.removeEventListener("pageshow", handlePageShow);
       window.removeEventListener("popstate", handlePopState);
+      history.pushState = origPush;
     };
   }, []);
+
+  function openAuthModal() {
+    try { sessionStorage.setItem("fondanalys_builder_quiz", JSON.stringify({ answers, result, priorities, localEquity })); } catch { /* ignore */ }
+    setAuthModal(true);
+  }
+
+  async function handleAuthGoogle() {
+    const supabase = createClient();
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent("/bygg-portfolj")}`,
+        queryParams: { prompt: "select_account" },
+      },
+    });
+  }
+
+  async function handleAuthMagicLink(e: React.FormEvent) {
+    e.preventDefault();
+    setAuthError(null);
+    setAuthLoading(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithOtp({
+      email: authEmail,
+      options: { emailRedirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent("/bygg-portfolj")}` },
+    });
+    if (error) setAuthError(error.message);
+    else setAuthSent(true);
+    setAuthLoading(false);
+  }
 
   // Auto-apply selections when entering that step (if not already set)
   useEffect(() => {
@@ -387,9 +467,10 @@ export default function BuilderClient() {
     setStep("management");
   }
 
-  async function submit(next: Answers) {
+  async function submit(next: Answers, loggedIn?: boolean) {
     setStep("results");
     setLoading(true);
+    setShowSaveForm(false);
     setError(null);
     try {
       const res  = await fetch("/api/build-portfolio", {
@@ -402,6 +483,7 @@ export default function BuilderClient() {
       setResult(data);
       setLocalEquity(data.equityPct);
       setSlotIndices(data.portfolio.map(() => 0));
+      setShowSaveForm(loggedIn ?? user !== null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -457,14 +539,13 @@ export default function BuilderClient() {
       setSaveStatus("saved");
       setShowSaveForm(false);
       setSavingName("");
-      setTimeout(resetQuiz, 1500);
     } catch {
       setSaveStatus("error");
     }
   }
 
   function resetQuiz() {
-    setStep("platform");
+    setStep("horizon");
     setAnswers(EMPTY);
     setPending([]);
     setPriorities({});
@@ -513,7 +594,7 @@ export default function BuilderClient() {
 
   // Live preview panel data
   const previewRiskScore = computeRiskScoreClient(answers);
-  const previewEquity = previewRiskScore === 1 ? 20 : previewRiskScore === 2 ? 35 : previewRiskScore === 3 ? 55 : previewRiskScore === 4 ? 75 : 90;
+  const previewEquity = previewRiskScore === 1 ? 20 : previewRiskScore === 2 ? 35 : previewRiskScore === 3 ? 55 : previewRiskScore === 4 ? 75 : 100;
   const RISK_LABELS: Record<number, string> = { 1: "Mycket defensiv", 2: "Defensiv", 3: "Balanserad", 4: "Tillväxt", 5: "Offensiv" };
   const showPreview = !isResults && stepIdx >= 1;
 
@@ -573,11 +654,6 @@ export default function BuilderClient() {
             {/* Platform */}
             {step === "platform" && PLATFORM_OPTIONS.map((o) => (
               <OptionCard key={o.value} label={o.label} desc={o.desc} onClick={() => pick("platform", o.value)} />
-            ))}
-
-            {/* Goal */}
-            {step === "goal" && GOAL_OPTIONS.map((o) => (
-              <OptionCard key={o.value} label={o.label} desc={o.desc} onClick={() => pick("goal", o.value)} />
             ))}
 
             {/* Horizon */}
@@ -643,6 +719,74 @@ export default function BuilderClient() {
                     </button>
                   ) : (
                     <OptionCard key={o.value} label={o.label} desc={o.desc} onClick={() => pick("reaction", o.value)} />
+                  );
+                })}
+              </>
+            )}
+
+            {/* Q3 — how important is the investment */}
+            {step === "q3" && (
+              <>
+                {prefilled.has("q3") && answers.q3 !== null && (
+                  <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-xl px-4 py-2.5 mb-1">
+                    <p className="text-xs text-blue-700 font-medium">Förifylld från din riskprofil</p>
+                    <button
+                      type="button"
+                      onClick={() => pick("q3", answers.q3!)}
+                      className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+                    >
+                      Bekräfta →
+                    </button>
+                  </div>
+                )}
+                {Q3_OPTIONS.map((o) => {
+                  const isPreSelected = prefilled.has("q3") && answers.q3 === o.value;
+                  return isPreSelected ? (
+                    <button
+                      key={o.value}
+                      type="button"
+                      onClick={() => pick("q3", o.value)}
+                      className="w-full px-4 py-3.5 rounded-xl border-2 text-left transition-all border-blue-500 bg-blue-50"
+                    >
+                      <p className="text-sm font-semibold text-blue-700">{o.label}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{o.desc}</p>
+                    </button>
+                  ) : (
+                    <OptionCard key={o.value} label={o.label} desc={o.desc} onClick={() => pick("q3", o.value)} />
+                  );
+                })}
+              </>
+            )}
+
+            {/* Q4 — risk vs return priority */}
+            {step === "q4" && (
+              <>
+                {prefilled.has("q4") && answers.q4 !== null && (
+                  <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-xl px-4 py-2.5 mb-1">
+                    <p className="text-xs text-blue-700 font-medium">Förifylld från din riskprofil</p>
+                    <button
+                      type="button"
+                      onClick={() => pick("q4", answers.q4!)}
+                      className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+                    >
+                      Bekräfta →
+                    </button>
+                  </div>
+                )}
+                {Q4_OPTIONS.map((o) => {
+                  const isPreSelected = prefilled.has("q4") && answers.q4 === o.value;
+                  return isPreSelected ? (
+                    <button
+                      key={o.value}
+                      type="button"
+                      onClick={() => pick("q4", o.value)}
+                      className="w-full px-4 py-3.5 rounded-xl border-2 text-left transition-all border-blue-500 bg-blue-50"
+                    >
+                      <p className="text-sm font-semibold text-blue-700">{o.label}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{o.desc}</p>
+                    </button>
+                  ) : (
+                    <OptionCard key={o.value} label={o.label} desc={o.desc} onClick={() => pick("q4", o.value)} />
                   );
                 })}
               </>
@@ -888,7 +1032,7 @@ export default function BuilderClient() {
 
                     {/* ── Blurrbar sektion: analys + spara ── */}
                     <div className="relative">
-                      <div className={!user ? "blur-sm pointer-events-none select-none" : undefined}>
+                      <div className={!user ? "blur-sm pointer-events-none select-none max-h-52 overflow-hidden" : undefined}>
                         <div className="lg:grid lg:grid-cols-5 lg:gap-8 space-y-4 lg:space-y-0">
 
                           {((result.reasoning?.length > 0) || (result.fundExplanations?.length > 0)) && (
@@ -919,22 +1063,35 @@ export default function BuilderClient() {
                                   <div className="divide-y divide-slate-100">
                                     {result.fundExplanations.map((f, i) => {
                                       const open = expandedFunds.has(i);
-                                      const parts: string[] = [];
-                                      if (f.sharpe != null) parts.push(`Sharpe ${f.sharpe.toFixed(2)}`);
-                                      if (f.cost   != null) parts.push(`avgift ${f.cost.toFixed(2)}%/år`);
+                                      const poolStr = f.poolSize > 1 ? ` av ${f.poolSize} fonder` : "";
+                                      const sharpeAboveAvg    = f.sharpe != null && f.avgPoolSharpe != null && f.sharpe > f.avgPoolSharpe * 1.25;
+                                      const sharpeSlightlyAbove = f.sharpe != null && f.avgPoolSharpe != null && f.sharpe > f.avgPoolSharpe;
+                                      const costBelowAvg      = f.cost   != null && f.avgPoolCost   != null && f.cost   < f.avgPoolCost   * 0.75;
+                                      const costSlightlyBelow = f.cost   != null && f.avgPoolCost   != null && f.cost   < f.avgPoolCost;
                                       const explanation = (() => {
-                                        const isVeryLowCost = f.cost  != null && f.cost  < 0.05;
-                                        const isLowCost     = f.cost  != null && f.cost  < 0.20;
-                                        const isHighSharpe  = f.sharpe != null && f.sharpe > 0.7;
-                                        const isGoodSharpe  = f.sharpe != null && f.sharpe > 0.4;
-                                        const sharpeStr = f.sharpe != null ? `Sharpe ${f.sharpe.toFixed(2)}` : null;
-                                        const costStr   = f.cost   != null ? `avgift ${f.cost.toFixed(2)}%/år` : null;
-                                        if (isVeryLowCost && !isHighSharpe) return ["Exceptionellt låg avgift", sharpeStr].filter(Boolean).join(" · ");
-                                        if (isHighSharpe && isLowCost) return ["Stark riskjusterad avkastning och låg avgift", sharpeStr, costStr].filter(Boolean).join(" · ");
-                                        if (isHighSharpe) return ["Stark riskjusterad avkastning", costStr].filter(Boolean).join(" · ");
-                                        if (isLowCost) return ["Låg avgift", sharpeStr].filter(Boolean).join(" · ");
-                                        if (isGoodSharpe) return ["God riskjusterad avkastning", costStr].filter(Boolean).join(" · ");
-                                        return ["Rankad i sin kategori", sharpeStr, costStr].filter(Boolean).join(" · ");
+                                        if (sharpeAboveAvg && costBelowAvg) {
+                                          return `Bäst kombination av avkastning och avgift${poolStr} — Sharpe ${f.sharpe!.toFixed(2)} vs snitt ${f.avgPoolSharpe!.toFixed(2)} · avgift ${f.cost!.toFixed(2)}% vs snitt ${f.avgPoolCost!.toFixed(2)}%`;
+                                        }
+                                        if (sharpeAboveAvg) {
+                                          const costNote = f.cost != null ? ` · avgift ${f.cost.toFixed(2)}%/år` : "";
+                                          return `Starkast riskjusterad avkastning${poolStr} — Sharpe ${f.sharpe!.toFixed(2)} vs snitt ${f.avgPoolSharpe!.toFixed(2)}${costNote}`;
+                                        }
+                                        if (costBelowAvg) {
+                                          const sharpeNote = f.sharpe != null ? ` · Sharpe ${f.sharpe.toFixed(2)}` : "";
+                                          return `Lägst avgift${poolStr} — ${f.cost!.toFixed(2)}% vs snitt ${f.avgPoolCost!.toFixed(2)}%${sharpeNote}`;
+                                        }
+                                        if (sharpeSlightlyAbove) {
+                                          const costNote = f.cost != null ? ` · avgift ${f.cost.toFixed(2)}%/år` : "";
+                                          return `God riskjusterad avkastning${poolStr} — Sharpe ${f.sharpe!.toFixed(2)} vs snitt ${f.avgPoolSharpe!.toFixed(2)}${costNote}`;
+                                        }
+                                        if (costSlightlyBelow) {
+                                          const sharpeNote = f.sharpe != null ? ` · Sharpe ${f.sharpe.toFixed(2)}` : "";
+                                          return `Lägre avgift än snittet${poolStr} — ${f.cost!.toFixed(2)}% vs ${f.avgPoolCost!.toFixed(2)}%${sharpeNote}`;
+                                        }
+                                        if (f.sharpe != null && f.cost != null) return `Sharpe ${f.sharpe.toFixed(2)} · avgift ${f.cost.toFixed(2)}%/år`;
+                                        if (f.sharpe != null) return `Sharpe ${f.sharpe.toFixed(2)}`;
+                                        if (f.cost   != null) return `Avgift ${f.cost.toFixed(2)}%/år`;
+                                        return "Rankad i sin kategori";
                                       })();
                                       return (
                                         <div key={i}>
@@ -948,7 +1105,6 @@ export default function BuilderClient() {
                                           {open && (
                                             <div className="px-4 pb-3 space-y-1">
                                               <p className="text-xs text-slate-500">Kategori: <span className="font-medium text-slate-700">{f.rationale}</span></p>
-                                              {parts.length > 0 && <p className="text-xs text-slate-500">{parts.join(" · ")}</p>}
                                               <p className="text-xs text-slate-400 leading-relaxed">{explanation}</p>
                                             </div>
                                           )}
@@ -999,10 +1155,7 @@ export default function BuilderClient() {
                                       <p className="text-xs text-slate-400 mt-0.5">Logga in för att komma åt den när som helst.</p>
                                     </div>
                                     <button
-                                      onClick={() => {
-                                        try { sessionStorage.setItem("fondanalys_builder_quiz", JSON.stringify({ answers, result, priorities, localEquity })); } catch { /* ignore */ }
-                                        router.push("/login?next=/bygg-portfolj");
-                                      }}
+                                      onClick={openAuthModal}
                                       className="w-full bg-slate-900 hover:bg-slate-700 text-white text-sm font-semibold py-3.5 rounded-xl transition-colors"
                                     >
                                       Logga in för att spara
@@ -1046,28 +1199,25 @@ export default function BuilderClient() {
                       </div>
 
                       {!user && (
-                        <div className="absolute inset-0 flex items-center justify-center z-10">
-                          <div className="bg-white rounded-2xl p-6 shadow-xl border border-slate-100 max-w-sm w-full mx-4 text-center space-y-4">
-                            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto">
-                              <svg className="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-                              </svg>
+                        <>
+                          <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-b from-transparent to-white pointer-events-none z-[1]" />
+                          <div className="absolute inset-0 flex items-center justify-center z-10">
+                            <div className="bg-white rounded-2xl p-6 shadow-xl border border-slate-100 max-w-sm w-full mx-4 text-center space-y-4">
+                              <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto">
+                                <svg className="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                                </svg>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-sm font-semibold text-slate-900">Logga in för att se portföljanalysen och spara din portfölj</p>
+                                <p className="text-xs text-slate-400">Gratis · Klart på under en minut</p>
+                              </div>
+                              <button onClick={openAuthModal} className="w-full bg-slate-900 hover:bg-slate-700 text-white font-semibold py-3 rounded-xl transition-colors text-sm">
+                                Logga in
+                              </button>
                             </div>
-                            <div className="space-y-1">
-                              <p className="text-sm font-semibold text-slate-900">Logga in för att se portföljanalysen och spara din portfölj</p>
-                              <p className="text-xs text-slate-400">Gratis · Klart på under en minut</p>
-                            </div>
-                            <button
-                              onClick={() => {
-                                try { sessionStorage.setItem("fondanalys_builder_quiz", JSON.stringify({ answers, result, priorities, localEquity })); } catch { /* ignore */ }
-                                router.push("/login?next=/bygg-portfolj");
-                              }}
-                              className="w-full bg-slate-900 hover:bg-slate-700 text-white font-semibold py-3 rounded-xl transition-colors text-sm"
-                            >
-                              Logga in
-                            </button>
                           </div>
-                        </div>
+                        </>
                       )}
                     </div>
 
@@ -1080,7 +1230,7 @@ export default function BuilderClient() {
       </AnimatePresence>
 
       {/* Back button */}
-      {step !== "goal" && (
+      {step !== "horizon" && (
         <button onClick={goBack} className="mt-4 text-xs text-slate-400 hover:text-slate-600 transition-colors">
           ← Tillbaka
         </button>
@@ -1137,18 +1287,24 @@ export default function BuilderClient() {
               </div>
             )}
 
-            {/* Goal & horizon summary */}
+            {/* Answers summary */}
             <div className="border-t border-slate-100 pt-3 space-y-1">
-              {answers.goal && (
-                <p className="text-[10px] text-slate-400 leading-snug">
-                  <span className="font-semibold text-slate-500">Mål:</span>{" "}
-                  {GOAL_OPTIONS.find(o => o.value === answers.goal)?.label}
-                </p>
-              )}
               {answers.horizon && (
                 <p className="text-[10px] text-slate-400 leading-snug">
                   <span className="font-semibold text-slate-500">Horisont:</span>{" "}
                   {HORIZON_OPTIONS.find(o => o.value === answers.horizon)?.label}
+                </p>
+              )}
+              {answers.q3 !== null && (
+                <p className="text-[10px] text-slate-400 leading-snug">
+                  <span className="font-semibold text-slate-500">Investeringsvikt:</span>{" "}
+                  {Q3_OPTIONS.find(o => o.value === answers.q3)?.label}
+                </p>
+              )}
+              {answers.q4 !== null && (
+                <p className="text-[10px] text-slate-400 leading-snug">
+                  <span className="font-semibold text-slate-500">Prioritet:</span>{" "}
+                  {Q4_OPTIONS.find(o => o.value === answers.q4)?.label}
                 </p>
               )}
             </div>
@@ -1158,10 +1314,71 @@ export default function BuilderClient() {
 
       </div>{/* end grid wrapper */}
 
+      {/* ── Inline auth modal ─────────────────────────────────────────────────── */}
+      {authModal && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) { setAuthModal(false); setAuthSent(false); setAuthEmail(""); setAuthError(null); } }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-4">
+            <div className="text-center space-y-1">
+              <p className="font-semibold text-slate-900 text-base">Logga in eller skapa konto</p>
+              <p className="text-xs text-slate-400">Inget konto? Vi skapar ett åt dig automatiskt.</p>
+            </div>
+
+            {authSent ? (
+              <div className="text-center py-4 space-y-2">
+                <div className="text-3xl">✉️</div>
+                <p className="font-semibold text-slate-900">Kolla din e-post</p>
+                <p className="text-sm text-slate-500">Vi har skickat en inloggningslänk till <span className="font-medium text-slate-700">{authEmail}</span>.</p>
+              </div>
+            ) : (
+              <>
+                <button
+                  onClick={handleAuthGoogle}
+                  className="w-full flex items-center justify-center gap-3 border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  <svg width="18" height="18" viewBox="0 0 18 18">
+                    <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/>
+                    <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
+                    <path fill="#FBBC05" d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"/>
+                    <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z"/>
+                  </svg>
+                  Fortsätt med Google
+                </button>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px bg-slate-200" />
+                  <span className="text-xs text-slate-400">eller</span>
+                  <div className="flex-1 h-px bg-slate-200" />
+                </div>
+                <form onSubmit={handleAuthMagicLink} className="space-y-3">
+                  <input
+                    type="email"
+                    required
+                    placeholder="din@email.se"
+                    value={authEmail}
+                    onChange={(e) => setAuthEmail(e.target.value)}
+                    className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {authError && <p className="text-xs text-red-600">{authError}</p>}
+                  <button
+                    type="submit"
+                    disabled={authLoading}
+                    className="w-full bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 disabled:from-blue-300 disabled:to-blue-300 text-white font-medium rounded-xl py-2.5 text-sm transition-all shadow-sm shadow-blue-200"
+                  >
+                    {authLoading ? "Skickar…" : "Skicka inloggningslänk"}
+                  </button>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Sticky bottom CTA för selections-steget på mobil */}
       {step === "selections" && (
         <div
-          className="sm:hidden fixed left-0 right-0 px-4 pb-3 pt-2 bg-white/95 backdrop-blur-sm border-t border-slate-100 z-50"
+          className="sm:hidden fixed left-0 right-0 px-4 pb-3 pt-2 bg-white/95 backdrop-blur-sm border-t border-slate-100 z-40"
           style={{ bottom: "calc(52px + max(8px, env(safe-area-inset-bottom, 0px)))" }}
         >
           <button

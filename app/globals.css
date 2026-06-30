@@ -12,8 +12,21 @@ body {
 }
 
 /* Main content bottom padding on mobile: clears the fixed bottom nav (~52px) + safe area */
-.pb-nav-safe {
-  padding-bottom: calc(56px + max(8px, env(safe-area-inset-bottom)));
+@layer utilities {
+  .pb-nav-safe {
+    padding-bottom: calc(56px + max(8px, env(safe-area-inset-bottom)));
+  }
+}
+
+
+/* Extend a dark section's background to cover the pb-nav-safe gap on mobile.
+   The extra padding pushes the background down into the gap; the negative margin
+   keeps the document flow (and footer position) exactly where it was. */
+@media (max-width: 639px) {
+  .mobile-dark-extend {
+    padding-bottom: calc(3rem + 56px + max(8px, env(safe-area-inset-bottom)));
+    margin-bottom: calc(-56px - max(8px, env(safe-area-inset-bottom)));
+  }
 }
 
 @keyframes fade-in-up {
@@ -59,23 +72,6 @@ body {
 }
 
 
-.ai-shimmer-btn {
-  transition: transform 0.15s ease, opacity 0.15s ease;
-}
-
-.ai-shimmer-btn:hover {
-  transform: scale(1.03);
-  opacity: 0.9;
-}
-
-@keyframes ai-border-shimmer {
-  0%, 100% { border-color: #818cf8; box-shadow: 0 0 6px rgba(129,140,248,0.25); }
-  50%       { border-color: #c4b5fd; box-shadow: 0 0 10px rgba(196,181,253,0.35); }
-}
-
-.ai-border-shimmer {
-  animation: ai-border-shimmer 2s ease-in-out infinite;
-}
 
 /* ── Hero accent — slow shimmer on "2 minuter" ───────────────────────────── */
 
@@ -110,19 +106,11 @@ body.rapport-mode > footer {
   display: none !important;
 }
 
-body.rapport-mode > main {
-  padding-bottom: 0 !important;
-}
-
 /* ── Dashboard mode (portföljanalys — no site chrome) ───────────────────── */
 
 body.dashboard-mode > header,
 body.dashboard-mode > footer {
   display: none !important;
-}
-
-body.dashboard-mode > main {
-  padding-bottom: 0 !important;
 }
 
 /* ── Print / PDF export ──────────────────────────────────────────────────── */

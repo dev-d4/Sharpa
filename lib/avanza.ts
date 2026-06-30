@@ -204,8 +204,9 @@ export async function fetchAvanzaFunds({ force = false } = {}): Promise<Fund[]> 
     const now = new Date().toISOString();
     const BATCH = 500;
 
-    // Upsert fund data into unified funds table
-    const fundRows = funds.map((f) => ({
+    // Upsert fund data into unified funds table.
+    // Exclude selection_id so the pre-classification set by classify-funds.ts is preserved.
+    const fundRows = funds.map(({ selection_id: _ignored, ...f }) => ({
       ...f,
       sri_value: f.sri_value != null ? Math.round(f.sri_value) : null,
       source: "avanza",

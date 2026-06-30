@@ -48,48 +48,48 @@ type QuizAnswers = {
 };
 
 const ASSET_OPTIONS = [
-  { value: "equity", emoji: "📈", label: "Aktiefonder", desc: "Investerar i börsnoterade bolag" },
-  { value: "fixed-income", emoji: "🏦", label: "Räntefonder", desc: "Obligationer och penningmarknad" },
-  { value: "allocation", emoji: "⚖️", label: "Blandfonder", desc: "Blandning av aktier och räntor" },
-  { value: "alternative", emoji: "🎲", label: "Alternativa fonder", desc: "Hedgefonder och råvaror" },
+  { value: "equity", label: "Aktiefonder", desc: "Investerar i börsnoterade bolag" },
+  { value: "fixed-income", label: "Räntefonder", desc: "Obligationer och penningmarknad" },
+  { value: "allocation", label: "Blandfonder", desc: "Blandning av aktier och räntor" },
+  { value: "alternative", label: "Alternativa fonder", desc: "Hedgefonder och råvaror" },
 ];
 
 const MARKET_OPTIONS = [
-  { value: "global", emoji: "🌍", label: "Globalt" },
-  { value: "sweden", emoji: "🇸🇪", label: "Sverige" },
-  { value: "usa", emoji: "🇺🇸", label: "USA" },
-  { value: "europe", emoji: "🇪🇺", label: "Europa" },
-  { value: "nordic", emoji: "❄️", label: "Norden" },
-  { value: "emerging", emoji: "🌏", label: "Tillväxtmarknader" },
-  { value: "asia", emoji: "🏯", label: "Asien" },
-  { value: "sector", emoji: "🔬", label: "Bransch/tema" },
+  { value: "global", label: "Globalt" },
+  { value: "sweden", label: "Sverige" },
+  { value: "usa", label: "USA" },
+  { value: "europe", label: "Europa" },
+  { value: "nordic", label: "Norden" },
+  { value: "emerging", label: "Tillväxtmarknader" },
+  { value: "asia", label: "Asien" },
+  { value: "sector", label: "Bransch/tema" },
 ];
 
 const SECTOR_OPTIONS = [
-  { value: "tech", emoji: "💻", label: "Teknik" },
-  { value: "health", emoji: "🧬", label: "Hälsa & biotech" },
-  { value: "real-estate", emoji: "🏢", label: "Fastigheter" },
-  { value: "energy", emoji: "⚡", label: "Energi & råvaror" },
-  { value: "other-sector", emoji: "🏭", label: "Annan bransch" },
+  { value: "tech", label: "Teknik" },
+  { value: "health", label: "Hälsa & biotech" },
+  { value: "real-estate", label: "Fastigheter" },
+  { value: "energy", label: "Energi & råvaror" },
+  { value: "other-sector", label: "Annan bransch" },
 ];
 
 const MANAGEMENT_OPTIONS = [
-  { value: "any", emoji: "🤷", label: "Spelar ingen roll", desc: "Visa alla förvaltningsstilar" },
-  { value: "passive", emoji: "📊", label: "Indexfond", desc: "Följer ett index, låg avgift" },
-  { value: "active", emoji: "🧠", label: "Aktivt förvaltad", desc: "Fondförvaltare väljer placeringar" },
+  { value: "any", label: "Spelar ingen roll", desc: "Visa alla förvaltningsstilar" },
+  { value: "passive", label: "Indexfond", desc: "Följer ett index, låg avgift" },
+  { value: "active", label: "Aktivt förvaltad", desc: "Fondförvaltare väljer placeringar" },
 ];
 
 const COST_OPTIONS = [
-  { value: null, emoji: "🔓", label: "Ingen gräns", desc: "Visa alla avgiftsnivåer" },
-  { value: 0.3, emoji: "💎", label: "Max 0,3%", desc: "Riktigt billiga fonder" },
-  { value: 0.5, emoji: "💰", label: "Max 0,5%", desc: "Prisvärd nivå" },
-  { value: 1.0, emoji: "📝", label: "Max 1,0%", desc: "Inkluderar aktiva fonder" },
+  { value: null, label: "Ingen gräns", desc: "Visa alla avgiftsnivåer" },
+  { value: 0.3, label: "Max 0,3%", desc: "Riktigt billiga fonder" },
+  { value: 0.5, label: "Max 0,5%", desc: "Prisvärd nivå" },
+  { value: 1.0, label: "Max 1,0%", desc: "Inkluderar aktiva fonder" },
 ];
 
 const SORT_OPTIONS = [
-  { value: "sharpe", emoji: "🏆", label: "Bäst riskjusterad avkastning", desc: "Avkastning i förhållande till risk" },
-  { value: "return", emoji: "🚀", label: "Bäst historisk avkastning", desc: "Högst 3-årsavkastning" },
-  { value: "cost", emoji: "💸", label: "Lägst avgift", desc: "Billigast fondavgift" },
+  { value: "sharpe", label: "Bäst riskjusterad avkastning", desc: "Avkastning i förhållande till risk" },
+  { value: "return", label: "Bäst historisk avkastning", desc: "Högst 3-årsavkastning" },
+  { value: "cost", label: "Lägst avgift", desc: "Billigast fondavgift" },
 ];
 
 // Build the ordered step list for the current path
@@ -199,21 +199,21 @@ function FundQuiz({
   function getSummaryPills(a: QuizAnswers): string[] {
     const pills: string[] = [];
     const asset = ASSET_OPTIONS.find((o) => o.value === a.assetClass);
-    if (asset) pills.push(`${asset.emoji} ${asset.label}`);
+    if (asset) pills.push(asset.label);
     if (a.assetClass === "equity" && a.market) {
       const m = MARKET_OPTIONS.find((o) => o.value === a.market);
-      if (m) pills.push(`${m.emoji} ${m.label}`);
+      if (m) pills.push(m.label);
     }
     if (a.market === "sector" && a.sector) {
       const s = SECTOR_OPTIONS.find((o) => o.value === a.sector);
-      if (s) pills.push(`${s.emoji} ${s.label}`);
+      if (s) pills.push(s.label);
     }
     if (a.management && a.management !== "any") {
       const m = MANAGEMENT_OPTIONS.find((o) => o.value === a.management);
-      if (m) pills.push(`${m.emoji} ${m.label}`);
+      if (m) pills.push(m.label);
     }
     if (a.maxCost !== null && a.maxCost !== undefined) {
-      pills.push(`💰 Max ${String(a.maxCost).replace(".", ",")}% avgift`);
+      pills.push(`Max ${String(a.maxCost).replace(".", ",")}% avgift`);
     }
     return pills;
   }
@@ -285,7 +285,6 @@ function FundQuiz({
                 onClick={() => pick("assetClass", o.value)}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/40 transition-all text-left group"
               >
-                <span className="text-xl">{o.emoji}</span>
                 <div>
                   <p className="text-sm font-medium text-slate-800 group-hover:text-blue-700">{o.label}</p>
                   <p className="text-xs text-slate-400">{o.desc}</p>
@@ -305,7 +304,6 @@ function FundQuiz({
                 onClick={() => pick("market", o.value)}
                 className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/40 transition-all text-left group"
               >
-                <span className="text-base leading-none">{o.emoji}</span>
                 <span className="text-sm font-medium text-slate-700 group-hover:text-blue-700">{o.label}</span>
               </button>
             ))}
@@ -322,7 +320,6 @@ function FundQuiz({
                 onClick={() => pick("sector", o.value)}
                 className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/40 transition-all text-left group"
               >
-                <span className="text-base leading-none">{o.emoji}</span>
                 <span className="text-sm font-medium text-slate-700 group-hover:text-blue-700">{o.label}</span>
               </button>
             ))}
@@ -339,7 +336,6 @@ function FundQuiz({
                 onClick={() => pick("management", o.value)}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/40 transition-all text-left group"
               >
-                <span className="text-xl">{o.emoji}</span>
                 <div>
                   <p className="text-sm font-medium text-slate-800 group-hover:text-blue-700">{o.label}</p>
                   <p className="text-xs text-slate-400">{o.desc}</p>
@@ -376,7 +372,6 @@ function FundQuiz({
                 onClick={() => pick("sortBy", o.value)}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/40 transition-all text-left group"
               >
-                <span className="text-xl">{o.emoji}</span>
                 <div>
                   <p className="text-sm font-medium text-slate-800 group-hover:text-blue-700">{o.label}</p>
                   <p className="text-xs text-slate-400">{o.desc}</p>
@@ -676,6 +671,7 @@ export default function AnalyzeClient() {
   const [portfolioLoading, setPortfolioLoading] = useState(() =>
     new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").has("portfolio")
   );
+  const autoRunPendingRef = useRef(false);
 
   // Warm up fund cache as soon as page loads so search is instant
   useEffect(() => {
@@ -714,6 +710,7 @@ export default function AnalyzeClient() {
         const builder = JSON.parse(builderRaw) as { custodian?: string; entries: Entry[] };
         if (builder.custodian) setCustodian(builder.custodian);
         if (builder.entries?.length) { setEntries(builder.entries); setInputMethod("manual"); }
+        autoRunPendingRef.current = true;
       } catch { /* ignore */ }
       sessionStorage.removeItem("fondanalys_builder");
       return;
@@ -768,6 +765,15 @@ export default function AnalyzeClient() {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
+
+  // Auto-run analysis when navigating here from the portfolio builder
+  useEffect(() => {
+    if (autoRunPendingRef.current && custodian && entries.some((e) => e.isin)) {
+      autoRunPendingRef.current = false;
+      analyze();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [custodian, entries]);
 
   function loadPortfolio(p: SavedPortfolio) {
     setCustodian(p.custodian);
@@ -1654,6 +1660,18 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
   const score = computePortfolioScore(analysis).score;
   const [showAllSwaps, setShowAllSwaps] = useState(false);
   const [openSwapTooltip, setOpenSwapTooltip] = useState<number | null>(null);
+  const swapSectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (openSwapTooltip === null) return;
+    function handler(e: MouseEvent) {
+      if (swapSectionRef.current && !swapSectionRef.current.contains(e.target as Node)) {
+        setOpenSwapTooltip(null);
+      }
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [openSwapTooltip]);
 
   const pv = portfolioValue ?? 100_000;
   const assumed = portfolioValue === null;
@@ -1903,12 +1921,12 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
       </section>
 
       <div className="relative">
-        <div className={`space-y-5${showBlur ? " blur-sm pointer-events-none select-none" : ""}`}>
+        <div className={`space-y-5${showBlur ? " blur-sm pointer-events-none select-none max-h-64 overflow-hidden" : ""}`}>
 
       {/* Swap suggestions + best-in-category */}
       {((analysis.swapSuggestions?.length ?? 0) > 0 ||
         (analysis.bestInCategory?.length ?? 0) > 0) && (
-        <section className="bg-white rounded-2xl p-6 sm:p-8" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.04)", border: "1px solid #F1F5F9" }}>
+        <section ref={swapSectionRef} className="bg-white rounded-2xl p-6 sm:p-8" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.04)", border: "1px solid #F1F5F9" }}>
             <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-1">Fondbytesförslag</p>
             <p className="text-lg font-semibold text-[#111827] mb-4">Förslag på förbättringar</p>
 
@@ -2080,6 +2098,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
       )}
         </div>
 
+        {showBlur && <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-b from-transparent to-white pointer-events-none z-[1]" />}
         {showBlur && (
           <div className="no-print absolute inset-0 flex items-center justify-center z-10">
             <div className="bg-white rounded-2xl p-6 shadow-xl border border-slate-100 max-w-sm w-full mx-4 text-center space-y-4">
@@ -2138,8 +2157,20 @@ function InfoButton({ children, open }: { children: React.ReactNode; open: boole
 
 function Metric({ label, value, sub, info }: { label: string; value: string; sub: string; info: string }) {
   const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
   return (
     <div
+      ref={ref}
       className="relative group cursor-pointer select-none"
       onClick={() => setOpen(o => !o)}
     >

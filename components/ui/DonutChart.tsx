@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
 const PALETTE = [
@@ -79,6 +79,20 @@ export default function DonutChart({
     setHoveredIdx(null);
     setTooltip(null);
   }
+
+  useEffect(() => {
+    if (!tooltip) return;
+    function dismiss() { setTooltip(null); setHoveredIdx(null); }
+    window.addEventListener("scroll", dismiss, { passive: true });
+    const timer = setTimeout(() => {
+      document.addEventListener("touchstart", dismiss, { passive: true });
+    }, 100);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("scroll", dismiss);
+      document.removeEventListener("touchstart", dismiss);
+    };
+  }, [tooltip]);
 
   return (
     <div className={horizontal ? "flex items-center gap-6" : showLegend ? "flex flex-col items-center gap-4 w-full max-w-xs mx-auto" : "inline-flex"}>

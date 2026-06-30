@@ -367,7 +367,8 @@ export async function fetchNordnetFunds({ force = false } = {}): Promise<Fund[]>
     }
 
     const exclusiveFunds = funds.filter((f) => !avanzaIsins.has(f.isin));
-    const fundRows = exclusiveFunds.map((f) => ({ ...f, source: "nordnet", fetched_at: now }));
+    // Exclude selection_id to preserve any existing classification from classify-funds.ts
+    const fundRows = exclusiveFunds.map(({ selection_id: _ignored, ...f }) => ({ ...f, source: "nordnet", fetched_at: now }));
     for (let i = 0; i < fundRows.length; i += BATCH) {
       const { error } = await supabase
         .from("funds")

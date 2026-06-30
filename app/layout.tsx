@@ -51,14 +51,17 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="sv">
-      <body className={`${geist.variable} ${dmSerif.variable} ${geist.className} min-h-screen text-slate-900 leading-relaxed`}>
+      <body className={`${geist.variable} ${dmSerif.variable} ${geist.className} min-h-dvh flex flex-col text-slate-900 leading-relaxed`}>
         <ScrollToTop />
         <Header />
 
         <Prefetch hrefs={["/analyze", "/risk-profile"]} />
-        <main className="pb-nav-safe sm:pb-0">{children}</main>
+        <main className="flex-1 pb-nav-safe sm:pb-0">{children}</main>
 
         <Footer />
+        {/* Spacer so the footer clears the fixed mobile bottom nav */}
+        <div className="sm:hidden shrink-0" style={{ height: "calc(52px + max(8px, env(safe-area-inset-bottom, 0px)))" }} aria-hidden="true" />
+
         <CookieBanner />
       </body>
     </html>

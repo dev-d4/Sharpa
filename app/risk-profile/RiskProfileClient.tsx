@@ -49,12 +49,24 @@ export default function RiskProfileClient() {
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+  const [prefillCount, setPrefillCount] = useState(0);
 
 
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getSession().then(({ data }) => {
       if (!data.session?.user) { setAuthed(false); setLoading(false); return; }
+
+      // Read pre-fill from builder quiz (written by onboarding when user chose to complete risk profile)
+      let prefillAnswers: Record<string, number> = {};
+      try {
+        const prefill = sessionStorage.getItem("fondanalys_risk_prefill");
+        if (prefill) {
+          sessionStorage.removeItem("fondanalys_risk_prefill");
+          prefillAnswers = JSON.parse(prefill);
+        }
+      } catch { /* ignore */ }
+
       fetch("/api/risk-profile")
         .then((r) => r.json())
         .then((p) => {
@@ -62,6 +74,13 @@ export default function RiskProfileClient() {
             setExisting({ score: p.score, label: p.label });
             setAnswers({ q1: p.q1, q2: p.q2, q3: p.q3, q4: p.q4 });
           } else {
+            if (Object.keys(prefillAnswers).length > 0) {
+              setAnswers(prefillAnswers);
+              setPrefillCount(Object.keys(prefillAnswers).length);
+              // Advance to the first question not already answered by the prefill
+              const firstUnanswered = QUESTIONS.findIndex((q) => !prefillAnswers[q.key]);
+              if (firstUnanswered > 0) setCurrentStep(firstUnanswered);
+            }
             setEditing(true);
           }
           setLoading(false);
@@ -185,7 +204,11 @@ export default function RiskProfileClient() {
     }>
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Ta fram din riskprofil</h1>
-        <p className="text-sm text-slate-500 mt-1">Svara på 4 frågor — tar under en minut.</p>
+        <p className="text-sm text-slate-500 mt-1">
+          {prefillCount > 0
+            ? `${prefillCount} av 4 frågor förifyllda från ditt portföljquiz — besvara de sista ${4 - prefillCount}.`
+            : "Svara på 4 frågor — tar under en minut."}
+        </p>
       </div>
 
       {/* Progress bar */}

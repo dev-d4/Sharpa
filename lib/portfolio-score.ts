@@ -25,8 +25,9 @@ export function computePortfolioScore(analysis: PortfolioAnalysis): PortfolioSco
     total += analysis.weightedReturn3yr > 40 ? 10 : analysis.weightedReturn3yr > 25 ? 9 : analysis.weightedReturn3yr > 15 ? 8 : analysis.weightedReturn3yr > 8 ? 7 : analysis.weightedReturn3yr > 3 ? 5 : 2;
     count++;
   }
-  if (analysis.categoryBreakdown?.length) {
-    const n = analysis.categoryBreakdown.filter(c => c.weight > 5).length;
+  const diversitySource = analysis.detailedBreakdown ?? analysis.categoryBreakdown;
+  if (diversitySource?.length) {
+    const n = diversitySource.filter(c => c.weight > 5).length;
     total += n >= 4 ? 10 : n === 3 ? 8 : n === 2 ? 5 : 2;
     count++;
   }

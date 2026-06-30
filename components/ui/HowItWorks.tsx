@@ -20,11 +20,11 @@ function BuildCard() {
       initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      transition={{ duration: 0.5 }}
-      className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col"
+      transition={{ duration: 0.5, delay: 0.1 }}
+      className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col"
     >
       <div className="p-5 sm:p-7 flex flex-col flex-1 space-y-5">
-        <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
+        <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
           <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -38,7 +38,7 @@ function BuildCard() {
           </p>
         </div>
 
-        <div className="bg-slate-50 rounded-xl p-3 w-fit">
+        <div className="bg-slate-50 rounded-lg p-3 w-fit">
           <DonutChart slices={BUILD_SLICES} centerLabel="70%" centerSub="Aktier" size={88} thickness={14} horizontal disableHover />
         </div>
 
@@ -76,11 +76,11 @@ function AnalyzeCard() {
       initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      transition={{ duration: 0.5, delay: 0.1 }}
-      className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col"
+      transition={{ duration: 0.5 }}
+      className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col"
     >
       <div className="p-5 sm:p-7 flex flex-col flex-1 space-y-5">
-        <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center">
+        <div className="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center">
           <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
           </svg>
@@ -95,7 +95,7 @@ function AnalyzeCard() {
         </div>
 
         {/* Mock swap suggestion preview */}
-        <div className="bg-slate-50 rounded-xl p-3 space-y-2.5">
+        <div className="bg-slate-50 rounded-lg p-3 space-y-2.5">
           <div className="flex items-center gap-3">
             <div className="flex-1 min-w-0">
               <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Nuvarande</p>
@@ -201,7 +201,7 @@ function PortfolioCalculator() {
   const diff        = Math.round(endValueOpt - endValue);
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-8">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 sm:p-8">
       <div className="grid sm:grid-cols-2 gap-8 sm:gap-10 items-start">
 
         {/* Inputs */}
@@ -245,7 +245,7 @@ function PortfolioCalculator() {
           </div>
 
           {/* Net return display */}
-          <div className="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-3">
+          <div className="flex items-center justify-between bg-slate-50 rounded-lg px-4 py-3">
             <span className="text-xs text-slate-500">Nettoavkastning</span>
             <span className={`text-sm font-bold tabular-nums ${net < 1 ? "text-red-500" : "text-slate-800"}`}>
               {net.toFixed(2)}% / år
@@ -255,7 +255,7 @@ function PortfolioCalculator() {
 
         {/* Output */}
         <div className="space-y-3">
-          <div className="rounded-xl border border-slate-200 p-5">
+          <div className="rounded-lg border border-slate-200 p-5">
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">Efter {YEARS} år</p>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -279,7 +279,7 @@ function PortfolioCalculator() {
           </div>
 
           {diff > 0 && (
-            <div className="bg-green-50 border border-green-100 rounded-xl p-5 text-center">
+            <div className="bg-green-50 border border-green-100 rounded-lg p-5 text-center">
               <p className="text-[10px] font-bold uppercase tracking-widest text-green-700/60 mb-1">Skillnad efter {YEARS} år</p>
               <p className="text-3xl sm:text-4xl font-bold text-green-700 tabular-nums">+{diff.toLocaleString("sv-SE")} kr</p>
               <p className="text-xs text-green-700/50 mt-1">med lägre avgift, samma avkastning</p>
@@ -348,8 +348,8 @@ export default function HowItWorks() {
 
         {/* Two feature cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <BuildCard />
           <AnalyzeCard />
+          <BuildCard />
         </div>
       </div>
 
@@ -422,7 +422,7 @@ export default function HowItWorks() {
         >
           <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Vanliga frågor</h2>
         </motion.div>
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-6">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-6">
           {FAQS.map((faq) => <FAQItem key={faq.q} q={faq.q} a={faq.a} />)}
         </div>
       </div>

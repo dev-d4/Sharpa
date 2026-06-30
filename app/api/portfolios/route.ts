@@ -29,12 +29,21 @@ export async function POST(req: NextRequest) {
 
   const { score } = computePortfolioScore(analysis);
 
-  const { data, error } = await supabase
+  let result = await supabase
     .from("portfolios")
     .insert({ user_id: user.id, name, custodian, holdings, analysis, score })
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  // score column may not exist yet (migration not applied) — retry without it
+  if (result.error?.code === "PGRST204") {
+    result = await supabase
+      .from("portfolios")
+      .insert({ user_id: user.id, name, custodian, holdings, analysis })
+      .select()
+      .single();
+  }
+
+  if (result.error) return NextResponse.json({ error: result.error.message }, { status: 500 });
+  return NextResponse.json(result.data);
 }

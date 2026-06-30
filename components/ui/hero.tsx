@@ -173,14 +173,14 @@ export default async function Hero() {
   const portfolioCount = formatPortfolioCount(rawCount);
 
   return (
-    <section className="relative w-full px-4 sm:px-6 pt-12 pb-16 sm:pt-24 sm:pb-28 lg:pt-24 lg:pb-32">
+    <section className="relative w-full px-4 sm:px-6 pt-28 pb-36 sm:pt-24 sm:pb-28 lg:pt-24 lg:pb-32">
       <div className="max-w-6xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-20 items-center">
 
           {/* ── Content column ─────────────────────────────────────────────────
               Mobil: centrerat.  Desktop (lg): vänsterjusterat.
           ──────────────────────────────────────────────────────────────────── */}
-          <div className="flex flex-col items-center lg:items-start text-center lg:text-left w-full gap-8 lg:gap-10">
+          <div className="flex flex-col items-center lg:items-start text-center lg:text-left w-full gap-16 lg:gap-10">
 
             {/* Trust badge */}
             <div className="inline-flex items-center gap-2 text-xs font-medium text-slate-500 border border-slate-200 bg-white px-4 py-1.5 rounded-full">
@@ -189,15 +189,15 @@ export default async function Hero() {
             </div>
 
             {/* Headline */}
-            <div className="space-y-7">
+            <div className="space-y-10">
               <h1
                 className="text-[42px] sm:text-[54px] lg:text-[64px] leading-[1.05] tracking-[-0.02em] text-slate-900"
                 style={{ fontFamily: "var(--font-dm-serif), Georgia, serif" }}
               >
-                Hur bra är dina<br />
-                fonder <span className="hero-accent">egentligen</span>?
+                Hur bra är <span className="hero-accent">dina<br />
+                fonder</span> egentligen?
               </h1>
-              <p className="text-base sm:text-lg text-slate-500 leading-loose max-w-[430px] mx-auto lg:mx-0">
+              <p className="text-base sm:text-lg text-slate-500 leading-relaxed max-w-[430px] mx-auto lg:mx-0">
                 Sök upp dina fonder och se på 2 minuter hur bra de egentligen presterar — och vilka byten som kan ge dig mer för pengarna. Gratis och oberoende.
               </p>
             </div>
@@ -207,19 +207,19 @@ export default async function Hero() {
 
               {/* Exempelkort mobil */}
               <div
-                className="w-full max-w-sm bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl p-4"
+                className="w-full max-w-xs bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl p-3"
                 style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.07), 0 0 0 1px rgba(255,255,255,0.6)" }}
               >
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-3">Exempel på byten vi hittar</p>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Exempel på byten vi hittar</p>
                 {SWAP_EXAMPLES.slice(0, 2).map((ex, i) => (
-                  <div key={i} className="py-3 border-b border-slate-50 last:border-0">
+                  <div key={i} className="py-2 border-b border-slate-50 last:border-0">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs text-slate-500 truncate min-w-0">{ex.from.name}</p>
                       <span className="text-[10px] font-semibold text-red-500 shrink-0">{ex.from.cost}</span>
                     </div>
-                    <div className="flex items-center justify-center my-2">
-                      <div className="w-7 h-7 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center">
-                        <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <div className="flex items-center justify-center my-1">
+                      <div className="w-5 h-5 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center">
+                        <svg className="w-3 h-3 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                         </svg>
                       </div>
@@ -228,7 +228,7 @@ export default async function Hero() {
                       <p className="text-xs font-semibold text-slate-800 truncate min-w-0">{ex.to.name}</p>
                       <span className="text-[10px] font-semibold text-green-600 shrink-0">{ex.to.cost}</span>
                     </div>
-                    <div className="flex justify-end mt-1.5">
+                    <div className="flex justify-end mt-1">
                       <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full whitespace-nowrap">
                         Sparar {ex.save}
                       </span>
@@ -240,19 +240,19 @@ export default async function Hero() {
               {/* Knappar mobil */}
               <div className="flex flex-col gap-3 w-full max-w-sm">
                 <Link
-                  href="/bygg-portfolj"
-                  className="inline-flex items-center justify-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-4 py-3.5 rounded-xl text-sm transition-all duration-200 shadow-md shadow-blue-500/25 active:scale-[0.98]"
+                  href="/analyze"
+                  className="inline-flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold px-4 py-3.5 rounded-xl text-sm transition-all duration-200 shadow-md shadow-slate-900/20 active:scale-[0.98]"
                 >
-                  Äger du inga fonder? Bygg en portfölj
+                  Analysera mina fonder
                   <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
                   </svg>
                 </Link>
                 <Link
-                  href="/analyze"
-                  className="inline-flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold px-4 py-3.5 rounded-xl text-sm transition-all duration-200 shadow-md shadow-slate-900/20 active:scale-[0.98]"
+                  href="/bygg-portfolj"
+                  className="inline-flex items-center justify-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-4 py-3.5 rounded-xl text-sm transition-all duration-200 shadow-md shadow-blue-500/25 active:scale-[0.98]"
                 >
-                  Analysera mina fonder
+                  Äger du inga fonder? Bygg en portfölj
                   <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
                   </svg>
@@ -264,19 +264,19 @@ export default async function Hero() {
             {/* Desktop: CTA-knappar */}
             <div className="hidden lg:flex flex-col gap-3 items-start">
               <Link
-                href="/bygg-portfolj"
-                className="inline-flex items-center justify-center gap-2.5 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-8 py-4 rounded-2xl text-sm transition-all duration-200 shadow-lg shadow-blue-500/25 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0"
+                href="/analyze"
+                className="inline-flex items-center justify-center gap-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold px-8 py-4 rounded-2xl text-sm transition-all duration-200 shadow-lg shadow-slate-900/20 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-900/25 active:translate-y-0"
               >
-                Äger du inga fonder? Bygg en portfölj
+                Analysera mina fonder — det är gratis
                 <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
                 </svg>
               </Link>
               <Link
-                href="/analyze"
-                className="inline-flex items-center justify-center gap-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold px-8 py-4 rounded-2xl text-sm transition-all duration-200 shadow-lg shadow-slate-900/20 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-900/25 active:translate-y-0"
+                href="/bygg-portfolj"
+                className="inline-flex items-center justify-center gap-2.5 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-8 py-4 rounded-2xl text-sm transition-all duration-200 shadow-lg shadow-blue-500/25 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/30 active:translate-y-0"
               >
-                Analysera mina fonder — det är gratis
+                Äger du inga fonder? Bygg en portfölj
                 <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
                 </svg>
