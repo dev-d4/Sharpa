@@ -130,15 +130,19 @@ function weightedAvg(
   return sumW === 0 ? null : sumV / sumW;
 }
 
-// ── Absolute fund scoring (same logic as scripts/analyze.py) ─────────────────
+// ── Absolute fund scoring ─────────────────────────────────────────────────────
+// Sharpe är huvudsignalen. Avgiften är den enda garanterade skillnaden mellan
+// två fonder och väger därför tungt (×3 ≈ en dyr fond måste ha ~1 Sharpe-enhet
+// bättre per procentenhet extra avgift). Avkastningstermerna är svaga
+// tiebreakers — hög senaste-avkastning ska inte kunna motivera en dyr fond.
 
 function absoluteScore(f: Fund): number {
   let score = 0;
   score += (f.sharpe_3yr ?? 0) * 3;
-  score += (f.return_3yr ?? 0) * 0.05;
-  score += (f.return_1yr ?? 0) * 0.02;
+  score += (f.return_3yr ?? 0) * 0.03;
+  score += (f.return_1yr ?? 0) * 0.01;
   const cost = f.ongoing_cost_actual ?? f.ongoing_cost_estimated ?? 0;
-  score -= cost * 1.5;
+  score -= cost * 3;
   return score;
 }
 
@@ -253,7 +257,20 @@ function generateSwaps(
         f.category === current.category &&
         geographicMatch(currentGeo, geographicFocus(f.category, f.name))
     );
-    if (peers.length === 0) {
+
+    // Avgiftsvakt: ett bytesförslag får aldrig höja avgiften mer än marginellt.
+    // Sajtens löfte är "mer för pengarna" — förslag som ökar årskostnaden
+    // undergräver det oavsett hur bra fondens historik ser ut.
+    const SWAP_COST_TOLERANCE = 0.1; // procentenheter
+    const currentCost = current.ongoing_cost_actual ?? current.ongoing_cost_estimated;
+    const eligible = peers.filter((f) => {
+      if (currentCost === null) return true;
+      const fCost = f.ongoing_cost_actual ?? f.ongoing_cost_estimated;
+      if (fCost === null) return false; // föreslå aldrig fond med okänd avgift
+      return fCost <= currentCost + SWAP_COST_TOLERANCE;
+    });
+
+    if (eligible.length === 0) {
       // No comparable peers found — still acknowledge the fund so it's not silently dropped
       bestInCategory.push({
         fundName: current.name,
@@ -263,10 +280,13 @@ function generateSwaps(
       continue;
     }
 
-    const best = peers.reduce((a, b) =>
+    const best = eligible.reduce((a, b) =>
       absoluteScore(b) > absoluteScore(a) ? b : a
     );
 
+    // Ingen marginal: sidan pekar alltid ut kategorins bästa fond. En fond
+    // stämplas "redan bäst" bara när ingen jämförbar fond faktiskt slår den —
+    // annars föreslås alltid toppfonden, även vid små försprång.
     if (absoluteScore(best) <= absoluteScore(current)) {
       bestInCategory.push({
         fundName: current.name,

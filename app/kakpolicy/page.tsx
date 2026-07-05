@@ -2,15 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Kakpolicy | Fondanalys",
-  description: "Information om hur Fondanalys använder cookies.",
+  title: "Kakpolicy | Sharpa",
+  description: "Information om hur Sharpa använder cookies.",
 };
 
 export default function KakpolicyPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
       <h1 className="text-3xl font-bold text-slate-900 mb-2">Kakpolicy</h1>
-      <p className="text-sm text-slate-400 mb-10">Senast uppdaterad: april 2026</p>
+      <p className="text-sm text-slate-400 mb-10">Senast uppdaterad: juli 2026</p>
 
       <div className="space-y-8 text-slate-700 text-sm leading-relaxed">
 
@@ -25,7 +25,7 @@ export default function KakpolicyPage() {
         <section className="space-y-3">
           <h2 className="text-lg font-bold text-slate-900">Vilka cookies använder vi?</h2>
           <p>
-            Fondanalys använder <strong>enbart nödvändiga cookies</strong>. Vi använder inga
+            Sharpa använder <strong>enbart nödvändiga cookies</strong>. Vi använder inga
             spårningskakor, annonskakor eller analyskakor från tredje part.
           </p>
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
@@ -42,13 +42,22 @@ export default function KakpolicyPage() {
             Vi använder inga cookies från Google Analytics, Facebook Pixel eller liknande
             spårningsverktyg.
           </p>
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+            <div>
+              <p className="font-semibold text-slate-800">Lokal lagring (localStorage)</p>
+              <p className="text-slate-500 mt-0.5">
+                Din webbläsare sparar lokalt ditt cookieval och vissa inställningar, t.ex. vald
+                depåplattform. Dessa uppgifter lämnar aldrig din enhet och skickas inte till oss.
+              </p>
+            </div>
+          </div>
         </section>
 
         <section className="space-y-3">
           <h2 className="text-lg font-bold text-slate-900">Hantera cookies</h2>
           <p>
             Du kan blockera eller radera cookies i din webbläsares inställningar. Observera att
-            om du blockerar nödvändiga sessionskakor kan du inte logga in på Fondanalys.
+            om du blockerar nödvändiga sessionskakor kan du inte logga in på Sharpa.
           </p>
           <p>
             Instruktioner för de vanligaste webbläsarna:

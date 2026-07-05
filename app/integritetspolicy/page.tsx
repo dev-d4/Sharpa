@@ -2,22 +2,22 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Integritetspolicy | Fondanalys",
-  description: "Hur Fondanalys hanterar dina personuppgifter.",
+  title: "Integritetspolicy | Sharpa",
+  description: "Hur Sharpa hanterar dina personuppgifter.",
 };
 
 export default function IntegritetspolicyPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
       <h1 className="text-3xl font-bold text-slate-900 mb-2">Integritetspolicy</h1>
-      <p className="text-sm text-slate-400 mb-10">Senast uppdaterad: april 2026</p>
+      <p className="text-sm text-slate-400 mb-10">Senast uppdaterad: juli 2026</p>
 
       <div className="prose prose-slate max-w-none space-y-8 text-slate-700 text-sm leading-relaxed">
 
         <section className="space-y-3">
           <h2 className="text-lg font-bold text-slate-900">1. Personuppgiftsansvarig</h2>
           <p>
-            Fondanalys är personuppgiftsansvarig för behandlingen av dina personuppgifter.
+            Sharpa är personuppgiftsansvarig för behandlingen av dina personuppgifter.
             Har du frågor om hur vi hanterar dina uppgifter är du välkommen att kontakta oss.
           </p>
         </section>
@@ -32,6 +32,10 @@ export default function IntegritetspolicyPage() {
             <li><strong>Riskprofil</strong> — dina svar på riskprofilfrågorna och beräknat riskbetyg.</li>
             <li><strong>Tekniska uppgifter</strong> — sessionskakor som krävs för inloggning.</li>
           </ul>
+          <p>
+            Vissa inställningar (t.ex. val av depåplattform och ditt cookieval) sparas endast lokalt
+            i din webbläsare och skickas inte till oss.
+          </p>
           <p>
             Vi samlar <strong>inte</strong> in känsliga personuppgifter, inga annonskakor och vi
             delar inte dina uppgifter med tredje part för marknadsföring.

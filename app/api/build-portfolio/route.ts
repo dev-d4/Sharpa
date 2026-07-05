@@ -185,11 +185,13 @@ function applyMgmt(funds: FundRow[], mgmt: string): FundRow[] {
   return funds;
 }
 
+// Samma viktning som absoluteScore i lib/analysis.ts: avgiften väger tungt
+// (×3) så att dyra fonder inte toppar kategorislotsen på ren momentum.
 function scoreF(f: FundRow): number {
   return (f.sharpe_3yr ?? 0) * 3
-    + (f.return_3yr ?? 0) * 0.05
-    + (f.return_1yr ?? 0) * 0.02
-    - (f.ongoing_cost_actual ?? f.ongoing_cost_estimated ?? 0) * 1.5;
+    + (f.return_3yr ?? 0) * 0.03
+    + (f.return_1yr ?? 0) * 0.01
+    - (f.ongoing_cost_actual ?? f.ongoing_cost_estimated ?? 0) * 3;
 }
 
 function pickTop(pool: FundRow[], exclude: string[] = [], n = 6): FundRow[] {

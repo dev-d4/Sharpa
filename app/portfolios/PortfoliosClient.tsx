@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase-browser";
 import type { SavedPortfolio } from "@/lib/portfolio";
-import { portfolioRiskLevel, riskMatch, type RiskLevel } from "@/lib/risk";
+import type { RiskLevel } from "@/lib/risk";
 import type { SwapSuggestion } from "@/lib/analysis";
 import { computePortfolioScore, SCORE_COLOR_CLASSES } from "@/lib/portfolio-score";
 
@@ -65,7 +65,7 @@ export default function PortfoliosClient() {
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Mina portföljer</h1>
+          <h1 className="font-heading text-2xl font-bold text-slate-900">Mina portföljer</h1>
           <p className="text-sm text-slate-500 mt-1">{portfolios.length} sparade portföljer</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -77,7 +77,7 @@ export default function PortfoliosClient() {
           </Link>
           <Link
             href="/bygg-portfolj"
-            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-medium px-3 py-2.5 sm:px-4 rounded-xl transition-all shadow-sm shadow-blue-200"
+            className="bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold px-3 py-2.5 sm:px-4 rounded-[10px] transition-colors"
           >
             + Ny portfölj
           </Link>
@@ -86,7 +86,7 @@ export default function PortfoliosClient() {
 
       {/* Risk profile widget */}
       {riskProfile ? (
-        <div className="bg-white border border-slate-200 rounded-2xl px-5 py-4 flex items-center justify-between gap-4">
+        <div className="bg-white border border-slate-200 rounded-xl px-5 py-4 flex items-center justify-between gap-4">
           <div className="space-y-0.5">
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Din risknivå</p>
             <p className="font-semibold text-slate-900">{riskProfile.label}</p>
@@ -104,7 +104,7 @@ export default function PortfoliosClient() {
           </div>
         </div>
       ) : (
-        <div className="bg-amber-50 border border-amber-100 rounded-2xl px-5 py-4 flex items-center justify-between gap-4">
+        <div className="bg-warn-soft border border-amber-100 rounded-xl px-5 py-4 flex items-center justify-between gap-4">
           <div>
             <p className="font-semibold text-slate-900 text-sm">Du saknar riskprofil</p>
             <p className="text-xs text-slate-500 mt-0.5">Den hjälper oss matcha portföljer mot din risknivå</p>
@@ -119,11 +119,11 @@ export default function PortfoliosClient() {
       )}
 
       {portfolios.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-6 py-20 text-center space-y-5">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-6 py-20 text-center space-y-5">
           <p className="text-slate-900 font-semibold text-lg">Du har inga sparade portföljer än</p>
           <p className="text-slate-400 text-sm max-w-sm mx-auto">Bygg din första portfölj på 2 minuter — vi ställer 6 frågor och sätter ihop en komplett portfölj åt dig. Eller lägg in din befintliga portfölj, analysera den och spara den här.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/bygg-portfolj" className="inline-block bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-semibold px-6 py-3 rounded-xl transition-all shadow-sm shadow-blue-200">
+            <Link href="/bygg-portfolj" className="inline-block bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold px-6 py-3 rounded-[10px] transition-colors">
               Bygg din första portfölj →
             </Link>
             <Link href="/analyze" className="inline-block border border-slate-200 hover:border-slate-300 text-slate-600 text-sm font-medium px-6 py-3 rounded-xl transition-colors">
@@ -138,36 +138,19 @@ export default function PortfoliosClient() {
             const showSwaps = expandedSwaps.has(p.id);
             const hasSwaps = p.analysis.swapSuggestions?.length > 0;
 
-            let riskBadge = null;
-            if (riskProfile && p.analysis.categoryBreakdown) {
-              const match = riskMatch(portfolioRiskLevel(p.analysis.categoryBreakdown), riskProfile.score);
-              const colors = {
-                green: "bg-green-50 text-green-700 border-green-100",
-                yellow: "bg-amber-50 text-amber-700 border-amber-100",
-                red: "bg-red-50 text-red-700 border-red-100",
-              };
-              riskBadge = (
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${colors[match.color]}`}>
-                  {match.label}
-                </span>
-              );
-            }
-
             const scoreResult = computePortfolioScore(p.analysis);
             const scoreColors = SCORE_COLOR_CLASSES[scoreResult.color];
 
             return (
-              <div key={p.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div key={p.id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                 {/* Header */}
                 <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-100">
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1.5 min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <h2 className="font-bold text-slate-900 break-words w-full sm:w-auto">{p.name}</h2>
-                        <span className="text-xs bg-blue-50 text-blue-600 font-medium px-2 py-0.5 rounded-full">{custodianLabel}</span>
-                        <span className="text-xs text-slate-400">{p.holdings.length} fonder</span>
-                        {riskBadge}
-                        <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border ${scoreColors.pill}`}>
+                        <h2 className="font-heading font-bold text-slate-900 break-words w-full sm:w-auto">{p.name}</h2>
+                        <span className="text-xs text-slate-400">{custodianLabel}</span>
+                        <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md border ${scoreColors.pill}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${scoreColors.dot}`} />
                           {scoreResult.score.toFixed(1)}/10 · {scoreResult.label}
                         </span>
@@ -305,8 +288,8 @@ export default function PortfoliosClient() {
                               const isConsolidate = group[0].consolidate;
                               if (group.length >= 2) {
                                 return (
-                                  <div key={gi} className={`rounded-xl p-4 space-y-3 border-2 ${isConsolidate ? "border-blue-200 bg-blue-50/30" : "border-amber-200 bg-amber-50/30"}`}>
-                                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full border uppercase tracking-wide inline-block ${isConsolidate ? "text-blue-700 bg-blue-100 border-blue-200" : "text-amber-700 bg-amber-100 border-amber-200"}`}>
+                                  <div key={gi} className={`rounded-xl p-4 space-y-3 border ${isConsolidate ? "border-info-line bg-info/40" : "border-warn/25 bg-warn-soft/40"}`}>
+                                    <span className={`text-xs font-bold px-2.5 py-1 rounded-md border uppercase tracking-wide inline-block ${isConsolidate ? "text-accent bg-info border-info-line" : "text-warn bg-warn-soft border-warn/25"}`}>
                                       {isConsolidate ? `Konsolidera ${group.length} fonder hit` : `Topval — bättre än ${group.length} fonder`}
                                     </span>
                                     <div>

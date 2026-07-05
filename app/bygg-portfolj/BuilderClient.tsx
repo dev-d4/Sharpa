@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, RotateCcw } from "lucide-react";
 import { createClient } from "@/lib/supabase-browser";
+import { RISK_LABELS, type RiskLevel } from "@/lib/risk";
 import type { User } from "@supabase/supabase-js";
 import DonutChart from "@/components/ui/DonutChart";
+import { CHART_PALETTE } from "@/lib/chart-palette";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -237,7 +239,7 @@ function OptionCard({ label, desc, onClick }: {
     <button
       type="button"
       onClick={onClick}
-      className="w-full px-4 py-4 rounded-xl border-2 text-left transition-all border-slate-100 bg-slate-50 hover:border-blue-300 hover:bg-blue-50/50 active:scale-[0.99]"
+      className="w-full px-4 py-4 rounded-[10px] border text-left transition-colors border-line bg-white hover:border-accent"
     >
       <p className="text-[15px] font-semibold text-slate-800">{label}</p>
       <p className="text-sm text-slate-400 mt-0.5">{desc}</p>
@@ -595,7 +597,6 @@ export default function BuilderClient() {
   // Live preview panel data
   const previewRiskScore = computeRiskScoreClient(answers);
   const previewEquity = previewRiskScore === 1 ? 20 : previewRiskScore === 2 ? 35 : previewRiskScore === 3 ? 55 : previewRiskScore === 4 ? 75 : 100;
-  const RISK_LABELS: Record<number, string> = { 1: "Mycket defensiv", 2: "Defensiv", 3: "Balanserad", 4: "Tillväxt", 5: "Offensiv" };
   const showPreview = !isResults && stepIdx >= 1;
 
   return (
@@ -603,7 +604,7 @@ export default function BuilderClient() {
 
       {/* Page header */}
       <div className="text-center mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Bygg din portfölj</h1>
+        <h1 className="font-heading text-2xl sm:text-3xl font-bold text-slate-900">Bygg din portfölj</h1>
         <p className="text-slate-500 mt-2 text-sm">
           Svara på {totalSteps} frågor — vi föreslår en komplett portfölj
         </p>
@@ -618,7 +619,7 @@ export default function BuilderClient() {
           </div>
           <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
             <motion.div
-              className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"
+              className="h-full bg-accent rounded-full"
               animate={{ width: `${((stepIdx + 1) / totalSteps) * 100}%` }}
               transition={{ duration: 0.3 }}
             />
@@ -640,7 +641,7 @@ export default function BuilderClient() {
           animate="center"
           exit="exit"
           transition={{ duration: 0.2 }}
-          className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"
+          className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"
         >
           {!isResults && (
             <div className="px-5 pt-5 pb-4 border-b border-slate-100">
@@ -678,7 +679,7 @@ export default function BuilderClient() {
                       key={o.value}
                       type="button"
                       onClick={() => pick("horizon", o.value)}
-                      className="w-full px-4 py-3.5 rounded-xl border-2 text-left transition-all border-blue-500 bg-blue-50"
+                      className="w-full px-4 py-3.5 rounded-[10px] border text-left transition-colors border-accent bg-info"
                     >
                       <p className="text-sm font-semibold text-blue-700">{o.label}</p>
                       <p className="text-xs text-slate-400 mt-0.5">{o.desc}</p>
@@ -712,7 +713,7 @@ export default function BuilderClient() {
                       key={o.value}
                       type="button"
                       onClick={() => pick("reaction", o.value)}
-                      className="w-full px-4 py-3.5 rounded-xl border-2 text-left transition-all border-blue-500 bg-blue-50"
+                      className="w-full px-4 py-3.5 rounded-[10px] border text-left transition-colors border-accent bg-info"
                     >
                       <p className="text-sm font-semibold text-blue-700">{o.label}</p>
                       <p className="text-xs text-slate-400 mt-0.5">{o.desc}</p>
@@ -746,7 +747,7 @@ export default function BuilderClient() {
                       key={o.value}
                       type="button"
                       onClick={() => pick("q3", o.value)}
-                      className="w-full px-4 py-3.5 rounded-xl border-2 text-left transition-all border-blue-500 bg-blue-50"
+                      className="w-full px-4 py-3.5 rounded-[10px] border text-left transition-colors border-accent bg-info"
                     >
                       <p className="text-sm font-semibold text-blue-700">{o.label}</p>
                       <p className="text-xs text-slate-400 mt-0.5">{o.desc}</p>
@@ -780,7 +781,7 @@ export default function BuilderClient() {
                       key={o.value}
                       type="button"
                       onClick={() => pick("q4", o.value)}
-                      className="w-full px-4 py-3.5 rounded-xl border-2 text-left transition-all border-blue-500 bg-blue-50"
+                      className="w-full px-4 py-3.5 rounded-[10px] border text-left transition-colors border-accent bg-info"
                     >
                       <p className="text-sm font-semibold text-blue-700">{o.label}</p>
                       <p className="text-xs text-slate-400 mt-0.5">{o.desc}</p>
@@ -812,7 +813,7 @@ export default function BuilderClient() {
                         const opt = SELECTION_OPTIONS.find((o) => o.value === id)!;
                         const prio = priorities[id] ?? 2;
                         return (
-                          <div key={id} className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded-full pl-3 pr-2 py-1.5">
+                          <div key={id} className="flex items-center gap-1.5 bg-info border border-info-line rounded-lg pl-3 pr-2 py-1.5">
                             <span className="text-xs font-semibold text-blue-700">{opt.label}</span>
                             <span className="text-[10px] text-blue-400">· {TIER_LABELS[prio]}</span>
                             <button type="button" onClick={() => toggleSelection(id)} className="w-4 h-4 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-500 flex items-center justify-center transition-colors shrink-0">
@@ -858,10 +859,10 @@ export default function BuilderClient() {
                                     key={o.value}
                                     type="button"
                                     onClick={() => toggleSelection(o.value)}
-                                    className={`w-full px-4 py-3 rounded-xl border-2 text-left transition-all active:scale-[0.99] ${
+                                    className={`w-full px-4 py-3 rounded-[10px] border text-left transition-colors ${
                                       selected
-                                        ? "border-blue-500 bg-blue-50"
-                                        : "border-slate-100 bg-slate-50 hover:border-blue-300 hover:bg-blue-50/50"
+                                        ? "border-accent bg-info"
+                                        : "border-line bg-white hover:border-accent"
                                     }`}
                                   >
                                     <p className={`text-sm font-semibold leading-snug ${selected ? "text-blue-700" : "text-slate-800"}`}>{o.label}</p>
@@ -920,7 +921,7 @@ export default function BuilderClient() {
                     type="button"
                     onClick={confirmSelections}
                     disabled={pending.length === 0}
-                    className="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-6 py-2.5 rounded-xl transition-colors text-sm"
+                    className="bg-accent hover:bg-accent-hover active:bg-accent-press disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-6 py-2.5 rounded-[10px] transition-colors text-sm"
                   >
                     Fortsätt →
                   </button>
@@ -939,7 +940,7 @@ export default function BuilderClient() {
               <>
                 {loading && (
                   <div className="flex flex-col items-center gap-3 py-12 text-center">
-                    <div className="w-10 h-10 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+                    <div className="w-10 h-10 rounded-full border-2 border-accent border-t-transparent animate-spin" />
                     <p className="text-sm text-slate-500 font-medium">Bygger din portfölj…</p>
                   </div>
                 )}
@@ -960,7 +961,7 @@ export default function BuilderClient() {
                     <div className="space-y-3">
 
                       {result.droppedSelections?.length > 0 && (
-                        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 space-y-1">
+                        <div className="bg-warn-soft border border-amber-200 rounded-xl px-4 py-3 space-y-1">
                           <p className="text-xs font-semibold text-amber-800">Vissa kategorier togs bort</p>
                           {result.droppedSelections.map((msg, i) => (
                             <p key={i} className="text-xs text-amber-700">{msg}</p>
@@ -979,7 +980,7 @@ export default function BuilderClient() {
                             <div key={si} className="border border-slate-100 rounded-xl px-4 py-3 bg-slate-50">
                               <div className="flex items-center gap-3">
                                 <div className="w-11 h-11 bg-white border border-slate-200 rounded-xl flex items-center justify-center shrink-0">
-                                  <span className="text-sm font-bold text-indigo-600">{slot.weight}%</span>
+                                  <span className="text-sm font-bold text-accent">{slot.weight}%</span>
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-semibold text-slate-900 truncate">{candidate.name}</p>
@@ -1010,7 +1011,7 @@ export default function BuilderClient() {
                             </button>
                           )}
                         </div>
-                        <input type="range" min={0} max={100} step={10} value={localEquity} onChange={(e) => setLocalEquity(Number(e.target.value))} className="w-full accent-blue-600" />
+                        <input type="range" min={0} max={100} step={10} value={localEquity} onChange={(e) => setLocalEquity(Number(e.target.value))} className="w-full accent-accent" />
                         {localEquity !== result.equityPct ? (
                           <p className="text-xs text-blue-600 text-center font-medium">{localEquity}% aktier / {100 - localEquity}% räntor — klicka "Generera om" för att uppdatera</p>
                         ) : (
@@ -1030,9 +1031,35 @@ export default function BuilderClient() {
                       </div>
                     </div>
 
-                    {/* ── Blurrbar sektion: analys + spara ── */}
-                    <div className="relative">
-                      <div className={!user ? "blur-sm pointer-events-none select-none max-h-52 overflow-hidden" : undefined}>
+                    {/* ── Låst sektion: analys + spara (förhandsvisning bakom frost i utloggat läge) ── */}
+                    {!user ? (
+                      <div className="relative">
+                        <div aria-hidden className="pointer-events-none select-none border border-slate-100 rounded-xl overflow-hidden">
+                          <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Portföljanalys</p>
+                          </div>
+                          <div className="px-4 py-3.5 space-y-2">
+                            <p className="text-xs leading-relaxed text-slate-600">Din portfölj har en god riskspridning mellan regioner och tillgångsslag.</p>
+                            <p className="text-xs leading-relaxed text-slate-600">Den genomsnittliga avgiften ligger under snittet för jämförbara portföljer.</p>
+                            <p className="text-xs leading-relaxed text-slate-600">Räntedelen dämpar svängningar och passar den valda risknivån.</p>
+                            <p className="text-xs leading-relaxed text-slate-600">Fonderna är topprankade i sina kategorier utifrån Sharpe-kvot och avgift.</p>
+                            <p className="text-xs leading-relaxed text-slate-600">Spara portföljen för att följa utvecklingen över tid.</p>
+                          </div>
+                        </div>
+
+                        <div className="absolute inset-0 rounded-xl backdrop-blur-[8px] bg-white/50" />
+                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-center px-6 space-y-3">
+                          <p className="text-base font-semibold text-ink leading-snug max-w-md">Logga in för att se portföljanalysen och spara din portfölj</p>
+                          <p className="text-xs text-ink-3">Gratis · Klart på under en minut</p>
+                          <button
+                            onClick={openAuthModal}
+                            className="inline-flex items-center justify-center bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold px-7 py-2.5 rounded-[10px] transition-colors"
+                          >
+                            Logga in
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
                         <div className="lg:grid lg:grid-cols-5 lg:gap-8 space-y-4 lg:space-y-0">
 
                           {((result.reasoning?.length > 0) || (result.fundExplanations?.length > 0)) && (
@@ -1046,7 +1073,7 @@ export default function BuilderClient() {
                                   <div className="px-4 py-3 space-y-2">
                                     {result.reasoning.map((line, i) => (
                                       line.startsWith("⚠") ? (
-                                        <p key={i} className="text-xs leading-relaxed text-amber-700 bg-amber-50 rounded-lg px-3 py-2">{line}</p>
+                                        <p key={i} className="text-xs leading-relaxed text-amber-700 bg-warn-soft rounded-lg px-3 py-2">{line}</p>
                                       ) : (
                                         <p key={i} className="text-xs leading-relaxed text-slate-600">{line}</p>
                                       )
@@ -1097,7 +1124,7 @@ export default function BuilderClient() {
                                         <div key={i}>
                                           <button type="button" onClick={() => setExpandedFunds((prev) => { const n = new Set(prev); open ? n.delete(i) : n.add(i); return n; })} className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-50 transition-colors">
                                             <div className="flex items-center gap-2 min-w-0">
-                                              <span className="text-xs font-semibold text-indigo-600 shrink-0">{f.weight}%</span>
+                                              <span className="text-xs font-semibold text-accent shrink-0">{f.weight}%</span>
                                               <span className="text-xs font-semibold text-slate-800 truncate">{f.name}</span>
                                             </div>
                                             <svg className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/></svg>
@@ -1121,11 +1148,12 @@ export default function BuilderClient() {
                             <div className="lg:sticky lg:top-20 space-y-3">
 
                               {/* Summary card */}
-                              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+                              <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-sm bg-indigo-50 text-indigo-700 border border-indigo-100 px-3 py-1 rounded-full font-semibold">{result.riskLabel}</span>
+                                  <span className="text-sm bg-info text-accent border border-info-line px-3 py-1 rounded-lg font-semibold">{result.riskLabel}</span>
                                 </div>
                                 <DonutChart
+                                  palette={CHART_PALETTE}
                                   slices={result.portfolio.map((slot) => ({
                                     label: RATIONALE_SHORT[slot.rationale] ?? slot.rationale.split(" ")[0],
                                     weight: slot.weight,
@@ -1145,7 +1173,7 @@ export default function BuilderClient() {
                               </div>
 
                               {/* Save — primary CTA */}
-                              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
+                              <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-3">
                                 {saveStatus === "saved" ? (
                                   <p className="text-sm text-green-700 font-semibold text-center py-1">Portföljen sparad ✓</p>
                                 ) : !user ? (
@@ -1156,7 +1184,7 @@ export default function BuilderClient() {
                                     </div>
                                     <button
                                       onClick={openAuthModal}
-                                      className="w-full bg-slate-900 hover:bg-slate-700 text-white text-sm font-semibold py-3.5 rounded-xl transition-colors"
+                                      className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold py-3.5 rounded-[10px] transition-colors"
                                     >
                                       Logga in för att spara
                                     </button>
@@ -1167,7 +1195,7 @@ export default function BuilderClient() {
                                       <p className="text-sm font-semibold text-slate-900">Spara din portfölj</p>
                                       <p className="text-xs text-slate-400 mt-0.5">Kom åt den när som helst från Mina portföljer.</p>
                                     </div>
-                                    <button onClick={() => setShowSaveForm(true)} className="w-full bg-slate-900 hover:bg-slate-700 text-white text-sm font-semibold py-3.5 rounded-xl transition-colors">
+                                    <button onClick={() => setShowSaveForm(true)} className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold py-3.5 rounded-[10px] transition-colors">
                                       Spara portfölj
                                     </button>
                                   </>
@@ -1175,7 +1203,7 @@ export default function BuilderClient() {
                                   <div className="space-y-2">
                                     <input autoFocus type="text" placeholder="t.ex. ISK, Pension, Barnspar…" value={savingName} onChange={(e) => setSavingName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSave()} className="w-full border border-slate-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                                     <div className="flex gap-2">
-                                      <button onClick={handleSave} disabled={!savingName.trim() || saveStatus === "saving"} className="flex-1 bg-slate-900 hover:bg-slate-700 disabled:opacity-40 text-white text-sm font-semibold py-3 rounded-xl transition-colors">
+                                      <button onClick={handleSave} disabled={!savingName.trim() || saveStatus === "saving"} className="flex-1 bg-accent hover:bg-accent-hover active:bg-accent-press disabled:opacity-40 text-white text-sm font-semibold py-3 rounded-[10px] transition-colors">
                                         {saveStatus === "saving" ? "Sparar…" : "Spara"}
                                       </button>
                                       <button onClick={() => { setShowSaveForm(false); setSavingName(""); setSaveStatus("idle"); }} className="text-sm text-slate-400 hover:text-slate-600 px-3 transition-colors">
@@ -1192,34 +1220,16 @@ export default function BuilderClient() {
                                 Se nyckeltal — analysera portföljen
                                 <ChevronRight className="w-3.5 h-3.5" />
                               </button>
+
+                              <p className="text-[10px] text-slate-400 leading-relaxed">
+                                Förslaget är automatiskt genererat utifrån historiska nyckeltal och utgör inte
+                                finansiell rådgivning. Historisk avkastning är ingen garanti för framtida resultat.
+                              </p>
                             </div>
                           </div>
 
                         </div>
-                      </div>
-
-                      {!user && (
-                        <>
-                          <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-b from-transparent to-white pointer-events-none z-[1]" />
-                          <div className="absolute inset-0 flex items-center justify-center z-10">
-                            <div className="bg-white rounded-2xl p-6 shadow-xl border border-slate-100 max-w-sm w-full mx-4 text-center space-y-4">
-                              <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto">
-                                <svg className="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-                                </svg>
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-sm font-semibold text-slate-900">Logga in för att se portföljanalysen och spara din portfölj</p>
-                                <p className="text-xs text-slate-400">Gratis · Klart på under en minut</p>
-                              </div>
-                              <button onClick={openAuthModal} className="w-full bg-slate-900 hover:bg-slate-700 text-white font-semibold py-3 rounded-xl transition-colors text-sm">
-                                Logga in
-                              </button>
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
+                    )}
 
                   </div>
                 )}
@@ -1241,14 +1251,14 @@ export default function BuilderClient() {
       {/* Live preview panel — only on desktop, from step 2 onward */}
       {showPreview && (
         <div className="hidden lg:block sticky top-20 space-y-3">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-4">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Din profil hittills</p>
 
             {/* Risk score bar */}
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-xs text-slate-500">Risknivå</span>
-                <span className="text-xs font-semibold text-slate-700">{RISK_LABELS[previewRiskScore]}</span>
+                <span className="text-xs font-semibold text-slate-700">{RISK_LABELS[previewRiskScore as RiskLevel]}</span>
               </div>
               <div className="flex gap-1">
                 {[1,2,3,4,5].map(i => (
@@ -1280,7 +1290,7 @@ export default function BuilderClient() {
                   {pending.map(id => {
                     const opt = SELECTION_OPTIONS.find(o => o.value === id);
                     return opt ? (
-                      <span key={id} className="text-[10px] font-medium bg-blue-50 text-blue-600 border border-blue-100 px-2 py-0.5 rounded-full">{opt.label}</span>
+                      <span key={id} className="text-[10px] font-medium bg-info text-accent border border-info-line px-2 py-0.5 rounded-md">{opt.label}</span>
                     ) : null;
                   })}
                 </div>
@@ -1320,7 +1330,7 @@ export default function BuilderClient() {
           className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
           onClick={(e) => { if (e.target === e.currentTarget) { setAuthModal(false); setAuthSent(false); setAuthEmail(""); setAuthError(null); } }}
         >
-          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 space-y-4">
             <div className="text-center space-y-1">
               <p className="font-semibold text-slate-900 text-base">Logga in eller skapa konto</p>
               <p className="text-xs text-slate-400">Inget konto? Vi skapar ett åt dig automatiskt.</p>
@@ -1328,7 +1338,7 @@ export default function BuilderClient() {
 
             {authSent ? (
               <div className="text-center py-4 space-y-2">
-                <div className="text-3xl">✉️</div>
+                <svg className="w-8 h-8 mx-auto text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" /></svg>
                 <p className="font-semibold text-slate-900">Kolla din e-post</p>
                 <p className="text-sm text-slate-500">Vi har skickat en inloggningslänk till <span className="font-medium text-slate-700">{authEmail}</span>.</p>
               </div>
@@ -1364,7 +1374,7 @@ export default function BuilderClient() {
                   <button
                     type="submit"
                     disabled={authLoading}
-                    className="w-full bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 disabled:from-blue-300 disabled:to-blue-300 text-white font-medium rounded-xl py-2.5 text-sm transition-all shadow-sm shadow-blue-200"
+                    className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press disabled:bg-blue-300 text-white font-semibold rounded-[10px] py-2.5 text-sm transition-colors"
                   >
                     {authLoading ? "Skickar…" : "Skicka inloggningslänk"}
                   </button>
@@ -1385,7 +1395,7 @@ export default function BuilderClient() {
             type="button"
             onClick={confirmSelections}
             disabled={pending.length === 0}
-            className="w-full bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-6 py-4 rounded-2xl text-sm transition-colors active:scale-[0.99]"
+            className="w-full bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-6 py-4 rounded-xl text-sm transition-colors"
           >
             {pending.length === 0 ? "Välj minst ett alternativ" : `Fortsätt — ${pending.length} valda`}
           </button>

@@ -33,13 +33,13 @@ function AvatarDropdown({ user }: { user: User }) {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 font-bold text-sm flex items-center justify-center hover:bg-blue-200 transition-colors"
+        className="w-8 h-8 rounded-full bg-info text-accent font-bold text-sm flex items-center justify-center hover:bg-blue-100 transition-colors"
         aria-label="Kontomeny"
       >
         {initials}
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl border border-slate-200 shadow-lg py-1 z-50 overflow-hidden">
+        <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl border border-line py-1 z-50 overflow-hidden" style={{ boxShadow: "0 8px 24px rgba(16,24,40,.08)" }}>
           <div className="px-4 py-2.5 border-b border-slate-100">
             <p className="text-xs text-slate-400 truncate">{user.email}</p>
           </div>
@@ -84,7 +84,7 @@ export default function Header() {
   function bottomTabClass(href: string, exact = false) {
     const active = exact ? pathname === href : (pathname === href || (href !== "/" && pathname.startsWith(href)));
     return `flex flex-col items-center gap-0.5 py-2 px-2 flex-1 transition-colors min-w-0 ${
-      active ? "text-blue-600" : "text-slate-400"
+      active ? "text-accent" : "text-slate-400"
     }`;
   }
 
@@ -94,9 +94,9 @@ export default function Header() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between sm:grid sm:grid-cols-3">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 shrink-0">
-            <Image src="/logo.svg" alt="Fondanalys" width={28} height={28} className="sm:w-8 sm:h-8" />
-            <span className="text-base font-bold tracking-tight text-slate-900">
-              Fond<span className="text-blue-500">analys</span>
+            <Image src="/logo.svg" alt="Sharpa" width={28} height={28} className="sm:w-8 sm:h-8" />
+            <span className="font-heading text-base font-extrabold tracking-tight text-slate-900">
+              Sharpa
             </span>
           </Link>
 
@@ -115,7 +115,7 @@ export default function Header() {
                 <>
                   <Link
                     href="/login"
-                    className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+                    className="bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold px-4 py-2 rounded-[10px] transition-colors"
                   >
                     Logga in eller skapa konto
                   </Link>

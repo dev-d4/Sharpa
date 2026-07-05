@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { ENTERPRISE_FEATURES_ENABLED } from "../../lib/features";
 
 const PASSWORD = process.env.INTEGRATION_PASSWORD ?? "password123";
 
@@ -53,6 +54,9 @@ test.describe("Integrationsguidens lösenordsskydd", () => {
 });
 
 test.describe("Integrationsguide – innehåll", () => {
+  // Guiden är en enterprise-funktion — sidan visar en platshållare när flaggan är av
+  test.skip(!ENTERPRISE_FEATURES_ENABLED, "Enterprise-funktioner avstängda (lib/features.ts)");
+
   test.beforeEach(async ({ page }) => {
     // Logga in inför varje test
     await page.goto("/radgivning/fundguide/login");

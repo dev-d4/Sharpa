@@ -50,9 +50,9 @@ export const SCORE_COLOR_CLASSES: Record<PortfolioScoreResult["color"], {
   text: string;
   dot: string;
 }> = {
-  green:  { pill: "bg-green-50 border-green-100 text-green-700",     text: "text-green-700",   dot: "bg-green-500"  },
-  blue:   { pill: "bg-blue-50 border-blue-100 text-blue-700",       text: "text-blue-700",    dot: "bg-blue-500"   },
-  yellow: { pill: "bg-amber-50 border-amber-100 text-amber-700",    text: "text-amber-700",   dot: "bg-amber-500"  },
-  orange: { pill: "bg-orange-50 border-orange-100 text-orange-700", text: "text-orange-700",  dot: "bg-orange-500" },
-  red:    { pill: "bg-red-50 border-red-100 text-red-700",          text: "text-red-700",     dot: "bg-red-500"    },
+  green:  { pill: "bg-pos-soft border-pos/20 text-pos",              text: "text-pos",          dot: "bg-pos"        },
+  blue:   { pill: "bg-info border-info-line text-accent",           text: "text-accent",       dot: "bg-accent"     },
+  yellow: { pill: "bg-warn-soft border-warn/25 text-warn",           text: "text-warn",         dot: "bg-warn"       },
+  orange: { pill: "bg-[#F6E9E0] border-[#E8CDBB] text-[#A9542A]",    text: "text-[#A9542A]",    dot: "bg-[#C26A3A]"  },
+  red:    { pill: "bg-neg-soft border-neg/20 text-neg",              text: "text-neg",          dot: "bg-neg"        },
 };

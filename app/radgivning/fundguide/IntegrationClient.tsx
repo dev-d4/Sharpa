@@ -543,7 +543,7 @@ export default function IntegrationClient() {
             Integrationstiden är typiskt under en timme. Kontakta oss för en teknisk genomgång och diskussion kring er specifika plattform.
           </p>
           <a
-            href="mailto:kontakt@fondanalys.se"
+            href="mailto:kontakt@sharpa.se"
             className="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-400 text-white font-semibold px-8 py-4 rounded-2xl text-sm transition-all"
           >
             Kontakta oss →

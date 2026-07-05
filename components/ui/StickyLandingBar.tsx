@@ -14,15 +14,15 @@ export default function StickyLandingBar() {
 
   return (
     <div
-      className={`hidden sm:flex fixed bottom-6 left-1/2 -translate-x-1/2 z-40 transition-all duration-300 ${
-        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
+      className={`hidden sm:flex fixed bottom-6 left-1/2 -translate-x-1/2 z-40 transition-opacity duration-200 ${
+        visible ? "opacity-100" : "opacity-0 pointer-events-none"
       }`}
     >
-      <div className="flex items-center gap-4 bg-slate-900/95 backdrop-blur-sm text-white px-5 py-3 rounded-2xl shadow-2xl shadow-slate-900/30">
-        <p className="text-sm font-medium text-slate-300">Bygg din fondportfölj — gratis</p>
+      <div className="flex items-center gap-4 bg-white border border-line px-5 py-3 rounded-xl" style={{ boxShadow: "0 8px 24px rgba(16,24,40,.08)" }}>
+        <p className="text-sm font-medium text-ink-2">Bygg din fondportfölj — gratis</p>
         <Link
           href="/bygg-portfolj"
-          className="bg-blue-500 hover:bg-blue-400 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+          className="bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold px-4 py-1.5 rounded-[10px] transition-colors whitespace-nowrap"
         >
           Kom igång →
         </Link>

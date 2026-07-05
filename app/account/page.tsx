@@ -91,12 +91,12 @@ export default function AccountPage() {
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10"><div className="max-w-lg space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Mitt konto</h1>
+        <h1 className="font-heading text-2xl font-bold text-slate-900">Mitt konto</h1>
         <p className="text-sm text-slate-500 mt-1">Hantera dina inställningar</p>
       </div>
 
       {/* Account info */}
-      <section className="bg-white rounded-2xl border border-slate-200 shadow-sm divide-y divide-slate-100">
+      <section className="bg-white rounded-xl border border-slate-200 shadow-sm divide-y divide-slate-100">
         <div className="px-6 py-4">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Kontoinformation</p>
           <div className="space-y-3">
@@ -119,7 +119,7 @@ export default function AccountPage() {
       <section className="space-y-3">
         <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Din riskprofil</p>
         {riskProfile === undefined ? (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 animate-pulse space-y-4">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 animate-pulse space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-2">
                 <div className="h-6 w-32 rounded bg-slate-100" />
@@ -132,20 +132,20 @@ export default function AccountPage() {
             </div>
           </div>
         ) : riskProfile === null ? (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-4 sm:px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-4 sm:px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <p className="font-semibold text-slate-900 text-sm">Du har ingen riskprofil ännu</p>
               <p className="text-xs text-slate-400 mt-0.5">Svara på 4 frågor för att se om dina portföljer matchar din risknivå.</p>
             </div>
             <button
               onClick={() => router.push("/risk-profile")}
-              className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-3 rounded-xl transition-colors"
+              className="shrink-0 bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold px-4 py-3 rounded-[10px] transition-colors"
             >
               Kom igång →
             </button>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xl font-bold text-slate-900">{riskProfile.label}</p>
@@ -177,7 +177,7 @@ export default function AccountPage() {
       <section>
         <button
           onClick={() => router.push("/portfolios")}
-          className="w-full text-left bg-white rounded-2xl border border-slate-200 shadow-sm px-6 py-4 hover:bg-slate-50 transition-colors flex items-center justify-between"
+          className="w-full text-left bg-white rounded-xl border border-slate-200 shadow-sm px-6 py-4 hover:bg-slate-50 transition-colors flex items-center justify-between"
         >
           <div>
             <p className="text-sm font-semibold text-slate-900">Mina portföljer</p>
@@ -192,7 +192,7 @@ export default function AccountPage() {
       </section>
 
       {/* Sign out */}
-      <section className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+      <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
         <div className="px-6 py-4 flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-slate-900">Logga ut</p>
@@ -200,7 +200,7 @@ export default function AccountPage() {
           </div>
           <button
             onClick={handleSignOut}
-            className="text-sm font-medium text-red-600 hover:text-red-700 border border-red-200 hover:border-red-300 rounded-xl px-4 py-2 transition-colors"
+            className="text-sm font-medium text-red-600 hover:text-red-700 border border-red-200 hover:border-red-300 rounded-[10px] px-4 py-2 transition-colors"
           >
             Logga ut
           </button>
@@ -208,7 +208,7 @@ export default function AccountPage() {
       </section>
 
       {/* Delete account */}
-      <section className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+      <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
         {!deleteConfirm ? (
           <div className="px-6 py-4 flex items-center justify-between">
             <div>
@@ -217,7 +217,7 @@ export default function AccountPage() {
             </div>
             <button
               onClick={() => setDeleteConfirm(true)}
-              className="text-sm font-medium text-red-600 hover:text-red-700 border border-red-200 hover:border-red-300 rounded-xl px-4 py-2 transition-colors"
+              className="text-sm font-medium text-red-600 hover:text-red-700 border border-red-200 hover:border-red-300 rounded-[10px] px-4 py-2 transition-colors"
             >
               Radera
             </button>
@@ -232,14 +232,14 @@ export default function AccountPage() {
               <button
                 onClick={handleDeleteAccount}
                 disabled={deleting}
-                className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
+                className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white text-sm font-medium px-4 py-2 rounded-[10px] transition-colors"
               >
                 {deleting ? "Raderar…" : "Ja, radera mitt konto"}
               </button>
               <button
                 onClick={() => setDeleteConfirm(false)}
                 disabled={deleting}
-                className="flex-1 border border-slate-200 text-slate-600 text-sm font-medium px-4 py-2 rounded-xl hover:bg-slate-50 transition-colors"
+                className="flex-1 border border-slate-200 text-slate-600 text-sm font-medium px-4 py-2 rounded-[10px] hover:bg-slate-50 transition-colors"
               >
                 Avbryt
               </button>

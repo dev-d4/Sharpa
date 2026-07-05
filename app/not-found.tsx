@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Sidan hittades inte | Fondanalys",
+  title: "Sidan hittades inte | Sharpa",
 };
 
 export default function NotFound() {

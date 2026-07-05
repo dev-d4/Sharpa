@@ -1,9 +1,97 @@
 @import "tailwindcss";
-@source inline("bg-violet-500 hover:bg-violet-600 shadow-violet-500/20");
+
+/* ── Designsystem "Saklig kapitalförvaltning" ─────────────────────────────────
+   Egna tokens + remap av Tailwinds standardskalor till briefens exakta värden.
+   Accent #0B6E99 (petroleum), text i blågrå ink-skala, borders som separation. */
+
+@theme {
+  /* Egna semantiska tokens */
+  --color-canvas: #F7F8FA;
+  --color-section: #F2F4F7;
+  --color-ink: #17212B;
+  --color-ink-2: #4B5A68;
+  --color-ink-3: #6F7D89;
+  --color-ink-4: #9CA8B3;
+  --color-accent: #0B6E99;
+  --color-accent-hover: #095D82;
+  --color-accent-press: #084C69;
+  --color-pos: #18864B;
+  --color-pos-soft: #E8F3ED;
+  --color-neg: #C23A32;
+  --color-neg-soft: #F9ECEB;
+  --color-warn: #B97818;
+  --color-warn-soft: #F7EFE3;
+  --color-info: #EAF3F8;
+  --color-info-line: #BFD8E7;
+  --color-line: #D9E0E6;
+  --color-line-soft: #E8EDF2;
+
+  /* Remap: slate → blågrå ink-skala */
+  --color-slate-50:  #F2F4F7;
+  --color-slate-100: #E8EDF2;
+  --color-slate-200: #D9E0E6;
+  --color-slate-300: #B9C2CB;
+  --color-slate-400: #8B97A3;
+  --color-slate-500: #5D6B78;
+  --color-slate-600: #4B5A68;
+  --color-slate-700: #33404D;
+  --color-slate-800: #212D39;
+  --color-slate-900: #17212B;
+
+  /* Remap: blue → accent (petroleum) */
+  --color-blue-50:  #EAF3F8;
+  --color-blue-100: #D8E7EF;
+  --color-blue-200: #B7D3E1;
+  --color-blue-300: #7FB3CC;
+  --color-blue-400: #3D8AB0;
+  --color-blue-500: #0B6E99;
+  --color-blue-600: #095D82;
+  --color-blue-700: #084C69;
+  --color-blue-800: #073F57;
+
+  /* Remap: green/emerald → positiv avkastning */
+  --color-green-50:  #E8F3ED;
+  --color-green-100: #D3E8DC;
+  --color-green-400: #4CAF7D;
+  --color-green-500: #1E9E59;
+  --color-green-600: #18864B;
+  --color-green-700: #136A3C;
+  --color-emerald-50:  #E8F3ED;
+  --color-emerald-400: #4CAF7D;
+  --color-emerald-500: #1E9E59;
+  --color-emerald-600: #18864B;
+
+  /* Remap: red → negativ avkastning */
+  --color-red-50:  #F9ECEB;
+  --color-red-100: #F2D9D7;
+  --color-red-200: #E5B5B1;
+  --color-red-300: #D98F89;
+  --color-red-400: #D0685F;
+  --color-red-500: #C23A32;
+  --color-red-600: #A93028;
+  --color-red-700: #8F2822;
+
+  /* Remap: amber → varning (ockra) */
+  --color-amber-50:  #F7EFE3;
+  --color-amber-100: #EFE1C8;
+  --color-amber-200: #EAD9BC;
+  --color-amber-300: #DDC08F;
+  --color-amber-400: #D9A542;
+  --color-amber-500: #B97818;
+  --color-amber-600: #A56A15;
+  --color-amber-700: #8F5D13;
+  --color-amber-800: #7A500F;
+
+  /* Rubriktypsnitt */
+  --font-heading: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+}
 
 body {
-  color: #1a1a2e;
-  background-color: #ffffff;
+  color: #17212B;
+  background-color: #F7F8FA;
+  /* Tabulära siffror överallt — procenttal och belopp är produktens kärna */
+  font-feature-settings: "tnum" 1, "cv03" 1;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Safe-area bottom padding for mobile bottom nav on notched devices */
@@ -11,10 +99,14 @@ body {
   padding-bottom: max(8px, env(safe-area-inset-bottom));
 }
 
-/* Main content bottom padding on mobile: clears the fixed bottom nav (~52px) + safe area */
+/* Main content bottom padding on mobile: clears the fixed bottom nav (~52px) + safe area.
+   Scoped to <640px — bottennaven finns bara på mobil, och utan scopingen vann
+   klassen över sm:pb-0 och skapade ett tomt band ovanför footern på desktop. */
 @layer utilities {
-  .pb-nav-safe {
-    padding-bottom: calc(56px + max(8px, env(safe-area-inset-bottom)));
+  @media (max-width: 639px) {
+    .pb-nav-safe {
+      padding-bottom: calc(56px + max(8px, env(safe-area-inset-bottom)));
+    }
   }
 }
 
@@ -47,54 +139,19 @@ body {
   animation: fade-in-down 0.5s ease both;
 }
 
-@keyframes ai-shimmer {
-  0%   { background-position: 200% center; }
-  100% { background-position: -200% center; }
+/* Diskret fade när nytt analysresultat laddas — enda tillåtna innehållsanimationen */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
-.ai-shimmer-text {
-  background: linear-gradient(
-    90deg,
-    #6366f1 0%,
-    #818cf8 20%,
-    #c4b5fd 40%,
-    #a5b4fc 50%,
-    #c4b5fd 60%,
-    #818cf8 80%,
-    #6366f1 100%
-  );
-  background-size: 200% auto;
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  animation: ai-shimmer 3s linear infinite;
-  text-decoration: none;
+.animate-fade {
+  animation: fade-in 180ms ease-out both;
 }
 
-
-
-/* ── Hero accent — slow shimmer on "2 minuter" ───────────────────────────── */
-
-@keyframes hero-shimmer {
-  0%   { background-position: 0% center; }
-  50%  { background-position: 100% center; }
-  100% { background-position: 0% center; }
-}
-
+/* Accentord i rubriker — solid färg, ingen gradient */
 .hero-accent {
-  background: linear-gradient(
-    90deg,
-    #1d4ed8 0%,
-    #3b82f6 25%,
-    #93c5fd 50%,
-    #3b82f6 75%,
-    #1d4ed8 100%
-  );
-  background-size: 250% auto;
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  animation: hero-shimmer 5s ease-in-out infinite;
+  color: #0B6E99;
 }
 
 /* ── Rapport mode (B2B advisor report — no site chrome) ─────────────────── */
@@ -111,6 +168,12 @@ body.rapport-mode > footer {
 body.dashboard-mode > header,
 body.dashboard-mode > footer {
   display: none !important;
+}
+
+/* ── Fondbytesförslag: rader bortom de tre första döljs tills "Visa alla" ── */
+
+.swap-hidden {
+  display: none;
 }
 
 /* ── Print / PDF export ──────────────────────────────────────────────────── */

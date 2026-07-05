@@ -7,10 +7,11 @@ import { createClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { Search, Sparkles, X } from "lucide-react"
+import { RotateCcw, Search, SlidersHorizontal, X } from "lucide-react"
 import type { SavedPortfolio } from "@/lib/portfolio"
 import DonutChart from "@/components/ui/DonutChart"
 import { computePortfolioScore } from "@/lib/portfolio-score"
+import { CHART_PALETTE } from "@/lib/chart-palette"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -242,9 +243,9 @@ function FundQuiz({
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-slate-50/60 border-b border-slate-100">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+          <SlidersHorizontal className="w-3.5 h-3.5 text-accent" />
           <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-            Sök med AI
+            Guidad sökning
           </span>
         </div>
         <div className="flex items-center gap-3">
@@ -261,7 +262,7 @@ function FundQuiz({
       {!isResults && (
         <div className="h-0.5 bg-slate-100">
           <div
-            className="h-full bg-blue-500 transition-all duration-300"
+            className="h-full bg-accent transition-all duration-300"
             style={{ width: `${((stepIdx + 1) / steps.length) * 100}%` }}
           />
         </div>
@@ -283,10 +284,10 @@ function FundQuiz({
                 key={o.value}
                 type="button"
                 onClick={() => pick("assetClass", o.value)}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/40 transition-all text-left group"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 bg-white hover:border-accent hover:bg-slate-50 transition-all text-left group"
               >
                 <div>
-                  <p className="text-sm font-medium text-slate-800 group-hover:text-blue-700">{o.label}</p>
+                  <p className="text-sm font-medium text-slate-800">{o.label}</p>
                   <p className="text-xs text-slate-400">{o.desc}</p>
                 </div>
               </button>
@@ -302,9 +303,9 @@ function FundQuiz({
                 key={o.value}
                 type="button"
                 onClick={() => pick("market", o.value)}
-                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/40 transition-all text-left group"
+                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-accent hover:bg-slate-50 transition-all text-left group"
               >
-                <span className="text-sm font-medium text-slate-700 group-hover:text-blue-700">{o.label}</span>
+                <span className="text-sm font-medium text-slate-700">{o.label}</span>
               </button>
             ))}
           </div>
@@ -318,9 +319,9 @@ function FundQuiz({
                 key={o.value}
                 type="button"
                 onClick={() => pick("sector", o.value)}
-                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/40 transition-all text-left group"
+                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-accent hover:bg-slate-50 transition-all text-left group"
               >
-                <span className="text-sm font-medium text-slate-700 group-hover:text-blue-700">{o.label}</span>
+                <span className="text-sm font-medium text-slate-700">{o.label}</span>
               </button>
             ))}
           </div>
@@ -334,10 +335,10 @@ function FundQuiz({
                 key={o.value}
                 type="button"
                 onClick={() => pick("management", o.value)}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/40 transition-all text-left group"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 bg-white hover:border-accent hover:bg-slate-50 transition-all text-left group"
               >
                 <div>
-                  <p className="text-sm font-medium text-slate-800 group-hover:text-blue-700">{o.label}</p>
+                  <p className="text-sm font-medium text-slate-800">{o.label}</p>
                   <p className="text-xs text-slate-400">{o.desc}</p>
                 </div>
               </button>
@@ -353,9 +354,9 @@ function FundQuiz({
                 key={String(o.value)}
                 type="button"
                 onClick={() => pick("maxCost", o.value)}
-                className="flex flex-col gap-0.5 px-4 py-3 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/40 transition-all text-left group"
+                className="flex flex-col gap-0.5 px-4 py-3 rounded-xl border border-slate-200 bg-white hover:border-accent hover:bg-slate-50 transition-all text-left group"
               >
-                <span className="text-sm font-semibold text-slate-800 group-hover:text-blue-700">{o.label}</span>
+                <span className="text-sm font-semibold text-slate-800">{o.label}</span>
                 <span className="text-xs text-slate-400">{o.desc}</span>
               </button>
             ))}
@@ -370,10 +371,10 @@ function FundQuiz({
                 key={o.value}
                 type="button"
                 onClick={() => pick("sortBy", o.value)}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/40 transition-all text-left group"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 bg-white hover:border-accent hover:bg-slate-50 transition-all text-left group"
               >
                 <div>
-                  <p className="text-sm font-medium text-slate-800 group-hover:text-blue-700">{o.label}</p>
+                  <p className="text-sm font-medium text-slate-800">{o.label}</p>
                   <p className="text-xs text-slate-400">{o.desc}</p>
                 </div>
               </button>
@@ -388,7 +389,7 @@ function FundQuiz({
             {getSummaryPills(answers).length > 0 && (
               <div className="flex items-center gap-1.5 flex-wrap">
                 {getSummaryPills(answers).map((pill) => (
-                  <span key={pill} className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">
+                  <span key={pill} className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg font-medium">
                     {pill}
                   </span>
                 ))}
@@ -397,7 +398,7 @@ function FundQuiz({
 
             {loading && (
               <div className="flex items-center justify-center gap-2.5 py-8">
-                <div className="w-4 h-4 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+                <div className="w-4 h-4 rounded-full border-2 border-accent border-t-transparent animate-spin" />
                 <p className="text-sm text-slate-500">Söker bland alla fonder…</p>
               </div>
             )}
@@ -443,7 +444,7 @@ function FundQuiz({
                         type="button"
                         disabled={alreadyAdded}
                         onClick={() => onAdd(f.isin, f.name)}
-                        className="shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed border-blue-200 text-blue-600 hover:bg-blue-50 disabled:border-slate-200 disabled:text-slate-400"
+                        className="shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed border-slate-200 text-accent hover:border-accent hover:bg-slate-50 disabled:border-slate-200 disabled:text-slate-400"
                       >
                         {alreadyAdded ? "Tillagd" : "+ Lägg till"}
                       </button>
@@ -457,7 +458,7 @@ function FundQuiz({
               <button
                 type="button"
                 onClick={() => setVisibleCount((c) => c + PAGE)}
-                className="w-full text-xs font-medium text-slate-500 hover:text-blue-600 py-2 transition-colors"
+                className="w-full text-xs font-medium text-slate-500 hover:text-slate-700 py-2 transition-colors"
               >
                 Visa fler ({allResults.length - visibleCount} kvar)
               </button>
@@ -468,9 +469,9 @@ function FundQuiz({
                 <button
                   type="button"
                   onClick={resetQuiz}
-                  className="w-full flex items-center justify-center gap-1.5 text-xs font-medium text-slate-500 hover:text-blue-600 py-1.5 rounded-lg hover:bg-slate-50 transition-colors"
+                  className="w-full flex items-center justify-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 py-1.5 rounded-lg hover:bg-slate-50 transition-colors"
                 >
-                  <Sparkles className="w-3 h-3" />
+                  <RotateCcw className="w-3 h-3" />
                   Ny sökning
                 </button>
               </div>
@@ -1121,7 +1122,7 @@ export default function AnalyzeClient() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8">
       {/* Risk profile nudge — shown when logged in with no risk profile */}
       {user && riskProfile === null && !nudgeDismissed && (
-        <div className="no-print flex items-start gap-3 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+        <div className="no-print flex items-start gap-3 bg-warn-soft border border-amber-100 rounded-xl px-4 py-3">
           <span className="text-amber-500 shrink-0 mt-0.5">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z" />
@@ -1206,18 +1207,25 @@ export default function AnalyzeClient() {
         </div>
       )}
 
-      <section className="no-print bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 space-y-5">
+      <section className="no-print bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6 space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-lg font-bold text-slate-900 shrink-0">Din portfölj</h2>
+          <h2 className="font-heading text-lg font-bold text-slate-900 shrink-0">Din portfölj</h2>
           {inputMethod !== null && custodian && (
-            <button
-              type="button"
-              onClick={() => setInputMode(inputMode === "weight" ? "amount" : "weight")}
-              className="text-xs text-slate-400 hover:text-slate-600 underline transition-colors whitespace-nowrap"
-            >
-              {inputMode === "weight" ? "Ange belopp" : "Ange vikter (%)"}
-            </button>
+            <div className="flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5" role="group" aria-label="Ange innehav i vikt eller belopp">
+              {([["weight", "Vikt (%)"], ["amount", "Belopp (kr)"]] as const).map(([mode, label]) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setInputMode(mode)}
+                  className={`px-2.5 py-1 text-xs font-semibold rounded-md whitespace-nowrap transition-colors ${
+                    inputMode === mode ? "bg-white text-ink shadow-sm" : "text-slate-400 hover:text-slate-600"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           )}
         </div>
 
@@ -1342,31 +1350,28 @@ export default function AnalyzeClient() {
               {/* AI */}
               <button
                 type="button"
-                onClick={() => {
-                  if (!user) { router.push("/login"); return; }
-                  setInputMethod("ai");
-                }}
+                onClick={() => setInputMethod("ai")}
                 className={cn(
                   "flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition-all",
                   inputMethod === "ai"
-                    ? "border-indigo-200 bg-indigo-50"
-                    : "border-slate-200 bg-white hover:border-indigo-200 hover:bg-slate-50"
+                    ? "border-blue-200 bg-info"
+                    : "border-slate-200 bg-white hover:border-blue-200 hover:bg-slate-50"
                 )}
               >
                 <div className="flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                  <span className="text-xs font-semibold ai-shimmer-text">
-                    Sök med AI
+                  <SlidersHorizontal className={cn("w-3.5 h-3.5", inputMethod === "ai" ? "text-blue-500" : "text-slate-400")} />
+                  <span className={cn("text-xs font-semibold", inputMethod === "ai" ? "text-blue-700" : "text-slate-700")}>
+                    Guidad sökning
                   </span>
                 </div>
                 <span className="text-[11px] text-slate-400 leading-tight hidden sm:block">
-                  {user ? "Beskriv vad du letar efter" : "Kräver inloggning"}
+                  Svara på några snabba frågor
                 </span>
               </button>
             </div>
 
             {/* AI widget — shown when AI method selected */}
-            {inputMethod === "ai" && user && (
+            {inputMethod === "ai" && (
               <FundQuiz
                 custodian={custodian}
                 autoOpen
@@ -1454,7 +1459,7 @@ export default function AnalyzeClient() {
 
             <button
               onClick={() => analyze()} disabled={loading || inputMethod === null}
-              className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:from-blue-300 disabled:to-blue-300 text-white font-medium rounded-xl py-3 transition-all shadow-md shadow-blue-200"
+              className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press disabled:bg-blue-300 text-white font-semibold rounded-[10px] py-3 transition-colors"
             >
               {loading ? "Analyserar…" : "Analysera portfölj"}
             </button>
@@ -1466,7 +1471,7 @@ export default function AnalyzeClient() {
       {analysis && <AnalysisResult analysis={analysis} portfolioValue={portfolioValue} user={user} onLoginClick={handleLoginFromBlur} />}
 
       {analysis && user && !portfolioId && (
-        <section className="no-print bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
+        <section className="no-print bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
           {!showSaveForm ? (
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -1475,7 +1480,7 @@ export default function AnalyzeClient() {
               </div>
               <button
                 onClick={() => setShowSaveForm(true)}
-                className="shrink-0 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors"
+                className="shrink-0 bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold px-4 py-2.5 rounded-[10px] transition-colors"
               >
                 Spara
               </button>
@@ -1497,7 +1502,7 @@ export default function AnalyzeClient() {
                 <button
                   onClick={handleSaveNew}
                   disabled={!savingName.trim() || saveStatus === "saving"}
-                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
+                  className="bg-accent hover:bg-accent-hover active:bg-accent-press disabled:bg-blue-300 text-white text-sm font-semibold px-4 py-2 rounded-[10px] transition-colors"
                 >
                   {saveStatus === "saving" ? "Sparar…" : "Spara"}
                 </button>
@@ -1524,7 +1529,7 @@ export default function AnalyzeClient() {
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4"
         onClick={(e) => { if (e.target === e.currentTarget) setImportWizard(w => ({ ...w, open: false })); }}
       >
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
           {/* Header */}
           <div className="px-6 pt-6 pb-4 border-b border-slate-100">
             <div className="flex items-center justify-between mb-4">
@@ -1570,7 +1575,7 @@ export default function AnalyzeClient() {
                   )}>
                     {importWizard.file ? (
                       <div className="space-y-2">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mx-auto">
+                        <div className="w-10 h-10 rounded-[10px] bg-blue-100 flex items-center justify-center mx-auto">
                           <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                           </svg>
@@ -1580,7 +1585,7 @@ export default function AnalyzeClient() {
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mx-auto">
+                        <div className="w-10 h-10 rounded-[10px] bg-slate-100 flex items-center justify-center mx-auto">
                           <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
                           </svg>
@@ -1594,7 +1599,7 @@ export default function AnalyzeClient() {
                 <button
                   disabled={!importWizard.file}
                   onClick={() => setImportWizard(w => ({ ...w, step: 2 }))}
-                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white font-medium py-3 rounded-xl transition-colors text-sm"
+                  className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press disabled:bg-blue-300 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-[10px] transition-colors text-sm"
                 >
                   Nästa
                 </button>
@@ -1629,7 +1634,7 @@ export default function AnalyzeClient() {
                   <button
                     disabled={!importWizard.name.trim() || importing}
                     onClick={handleWizardComplete}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white font-medium py-3 rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
+                    className="flex-1 bg-accent hover:bg-accent-hover active:bg-accent-press disabled:bg-blue-300 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-[10px] transition-colors text-sm flex items-center justify-center gap-2"
                   >
                     {importing ? (
                       <>
@@ -1659,19 +1664,6 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
   const showBlur = user === null;
   const score = computePortfolioScore(analysis).score;
   const [showAllSwaps, setShowAllSwaps] = useState(false);
-  const [openSwapTooltip, setOpenSwapTooltip] = useState<number | null>(null);
-  const swapSectionRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (openSwapTooltip === null) return;
-    function handler(e: MouseEvent) {
-      if (swapSectionRef.current && !swapSectionRef.current.contains(e.target as Node)) {
-        setOpenSwapTooltip(null);
-      }
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [openSwapTooltip]);
 
   const pv = portfolioValue ?? 100_000;
   const assumed = portfolioValue === null;
@@ -1685,7 +1677,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
     if (fee + ret > 100) potentialGainKr = fee + ret;
   }
 
-  const scoreColor = score >= 7.5 ? "#16A34A" : score >= 5 ? "#F59E0B" : "#ef4444";
+  const scoreColor = score >= 7.5 ? "#18864B" : score >= 5 ? "#B97818" : "#C23A32";
 
   const strengths: string[] = [];
   const warnings: string[] = [];
@@ -1708,12 +1700,12 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 animate-fade">
 
       {/* Print-only header + score card */}
       <div className="print-only hidden">
         <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
-          <p className="text-base font-bold text-slate-900">Fondanalys</p>
+          <p className="text-base font-bold text-slate-900">Sharpa</p>
           <p className="text-sm text-slate-400">{new Date().toLocaleDateString("sv-SE")}</p>
         </div>
 
@@ -1766,29 +1758,29 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
         </div>
       </div>
 
-      {/* Hero card */}
-      <section className="no-print rounded-2xl p-6 sm:p-8 text-white" style={{ background: "linear-gradient(135deg, #0D1F36 0%, #0F2744 100%)" }}>
+      {/* Sammanfattande betygskort */}
+      <section className="no-print bg-white rounded-xl border border-line p-6 sm:p-8" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)" }}>
         <div className="flex items-start justify-between gap-6 flex-wrap">
           <div>
-            <p className="text-xs font-semibold tracking-[0.12em] uppercase text-white/40 mb-2">Portföljbetyg</p>
+            <p className="text-xs font-semibold tracking-[0.08em] uppercase text-ink-3 mb-2">Portföljbetyg</p>
             <div className="flex items-baseline gap-1.5">
               <span className="text-5xl sm:text-6xl font-bold tabular-nums" style={{ color: scoreColor }}>
                 {score.toFixed(1).replace(".", ",")}
               </span>
-              <span className="text-2xl text-white/25 font-light">/10</span>
+              <span className="text-2xl text-ink-4 font-light">/10</span>
             </div>
           </div>
           {potentialGainKr !== null && (
             <div className="text-right">
-              <p className="text-xs font-semibold tracking-[0.12em] uppercase text-white/40 mb-2">Förbättringspotential</p>
-              <p className="text-2xl sm:text-3xl font-bold text-green-400">+{Math.round(potentialGainKr).toLocaleString("sv-SE")} kr</p>
-              <p className="text-xs text-white/35 mt-1">per år{assumed ? " (vid 100 000 kr)" : ""}</p>
-              <p className="text-[10px] text-white/25 mt-0.5">inkl. historisk avkastningsskillnad</p>
+              <p className="text-xs font-semibold tracking-[0.08em] uppercase text-ink-3 mb-2">Förbättringspotential</p>
+              <p className="text-2xl sm:text-3xl font-bold text-pos tabular-nums">+{Math.round(potentialGainKr).toLocaleString("sv-SE")} kr</p>
+              <p className="text-xs text-ink-3 mt-1">per år{assumed ? " (vid 100 000 kr)" : ""}</p>
+              <p className="text-[10px] text-ink-4 mt-0.5">inkl. historisk avkastningsskillnad</p>
             </div>
           )}
         </div>
 
-        <p className="mt-5 pt-5 border-t border-white/10 text-white/70 leading-relaxed text-[15px]">
+        <p className="mt-5 pt-5 border-t border-line-soft text-ink-2 leading-relaxed text-[15px]">
           {analysis.summaryText}
         </p>
 
@@ -1796,10 +1788,10 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
           <div className="mt-5 grid sm:grid-cols-2 gap-4">
             {strengths.length > 0 && (
               <div>
-                <p className="text-xs font-semibold tracking-[0.1em] uppercase text-white/40 mb-2">Styrkor</p>
+                <p className="text-xs font-semibold tracking-[0.08em] uppercase text-ink-3 mb-2">Styrkor</p>
                 <div className="space-y-1.5">
                   {strengths.map(s => (
-                    <p key={s} className="text-sm text-green-400 flex items-center gap-2">
+                    <p key={s} className="text-sm text-pos flex items-center gap-2">
                       <span className="shrink-0">✓</span> {s}
                     </p>
                   ))}
@@ -1808,10 +1800,10 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
             )}
             {warnings.length > 0 && (
               <div>
-                <p className="text-xs font-semibold tracking-[0.1em] uppercase text-white/40 mb-2">Förbättringsområden</p>
+                <p className="text-xs font-semibold tracking-[0.08em] uppercase text-ink-3 mb-2">Förbättringsområden</p>
                 <div className="space-y-1.5">
                   {warnings.map(w => (
-                    <p key={w} className="text-sm text-amber-400 flex items-center gap-2">
+                    <p key={w} className="text-sm text-warn flex items-center gap-2">
                       <span className="shrink-0">⚠</span> {w}
                     </p>
                   ))}
@@ -1821,10 +1813,10 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
           </div>
         )}
 
-        <div className="mt-5 pt-4 border-t border-white/10 flex justify-end">
+        <div className="mt-5 pt-4 border-t border-line-soft flex justify-end">
           <button
             onClick={() => window.print()}
-            className="flex items-center gap-2 text-xs text-white/35 hover:text-white/60 transition-colors"
+            className="flex items-center gap-2 text-xs text-ink-3 hover:text-ink transition-colors"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -1835,7 +1827,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
       </section>
 
       {/* Key metrics + allocation */}
-      <section className="bg-white rounded-2xl p-6 sm:p-8" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.04)", border: "1px solid #F1F5F9" }}>
+      <section className="bg-white rounded-xl p-6 sm:p-8" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)", border: "1px solid #D9E0E6" }}>
         <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-6">Nyckeltal</p>
         <div className="grid lg:grid-cols-[1fr_340px] gap-8 items-start">
           <div className="grid grid-cols-2 gap-x-4 sm:gap-x-8 gap-y-6">
@@ -1847,6 +1839,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
           <div>
             <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-4">Fördelning</p>
             <DonutChart
+              palette={CHART_PALETTE}
               slices={(analysis.detailedBreakdown ?? []).map(c => ({ label: c.label, weight: c.weight }))}
               centerLabel={`${(analysis.detailedBreakdown ?? [])[0]?.weight.toFixed(0)}%`}
               centerSub={(analysis.detailedBreakdown ?? [])[0]?.label ?? ""}
@@ -1862,12 +1855,12 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
         <div className="mt-8 pt-6 border-t border-slate-50 grid sm:grid-cols-2 gap-8">
           {(analysis.categoryBreakdown?.length ?? 0) > 0 && (() => {
             const ASSET_COLORS: Record<string, string> = {
-              Aktiefonder:          "#3B82F6",
-              Räntefonder:          "#F59E0B",
-              Blandfonder:          "#10B981",
-              "Alternativa fonder": "#8B5CF6",
-              Penningmarknadsfonder:"#06B6D4",
-              Övrigt:               "#94A3B8",
+              Aktiefonder:          "#0B6E99",
+              Räntefonder:          "#D9A542",
+              Blandfonder:          "#18864B",
+              "Alternativa fonder": "#5D6B78",
+              Penningmarknadsfonder:"#7FB3CC",
+              Övrigt:               "#9CA8B3",
             };
             const items = (analysis.categoryBreakdown ?? []).filter(c => c.weight > 0);
             return (
@@ -1875,13 +1868,13 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                 <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-3">Tillgångsslag</p>
                 <div className="h-3 rounded-full overflow-hidden flex">
                   {items.map((c) => (
-                    <div key={c.label} style={{ width: `${c.weight}%`, backgroundColor: ASSET_COLORS[c.label] ?? "#94A3B8" }} />
+                    <div key={c.label} style={{ width: `${c.weight}%`, backgroundColor: ASSET_COLORS[c.label] ?? "#9CA8B3" }} />
                   ))}
                 </div>
                 <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
                   {items.map((c) => (
                     <div key={c.label} className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: ASSET_COLORS[c.label] ?? "#94A3B8" }} />
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: ASSET_COLORS[c.label] ?? "#9CA8B3" }} />
                       <span className="text-xs text-slate-500">{c.label}</span>
                       <span className="text-xs font-semibold text-slate-800 tabular-nums">{c.weight.toFixed(1)}%</span>
                     </div>
@@ -1893,9 +1886,9 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
 
           {(analysis.managementBreakdown.active + analysis.managementBreakdown.passive + analysis.managementBreakdown.unknown) > 0 && (() => {
             const items = [
-              { label: "Aktivt förvaltad", value: analysis.managementBreakdown.active,  color: "#3B82F6" },
-              { label: "Indexfond",         value: analysis.managementBreakdown.passive, color: "#F59E0B" },
-              { label: "Oklassad",          value: analysis.managementBreakdown.unknown, color: "#94A3B8" },
+              { label: "Aktivt förvaltad", value: analysis.managementBreakdown.active,  color: "#0B6E99" },
+              { label: "Indexfond",         value: analysis.managementBreakdown.passive, color: "#D9A542" },
+              { label: "Oklassad",          value: analysis.managementBreakdown.unknown, color: "#9CA8B3" },
             ].filter(i => i.value > 0);
             return (
               <div>
@@ -1920,15 +1913,62 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
         </div>
       </section>
 
-      <div className="relative">
-        <div className={`space-y-5${showBlur ? " blur-sm pointer-events-none select-none max-h-64 overflow-hidden" : ""}`}>
-
       {/* Swap suggestions + best-in-category */}
       {((analysis.swapSuggestions?.length ?? 0) > 0 ||
         (analysis.bestInCategory?.length ?? 0) > 0) && (
-        <section ref={swapSectionRef} className="bg-white rounded-2xl p-6 sm:p-8" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.04)", border: "1px solid #F1F5F9" }}>
+        <section className="relative bg-white rounded-xl p-6 sm:p-8" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)", border: "1px solid #D9E0E6" }}>
             <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-1">Fondbytesförslag</p>
-            <p className="text-lg font-semibold text-[#111827] mb-4">Förslag på förbättringar</p>
+            <p className="text-lg font-semibold text-ink mb-4">Förslag på förbättringar</p>
+
+            {showBlur ? (
+            <div>
+              <div aria-hidden className="pointer-events-none select-none divide-y divide-slate-200">
+                {[
+                  ["Swedbank Robur Ny Teknik A", "TIN Ny Teknik A"],
+                  ["Länsförsäkringar Global Aktiv A", "Avanza Global"],
+                  ["SEB Sverigefond Stora bolag", "PLUS Allabolag Sverige Index"],
+                ].map(([cur, sug], i) => (
+                  <div key={i} className="py-4 flex items-start gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-accent mb-1">Nuvarande</p>
+                      <p className="text-sm font-semibold text-ink leading-snug">{cur}</p>
+                    </div>
+                    <div className="flex flex-col items-center justify-start pt-4 shrink-0">
+                      <div className="w-7 h-7 rounded-[10px] bg-slate-100 flex items-center justify-center">
+                        <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0 text-right">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-accent mb-1">Föreslagen</p>
+                      <p className="text-sm font-semibold text-ink leading-snug">{sug}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="no-print absolute inset-0 rounded-xl backdrop-blur-[8px] bg-white/50" />
+              <div className="no-print absolute inset-0 z-10 flex flex-col items-center justify-center text-center px-6 space-y-3">
+                <p className="text-base font-semibold text-ink leading-snug max-w-md">
+                  {potentialGainKr !== null
+                    ? `Logga in för att se fondbytena med +${Math.round(potentialGainKr).toLocaleString("sv-SE")} kr/år i förbättringspotential`
+                    : "Logga in för att se personliga fondbytesförslag"}
+                </p>
+                {potentialGainKr !== null && assumed && (
+                  <p className="text-xs text-ink-3 max-w-sm">Beräknat på ett antaget sparkapital om 100 000 kr.</p>
+                )}
+                <p className="text-xs text-ink-3">Gratis · Klart på under en minut</p>
+                <button
+                  onClick={onLoginClick}
+                  className="inline-flex items-center justify-center bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold px-7 py-2.5 rounded-[10px] transition-colors"
+                >
+                  Logga in
+                </button>
+              </div>
+            </div>
+            ) : (
+              <>
 
             {(analysis.bestInCategory?.length ?? 0) > 0 && (() => {
               const bics = analysis.bestInCategory ?? [];
@@ -1936,7 +1976,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
               const label = bics.length === 1 ? "Redan bäst i sin kategori" : "Redan bäst i sina kategorier";
               return (
                 <div className={`flex items-start gap-3 ${hasSwaps ? "mb-4 pb-4 border-b border-slate-200" : ""}`}>
-                  <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-8 h-8 rounded-[10px] bg-green-50 flex items-center justify-center shrink-0 mt-0.5">
                     <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
@@ -1944,7 +1984,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                   <div className="min-w-0">
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-green-600 mb-1">{label}</p>
                     {bics.map((bic, i) => (
-                      <p key={i} className="text-sm font-semibold text-[#111827] leading-snug truncate">{bic.fundName}</p>
+                      <p key={i} className="text-sm font-semibold text-ink leading-snug truncate">{bic.fundName}</p>
                     ))}
                   </div>
                 </div>
@@ -1972,96 +2012,87 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                       const isConsolidate = group[0].consolidate;
                       const s = group[0];
                       const isMultiGroup = group.length >= 2;
-                      const showInfo = isMultiGroup || (s.reason || s.similarityNote);
 
-                      let tooltipContent: React.ReactNode = null;
+                      // Jämförelsedata för infopanelen — sammanvägt när flera fonder byts mot samma
+                      const sugCost = suggested.ongoing_cost_actual ?? suggested.ongoing_cost_estimated;
+                      let curCost: number | null = s.currentFund.ongoing_cost_actual ?? s.currentFund.ongoing_cost_estimated;
+                      let curReturn: number | null = s.currentFund.return_1yr;
+                      let curSharpe: number | null = s.currentFund.sharpe_3yr;
                       if (isMultiGroup) {
                         const totalW = group.reduce((sum, item) => sum + item.weight, 0);
-                        if (totalW > 0) {
-                          const items = group.map(item => ({
-                            normW: item.weight / totalW,
-                            cost: item.currentFund.ongoing_cost_actual ?? item.currentFund.ongoing_cost_estimated,
-                            r1yr: item.currentFund.return_1yr,
-                            sharpe: item.currentFund.sharpe_3yr,
-                          }));
-                          const compCost = items.every(x => x.cost !== null)
-                            ? items.reduce((sum, x) => sum + x.normW * x.cost!, 0) : null;
-                          const compReturn = items.every(x => x.r1yr !== null)
-                            ? items.reduce((sum, x) => sum + x.normW * x.r1yr!, 0) : null;
-                          const compSharpe = items.every(x => x.sharpe !== null)
-                            ? items.reduce((sum, x) => sum + x.normW * x.sharpe!, 0) : null;
-                          const sugCost = suggested.ongoing_cost_actual ?? suggested.ongoing_cost_estimated;
-                          tooltipContent = (
-                            <div>
-                              <p className="font-semibold mb-1.5">Nuvarande (sammanvägt)</p>
-                              {compCost !== null && <p>Avgift: {compCost.toFixed(2)}%</p>}
-                              {compReturn !== null && <p>Avk. 1 år: {compReturn.toFixed(1)}%</p>}
-                              {compSharpe !== null && <p>Sharpe: {compSharpe.toFixed(2)}</p>}
-                              <div className="border-t border-white/20 my-2" />
-                              <p className="font-semibold mb-1">Föreslagen</p>
-                              {suggested.category && <p className="opacity-70 mb-1">{suggested.category}</p>}
-                              {sugCost !== null && <p>Avgift: {sugCost.toFixed(2)}%</p>}
-                              {suggested.return_1yr !== null && <p>Avk. 1 år: {suggested.return_1yr.toFixed(1)}%</p>}
-                              {suggested.sharpe_3yr !== null && <p>Sharpe: {suggested.sharpe_3yr.toFixed(2)}</p>}
-                            </div>
-                          );
-                        }
-                      } else {
-                        const curCost = s.currentFund.ongoing_cost_actual ?? s.currentFund.ongoing_cost_estimated;
-                        const sugCost = s.suggestedFund.ongoing_cost_actual ?? s.suggestedFund.ongoing_cost_estimated;
-                        tooltipContent = (
-                          <div>
-                            <p className="font-semibold mb-1.5">Nuvarande</p>
-                            {s.currentFund.category && <p className="opacity-70 mb-1">{s.currentFund.category}</p>}
-                            {curCost !== null && <p>Avgift: {curCost.toFixed(2)}%</p>}
-                            {s.currentFund.return_1yr !== null && <p>Avk. 1 år: {s.currentFund.return_1yr.toFixed(1)}%</p>}
-                            {s.currentFund.sharpe_3yr !== null && <p>Sharpe: {s.currentFund.sharpe_3yr.toFixed(2)}</p>}
-                            <div className="border-t border-white/20 my-2" />
-                            <p className="font-semibold mb-1.5">Föreslagen</p>
-                            {s.suggestedFund.category && <p className="opacity-70 mb-1">{s.suggestedFund.category}</p>}
-                            {sugCost !== null && <p>Avgift: {sugCost.toFixed(2)}%</p>}
-                            {s.suggestedFund.return_1yr !== null && <p>Avk. 1 år: {s.suggestedFund.return_1yr.toFixed(1)}%</p>}
-                            {s.suggestedFund.sharpe_3yr !== null && <p>Sharpe: {s.suggestedFund.sharpe_3yr.toFixed(2)}</p>}
-                          </div>
-                        );
+                        const items = group.map(item => ({
+                          normW: totalW > 0 ? item.weight / totalW : 0,
+                          cost: item.currentFund.ongoing_cost_actual ?? item.currentFund.ongoing_cost_estimated,
+                          r1yr: item.currentFund.return_1yr,
+                          sharpe: item.currentFund.sharpe_3yr,
+                        }));
+                        curCost = totalW > 0 && items.every(x => x.cost !== null)
+                          ? items.reduce((sum, x) => sum + x.normW * x.cost!, 0) : null;
+                        curReturn = totalW > 0 && items.every(x => x.r1yr !== null)
+                          ? items.reduce((sum, x) => sum + x.normW * x.r1yr!, 0) : null;
+                        curSharpe = totalW > 0 && items.every(x => x.sharpe !== null)
+                          ? items.reduce((sum, x) => sum + x.normW * x.sharpe!, 0) : null;
                       }
 
                       return (
                         <div
                           key={gi}
-                          className={`py-4 first:pt-0 last:pb-0 cursor-pointer select-none${hidden ? " swap-hidden" : ""}`}
-                          onClick={() => setOpenSwapTooltip(prev => prev === gi ? null : gi)}
+                          className={`py-4 first:pt-0 last:pb-0${hidden ? " swap-hidden" : ""}`}
                         >
                           {isConsolidate && isMultiGroup && (
                             <div className="mb-2">
-                              <span className="inline-flex text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-[#2563EB]">
+                              <span className="inline-flex text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md bg-info text-accent">
                                 Konsolidera {group.length} fonder
                               </span>
                             </div>
                           )}
                           <div className="flex items-start gap-2">
                             <div className="flex-1 min-w-0">
-                              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#2563EB] mb-1">Nuvarande</p>
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-accent mb-1">Nuvarande</p>
                               {group.map((item, si) => (
-                                <p key={si} className="text-sm font-semibold text-[#111827] leading-snug break-words">{item.currentFund.name}</p>
+                                <p key={si} className="text-sm font-semibold text-ink leading-snug break-words">{item.currentFund.name}</p>
                               ))}
                             </div>
                             <div className="flex flex-col items-center justify-start pt-4 shrink-0">
-                              <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center">
+                              <div className="w-7 h-7 rounded-[10px] bg-slate-100 flex items-center justify-center">
                                 <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                                 </svg>
                               </div>
                             </div>
                             <div className="flex-1 min-w-0 text-right">
-                              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#2563EB] mb-1">
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-accent mb-1">
                                 {isConsolidate ? "Öka i" : "Föreslagen"}
                               </p>
-                              <p className="text-sm font-semibold text-[#111827] leading-snug break-words">{suggested.name}</p>
+                              <p className="text-sm font-semibold text-ink leading-snug break-words">{suggested.name}</p>
                             </div>
-                            {showInfo && (
-                              <InfoButton open={openSwapTooltip === gi}>{tooltipContent}</InfoButton>
-                            )}
+                            <div className="shrink-0 pt-0.5">
+                              <InfoPopover title="Jämförelse" width={340} ariaLabel="Visa jämförelse mellan nuvarande och föreslagen fond">
+                                {suggested.category && (
+                                  <p className="text-[11px] text-slate-400 mb-2.5">{suggested.category}</p>
+                                )}
+                                <div className="grid grid-cols-[1fr_auto_auto] gap-x-5 gap-y-2 items-baseline">
+                                  <span />
+                                  <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400 text-right whitespace-nowrap">Nuvarande</span>
+                                  <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400 text-right whitespace-nowrap">{isConsolidate ? "Öka i" : "Föreslagen"}</span>
+
+                                  <span className="text-xs text-slate-500">Avgift</span>
+                                  <span className="text-xs font-semibold text-ink tabular-nums text-right">{curCost !== null ? `${curCost.toFixed(2)}%` : "–"}</span>
+                                  <span className="text-xs font-semibold text-accent tabular-nums text-right">{sugCost !== null ? `${sugCost.toFixed(2)}%` : "–"}</span>
+
+                                  <span className="text-xs text-slate-500 whitespace-nowrap">Avkastning 1 år</span>
+                                  <span className="text-xs font-semibold text-ink tabular-nums text-right">{curReturn !== null ? `${curReturn.toFixed(1)}%` : "–"}</span>
+                                  <span className="text-xs font-semibold text-accent tabular-nums text-right">{suggested.return_1yr !== null ? `${suggested.return_1yr.toFixed(1)}%` : "–"}</span>
+
+                                  <span className="text-xs text-slate-500">Sharpe</span>
+                                  <span className="text-xs font-semibold text-ink tabular-nums text-right">{curSharpe !== null ? curSharpe.toFixed(2) : "–"}</span>
+                                  <span className="text-xs font-semibold text-accent tabular-nums text-right">{suggested.sharpe_3yr !== null ? suggested.sharpe_3yr.toFixed(2) : "–"}</span>
+                                </div>
+                                {isMultiGroup && (
+                                  <p className="text-[10px] text-slate-400 mt-2.5">Nuvarande = sammanvägt över {group.length} fonder utifrån dina vikter.</p>
+                                )}
+                              </InfoPopover>
+                            </div>
                           </div>
                         </div>
                       );
@@ -2070,7 +2101,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                   {total > VISIBLE && (
                     <button
                       onClick={() => setShowAllSwaps(v => !v)}
-                      className="mt-2 w-full py-2.5 text-sm font-medium text-slate-500 hover:text-[#111827] border border-slate-100 hover:border-slate-200 rounded-xl transition-colors"
+                      className="mt-2 w-full py-2.5 text-sm font-medium text-slate-500 hover:text-ink border border-slate-100 hover:border-slate-200 rounded-xl transition-colors"
                     >
                       {showAllSwaps ? "Visa färre förslag" : `Visa alla ${total} förslag`}
                     </button>
@@ -2079,10 +2110,13 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
               );
             })()}
 
+              </>
+            )}
+
           </section>
       )}
 
-      {analysis.suggestedMetrics && (
+      {!showBlur && analysis.suggestedMetrics && (
         <SuggestedPortfolio
           current={{ avgCost: analysis.avgCost, weightedReturn1yr: analysis.weightedReturn1yr, weightedReturn3yr: analysis.weightedReturn3yr, weightedSharpe: analysis.weightedSharpe }}
           suggested={analysis.suggestedMetrics}
@@ -2090,103 +2124,145 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
         />
       )}
 
-      {!analysis.suggestedMetrics && (analysis.swapSuggestions?.length ?? 0) === 0 && (
+      {!showBlur && !analysis.suggestedMetrics && (analysis.swapSuggestions?.length ?? 0) === 0 && (
         <OptimalPortfolioProjection
           current={{ avgCost: analysis.avgCost, weightedReturn1yr: analysis.weightedReturn1yr, weightedReturn3yr: analysis.weightedReturn3yr, weightedSharpe: analysis.weightedSharpe }}
           portfolioValue={portfolioValue}
         />
       )}
-        </div>
 
-        {showBlur && <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-b from-transparent to-white pointer-events-none z-[1]" />}
-        {showBlur && (
-          <div className="no-print absolute inset-0 flex items-center justify-center z-10">
-            <div className="bg-white rounded-2xl p-6 shadow-xl border border-slate-100 max-w-sm w-full mx-4 text-center space-y-4">
-              <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto">
-                <svg className="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-                </svg>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm font-semibold text-slate-900">
-                  {potentialGainKr !== null
-                    ? `Logga in för att se fondbytena med +${Math.round(potentialGainKr).toLocaleString("sv-SE")} kr/år i förbättringspotential`
-                    : "Logga in för att se personliga fondbytesförslag"}
-                </p>
-                <p className="text-xs text-slate-400">Gratis · Klart på under en minut</p>
-              </div>
-              <button
-                onClick={onLoginClick}
-                className="w-full bg-slate-900 hover:bg-slate-700 text-white font-semibold py-3 rounded-xl transition-colors text-sm"
-              >
-                Logga in
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+      {showBlur && (analysis.swapSuggestions?.length ?? 0) === 0 && (analysis.bestInCategory?.length ?? 0) === 0 && (
+        <section className="no-print bg-white rounded-xl p-6 sm:p-8 text-center space-y-3" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)", border: "1px solid #D9E0E6" }}>
+          <p className="text-base font-semibold text-ink leading-snug max-w-md mx-auto">Logga in för att se personliga fondbytesförslag</p>
+          <p className="text-xs text-ink-4">Gratis · Klart på under en minut</p>
+          <button
+            onClick={onLoginClick}
+            className="inline-flex items-center justify-center bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold px-7 py-2.5 rounded-[10px] transition-colors"
+          >
+            Logga in
+          </button>
+        </section>
+      )}
 
       {analysis.notFound.length > 0 && (
-        <section className="bg-amber-50 border border-amber-100 rounded-2xl p-4">
+        <section className="bg-warn-soft border border-amber-100 rounded-xl p-4">
           <p className="text-sm text-amber-800">
             <span className="font-medium">Hittades inte: </span>{analysis.notFound.join(", ")}
           </p>
         </section>
       )}
+      {/* Friskrivning */}
+      <p className="no-print text-[11px] text-slate-400 leading-relaxed">
+        Analysen är automatiskt genererad utifrån historiska nyckeltal och generella kriterier och
+        utgör inte finansiell rådgivning. Sharpa står inte under Finansinspektionens tillsyn och
+        har inget tillstånd att bedriva investeringsrådgivning. Historisk avkastning är ingen garanti
+        för framtida resultat — investeringsbeslut fattas på egen risk.
+      </p>
+
       {/* Print footer */}
       <div className="print-footer hidden">
-        fondanalys.se — Historisk avkastning är ingen garanti för framtida resultat. Ej finansiell rådgivning.
+        sharpa.se — Automatiskt genererad analys. Historisk avkastning är ingen garanti för framtida resultat. Ej finansiell rådgivning.
       </div>
 
     </div>
   );
 }
 
-function InfoButton({ children, open }: { children: React.ReactNode; open: boolean }) {
+// ── InfoPopover ───────────────────────────────────────────────────────────────
+// Gemensam infoknapp för nyckeltal och bytesförslag. ⓘ-knappen är den enda
+// triggern: hover på pekarenheter, tap på touch. Panelen positioneras fixed
+// utifrån knappens läge och kläms alltid innanför viewporten, så den aldrig
+// klipps på mobil. Stängs med tap utanför, Escape, scroll eller resize.
+
+const POPOVER_WIDTH = 288;
+
+function InfoPopover({ title, ariaLabel, width = POPOVER_WIDTH, children }: { title?: string; ariaLabel?: string; width?: number; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  const hoverable = () => window.matchMedia("(hover: hover)").matches;
+
+  function show() {
+    const r = btnRef.current?.getBoundingClientRect();
+    if (!r) return;
+    const margin = 12;
+    const w = Math.min(width, window.innerWidth - margin * 2);
+    const left = Math.max(margin, Math.min(r.left + r.width / 2 - w / 2, window.innerWidth - w - margin));
+    setPos({ top: r.bottom + 8, left });
+    setOpen(true);
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    function onDown(e: MouseEvent | TouchEvent) {
+      const t = e.target as Node;
+      if (btnRef.current?.contains(t) || panelRef.current?.contains(t)) return;
+      setOpen(false);
+    }
+    function close() { setOpen(false); }
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") setOpen(false); }
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("touchstart", onDown);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("touchstart", onDown);
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [open]);
+
   return (
-    <div className="relative shrink-0 pt-1">
-      <span className="flex items-center justify-center w-3.5 h-3.5 rounded-full bg-slate-200 text-[9px] normal-case text-slate-500 pointer-events-none">i</span>
-      {open && (
-        <div className="absolute bottom-full right-0 mb-2 w-56 bg-slate-700 text-white text-xs rounded-xl px-3 py-2.5 z-20 leading-relaxed shadow-lg whitespace-normal text-left pointer-events-none">
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        aria-label={ariaLabel ?? "Mer information"}
+        aria-expanded={open}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (open && !hoverable()) setOpen(false);
+          else show();
+        }}
+        onMouseEnter={() => { if (hoverable()) show(); }}
+        onMouseLeave={() => { if (hoverable()) setOpen(false); }}
+        className="no-print shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+      >
+        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+        </svg>
+      </button>
+      {open && pos && (
+        <div
+          ref={panelRef}
+          role="tooltip"
+          style={{ top: pos.top, left: pos.left, width: Math.min(width, typeof window !== "undefined" ? window.innerWidth - 24 : width), boxShadow: "0 8px 24px rgba(16,24,40,.12)" }}
+          className="fixed z-50 bg-white border border-slate-200 rounded-xl p-4 text-left normal-case tracking-normal font-normal text-xs text-slate-600 leading-relaxed whitespace-normal"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {title && <p className="text-xs font-semibold text-ink mb-1.5">{title}</p>}
           {children}
         </div>
       )}
-    </div>
+    </>
   );
 }
 
 function Metric({ label, value, sub, info }: { label: string; value: string; sub: string; info: string }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
   return (
-    <div
-      ref={ref}
-      className="relative group cursor-pointer select-none"
-      onClick={() => setOpen(o => !o)}
-    >
-      <div className={cn(
-        "absolute bottom-full left-0 mb-2 w-52 z-20",
-        "bg-slate-700 text-white text-xs rounded-xl px-3 py-2.5",
-        "leading-snug shadow-lg pointer-events-none transition-opacity",
-        open ? "opacity-100" : "opacity-0 sm:group-hover:opacity-100",
-      )}>
-        {info}
-      </div>
-      <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-1.5 flex items-center gap-1">
+    <div>
+      <div className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-1.5 flex items-center gap-1">
         {label}
-        <span className="flex items-center justify-center w-3.5 h-3.5 rounded-full bg-slate-200 text-[9px] normal-case text-slate-500">i</span>
-      </p>
-      <p className="text-2xl sm:text-3xl font-bold text-[#111827] leading-none tabular-nums">{value}</p>
+        <InfoPopover title={label} ariaLabel={`Vad betyder ${label.toLowerCase()}?`}>
+          {info}
+        </InfoPopover>
+      </div>
+      <p className="text-2xl sm:text-3xl font-bold text-ink leading-none tabular-nums">{value}</p>
       <p className="text-xs text-slate-400 mt-1.5">{sub}</p>
     </div>
   );
@@ -2220,9 +2296,9 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
   ];
 
   return (
-    <section className="bg-white rounded-2xl p-6 sm:p-8" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.04)", border: "1px solid #F1F5F9" }}>
+    <section className="bg-white rounded-xl p-6 sm:p-8" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)", border: "1px solid #D9E0E6" }}>
       <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-1">Föreslagen portfölj</p>
-      <p className="text-lg font-semibold text-[#111827] mb-6">Nyckeltal efter föreslagna byten</p>
+      <p className="text-lg font-semibold text-ink mb-6">Nyckeltal efter föreslagna byten</p>
 
       <div className="mb-6">
         <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-3">Fondinnehav</p>
@@ -2230,7 +2306,7 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
           {suggested.funds.map((f, i) => (
             <div key={i} className="flex items-center justify-between py-2.5 border-b border-slate-50 last:border-0 gap-2">
               <div className="min-w-0">
-                <span className="text-sm font-medium text-[#111827] break-words">{f.name}</span>
+                <span className="text-sm font-medium text-ink break-words">{f.name}</span>
                 <span className="hidden sm:inline text-xs text-slate-400 ml-2">{f.isin}</span>
               </div>
               <span className="text-sm font-semibold text-slate-500 tabular-nums shrink-0">{f.weight.toFixed(1)}%</span>
@@ -2241,48 +2317,28 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
 
       <div className="mb-6">
         <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-3">Jämförelse</p>
-        <div className="sm:hidden space-y-0">
-          {rows.map((row) => {
-            const d = delta(row.suggestedVal, row.currentVal, row.lowerIsBetter);
-            return (
-              <div key={row.label} className="flex items-center justify-between py-2.5 border-b border-slate-50 last:border-0">
-                <p className="text-sm text-slate-500">{row.label}</p>
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-slate-400 tabular-nums">{fmt(row.currentVal)}</span>
-                  <span className="text-slate-300">→</span>
-                  <span className="font-semibold text-[#111827] tabular-nums">{fmt(row.suggestedVal)}</span>
-                  {d && (
-                    <span className={`text-xs font-semibold tabular-nums ${d.better ? "text-[#16A34A]" : "text-red-500"}`}>
-                      {d.diff > 0 ? "▲" : "▼"}{Math.abs(d.diff).toFixed(2)}%
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        <div className="hidden sm:block">
-          <table className="w-full text-sm">
+        <div className="overflow-hidden rounded-[10px] border border-slate-100">
+          <table className="w-full text-xs sm:text-sm">
             <thead>
-              <tr className="text-xs font-semibold tracking-[0.06em] uppercase text-slate-400 border-b border-slate-100">
-                <th className="text-left pb-3 pr-4 font-semibold">Nyckeltal</th>
-                <th className="text-right pb-3 px-4 font-semibold">Nuvarande</th>
-                <th className="text-right pb-3 px-4 font-semibold">Föreslagen</th>
-                <th className="text-right pb-3 pl-4 font-semibold">Förändring</th>
+              <tr className="bg-slate-50 text-[10px] sm:text-xs font-semibold tracking-[0.06em] uppercase text-slate-400">
+                <th className="text-left py-2.5 px-3 sm:px-4 font-semibold">Nyckeltal</th>
+                <th className="text-right py-2.5 px-2 sm:px-4 font-semibold">Nuvarande</th>
+                <th className="text-right py-2.5 px-2 sm:px-4 font-semibold">Efter byten</th>
+                <th className="text-right py-2.5 px-3 sm:px-4 font-semibold">Förändring</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => {
                 const d = delta(row.suggestedVal, row.currentVal, row.lowerIsBetter);
                 return (
-                  <tr key={row.label} className="border-b border-slate-50 last:border-0">
-                    <td className="py-3 pr-4 text-slate-600">{row.label}</td>
-                    <td className="text-right py-3 px-4 text-slate-400 tabular-nums">{fmt(row.currentVal)}</td>
-                    <td className="text-right py-3 px-4 font-semibold text-[#111827] tabular-nums">{fmt(row.suggestedVal)}</td>
-                    <td className="text-right py-3 pl-4 font-semibold tabular-nums">
+                  <tr key={row.label} className="border-t border-slate-100">
+                    <td className="py-2.5 sm:py-3 px-3 sm:px-4 text-slate-600">{row.label}</td>
+                    <td className="text-right py-2.5 sm:py-3 px-2 sm:px-4 text-slate-400 tabular-nums">{fmt(row.currentVal)}</td>
+                    <td className="text-right py-2.5 sm:py-3 px-2 sm:px-4 font-semibold text-ink tabular-nums">{fmt(row.suggestedVal)}</td>
+                    <td className="text-right py-2.5 sm:py-3 px-3 sm:px-4 font-semibold tabular-nums">
                       {d ? (
-                        <span className={d.better ? "text-[#16A34A]" : "text-red-500"}>
-                          {d.diff > 0 ? "▲" : "▼"} {Math.abs(d.diff).toFixed(2)}%
+                        <span className={d.better ? "text-pos" : "text-neg"}>
+                          {d.diff > 0 ? "+" : "−"}{Math.abs(d.diff).toFixed(2)}%
                         </span>
                       ) : <span className="text-slate-300">–</span>}
                     </td>
@@ -2297,7 +2353,7 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
       {(feeSavingsKr !== null || returnGainKr !== null) && (
         <div className="bg-slate-50 rounded-xl p-5 space-y-4">
           <div className="flex items-start justify-between gap-2">
-            <p className="text-sm font-semibold text-[#111827]">Beräknad effekt per år</p>
+            <p className="text-sm font-semibold text-ink">Beräknad effekt per år</p>
             <p className="text-xs text-slate-400 text-right">
               {assumed ? "vid 100 000 kr investerat" : `vid ${pv.toLocaleString("sv-SE")} kr investerat`}
             </p>
@@ -2306,10 +2362,10 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
             {feeSavingsKr !== null && (
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-[#111827]">Avgiftsbesparing</p>
+                  <p className="text-sm font-medium text-ink">Avgiftsbesparing</p>
                   <p className="text-xs text-slate-400">Garanterad vid fondbyte</p>
                 </div>
-                <p className={`text-base font-bold tabular-nums ${feeSavingsKr >= 0 ? "text-[#16A34A]" : "text-red-500"}`}>
+                <p className={`text-base font-bold tabular-nums ${feeSavingsKr >= 0 ? "text-pos" : "text-red-500"}`}>
                   {`${feeSavingsKr >= 0 ? "+" : ""}${Math.round(feeSavingsKr).toLocaleString("sv-SE")} kr`}
                 </p>
               </div>
@@ -2317,10 +2373,10 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
             {returnGainKr !== null && (
               <div className="flex items-center justify-between border-t border-slate-200 pt-3">
                 <div>
-                  <p className="text-sm font-medium text-[#111827]">Historisk avkastningsskillnad</p>
+                  <p className="text-sm font-medium text-ink">Historisk avkastningsskillnad</p>
                   <p className="text-xs text-slate-400">Baserat på 3-årsavkastning, annualiserad</p>
                 </div>
-                <p className={`text-base font-bold tabular-nums ${returnGainKr >= 0 ? "text-[#16A34A]" : "text-red-500"}`}>
+                <p className={`text-base font-bold tabular-nums ${returnGainKr >= 0 ? "text-pos" : "text-red-500"}`}>
                   {`${returnGainKr >= 0 ? "+" : ""}${Math.round(returnGainKr).toLocaleString("sv-SE")} kr`}
                 </p>
               </div>
@@ -2343,22 +2399,22 @@ function OptimalPortfolioProjection({ current, portfolioValue }: { current: Curr
   const netKr = returnKr !== null && feeKr !== null ? returnKr - feeKr : null;
 
   return (
-    <section className="bg-white rounded-2xl p-6 sm:p-8" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.04)", border: "1px solid #F1F5F9" }}>
+    <section className="bg-white rounded-xl p-6 sm:p-8" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)", border: "1px solid #D9E0E6" }}>
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-          <svg className="w-4 h-4 text-[#16A34A]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <div className="w-8 h-8 rounded-[10px] bg-green-100 flex items-center justify-center shrink-0">
+          <svg className="w-4 h-4 text-pos" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
         <div>
           <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-0.5">Analys</p>
-          <p className="text-lg font-semibold text-[#111827]">Din portfölj är redan optimal</p>
+          <p className="text-lg font-semibold text-ink">Din portfölj är redan optimal</p>
         </div>
       </div>
 
       <div className="bg-slate-50 rounded-xl p-5">
         <div className="flex items-start justify-between gap-2 mb-4">
-          <p className="text-sm font-semibold text-[#111827]">Uppskattad avkastning per år</p>
+          <p className="text-sm font-semibold text-ink">Uppskattad avkastning per år</p>
           <p className="text-xs text-slate-400 text-right">
             {assumed ? "vid 100 000 kr investerat" : `vid ${pv.toLocaleString("sv-SE")} kr investerat`}
           </p>
@@ -2366,7 +2422,7 @@ function OptimalPortfolioProjection({ current, portfolioValue }: { current: Curr
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="flex sm:block items-center justify-between sm:justify-start">
             <p className="text-xs text-slate-400 sm:mb-1">Avkastning (3 år, ann.)</p>
-            <p className={`text-sm sm:text-base font-bold tabular-nums ${returnKr !== null ? returnKr >= 0 ? "text-[#16A34A]" : "text-red-500" : "text-slate-400"}`}>
+            <p className={`text-sm sm:text-base font-bold tabular-nums ${returnKr !== null ? returnKr >= 0 ? "text-pos" : "text-red-500" : "text-slate-400"}`}>
               {returnKr !== null ? `${returnKr >= 0 ? "+" : ""}${Math.round(returnKr).toLocaleString("sv-SE")} kr` : "–"}
             </p>
           </div>
@@ -2378,7 +2434,7 @@ function OptimalPortfolioProjection({ current, portfolioValue }: { current: Curr
           </div>
           <div className="flex sm:block items-center justify-between sm:justify-start border-t border-slate-200/60 sm:border-0 pt-3 sm:pt-0">
             <p className="text-xs text-slate-400 sm:mb-1 font-semibold">Netto</p>
-            <p className={`text-base sm:text-xl font-bold tabular-nums ${netKr !== null ? netKr >= 0 ? "text-[#16A34A]" : "text-red-500" : "text-slate-400"}`}>
+            <p className={`text-base sm:text-xl font-bold tabular-nums ${netKr !== null ? netKr >= 0 ? "text-pos" : "text-red-500" : "text-slate-400"}`}>
               {netKr !== null ? `${netKr >= 0 ? "+" : ""}${Math.round(netKr).toLocaleString("sv-SE")} kr` : "–"}
             </p>
           </div>
