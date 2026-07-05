@@ -509,10 +509,10 @@ function FundSearchInput({
 
   if (isin) {
     return (
-      <div className="flex items-center gap-2 border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white min-w-0">
+      <div className="flex items-center gap-2 border border-slate-300 rounded-lg px-3 py-2.5 text-sm bg-white min-w-0">
         <span className="flex-1 truncate font-medium text-slate-900">{name}</span>
-        <span className="text-xs text-slate-400 shrink-0">{isin}</span>
-        <button type="button" onClick={onClear} className="text-slate-400 hover:text-red-500 shrink-0 transition-colors">✕</button>
+        <span className="hidden sm:inline text-xs text-slate-400 shrink-0">{isin}</span>
+        <button type="button" onClick={onClear} aria-label="Rensa vald fond" className="-m-1 p-1 text-slate-400 hover:text-red-500 shrink-0 transition-colors">✕</button>
       </div>
     );
   }
@@ -1207,7 +1207,7 @@ export default function AnalyzeClient() {
         </div>
       )}
 
-      <section className="no-print bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6 space-y-5">
+      <section className="no-print bg-white rounded-xl shadow-sm border border-slate-200 p-5 sm:p-6 space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between gap-2">
           <h2 className="font-heading text-lg font-bold text-slate-900 shrink-0">Din portfölj</h2>
@@ -1405,28 +1405,40 @@ export default function AnalyzeClient() {
                 <span />
               </div>
               {entries.map((entry, i) => (
-                <div key={i} className="space-y-2 sm:space-y-0 sm:grid sm:grid-cols-[1fr_100px_44px] sm:gap-2 bg-slate-50 sm:bg-transparent rounded-xl sm:rounded-none p-3 sm:p-0 border border-slate-100 sm:border-0">
-                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide sm:hidden">Fond {i + 1}</p>
+                <div key={i} className="space-y-2.5 sm:space-y-0 sm:grid sm:grid-cols-[1fr_100px_44px] sm:gap-2 bg-slate-50 sm:bg-transparent rounded-xl sm:rounded-none p-4 sm:p-0 border border-slate-100 sm:border-0">
+                  {/* Mobil: rubrikrad med ta bort-knapp — desktop har egen knappkolumn */}
+                  <div className="flex items-center justify-between sm:hidden">
+                    <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Fond {i + 1}</p>
+                    <button
+                      onClick={() => removeRow(i)} disabled={entries.length === 1} aria-label={`Ta bort fond ${i + 1}`}
+                      className="-m-2 p-2 text-slate-400 hover:text-red-500 disabled:opacity-30 transition-colors"
+                    >✕</button>
+                  </div>
                   <FundSearchInput isin={entry.isin} name={entry.name} custodian={custodian} excludeIsins={entries.filter((_, idx) => idx !== i).map((e) => e.isin).filter(Boolean)} onSelect={(isin, name) => selectFund(i, isin, name)} onClear={() => clearFund(i)} />
-                  <div className="flex items-center gap-2 sm:contents">
+                  <div className="flex items-center gap-3 sm:contents">
+                    <label htmlFor={`entry-value-${i}`} className="sm:hidden w-24 shrink-0 text-[13px] font-medium text-slate-500">
+                      {inputMode === "weight" ? "Vikt (%)" : "Belopp (kr)"}
+                    </label>
                     {inputMode === "weight" ? (
                       <input
+                        id={`entry-value-${i}`}
                         type="number" placeholder="%" min={0} max={100}
                         value={entry.weight} onChange={(e) => updateWeight(i, e.target.value)}
                         onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRow(); } }}
-                        className="flex-1 sm:w-auto sm:flex-none border border-slate-300 rounded-lg px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="flex-1 min-w-0 sm:w-auto sm:flex-none border border-slate-300 rounded-lg px-3 py-3 text-base bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     ) : (
                       <input
+                        id={`entry-value-${i}`}
                         type="number" placeholder="kr" min={0}
                         value={entry.amount ?? ""} onChange={(e) => updateAmount(i, e.target.value)}
                         onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRow(); } }}
-                        className="flex-1 sm:flex-none border border-slate-300 rounded-lg px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="flex-1 min-w-0 sm:flex-none border border-slate-300 rounded-lg px-3 py-3 text-base bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     )}
                     <button
-                      onClick={() => removeRow(i)} disabled={entries.length === 1}
-                      className="h-11 w-11 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-200 disabled:opacity-30 transition-colors shrink-0"
+                      onClick={() => removeRow(i)} disabled={entries.length === 1} aria-label={`Ta bort fond ${i + 1}`}
+                      className="hidden sm:flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-200 disabled:opacity-30 transition-colors shrink-0"
                     >✕</button>
                   </div>
                 </div>
@@ -1760,7 +1772,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
 
       {/* Sammanfattande betygskort */}
       <section className="no-print bg-white rounded-xl border border-line p-6 sm:p-8" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)" }}>
-        <div className="flex items-start justify-between gap-6 flex-wrap">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs font-semibold tracking-[0.08em] uppercase text-ink-3 mb-2">Portföljbetyg</p>
             <div className="flex items-baseline gap-1.5">
@@ -1771,7 +1783,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
             </div>
           </div>
           {potentialGainKr !== null && (
-            <div className="text-right">
+            <div className="sm:text-right">
               <p className="text-xs font-semibold tracking-[0.08em] uppercase text-ink-3 mb-2">Förbättringspotential</p>
               <p className="text-2xl sm:text-3xl font-bold text-pos tabular-nums">+{Math.round(potentialGainKr).toLocaleString("sv-SE")} kr</p>
               <p className="text-xs text-ink-3 mt-1">per år{assumed ? " (vid 100 000 kr)" : ""}</p>
@@ -1928,19 +1940,19 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                   ["Länsförsäkringar Global Aktiv A", "Avanza Global"],
                   ["SEB Sverigefond Stora bolag", "PLUS Allabolag Sverige Index"],
                 ].map(([cur, sug], i) => (
-                  <div key={i} className="py-4 flex items-start gap-2">
-                    <div className="flex-1 min-w-0">
+                  <div key={i} className="py-4 flex flex-col gap-2.5 sm:flex-row sm:items-start sm:gap-2">
+                    <div className="min-w-0 sm:flex-1">
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-accent mb-1">Nuvarande</p>
                       <p className="text-sm font-semibold text-ink leading-snug">{cur}</p>
                     </div>
-                    <div className="flex flex-col items-center justify-start pt-4 shrink-0">
+                    <div className="shrink-0 sm:pt-4">
                       <div className="w-7 h-7 rounded-[10px] bg-slate-100 flex items-center justify-center">
-                        <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <svg className="w-3.5 h-3.5 text-slate-400 rotate-90 sm:rotate-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                         </svg>
                       </div>
                     </div>
-                    <div className="flex-1 min-w-0 text-right">
+                    <div className="min-w-0 sm:flex-1 sm:text-right">
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-accent mb-1">Föreslagen</p>
                       <p className="text-sm font-semibold text-ink leading-snug">{sug}</p>
                     </div>
@@ -2046,27 +2058,27 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                               </span>
                             </div>
                           )}
-                          <div className="flex items-start gap-2">
-                            <div className="flex-1 min-w-0">
+                          <div className="relative flex flex-col gap-2.5 sm:flex-row sm:items-start sm:gap-2">
+                            <div className="min-w-0 pr-8 sm:pr-0 sm:flex-1">
                               <p className="text-[10px] font-semibold uppercase tracking-wider text-accent mb-1">Nuvarande</p>
                               {group.map((item, si) => (
                                 <p key={si} className="text-sm font-semibold text-ink leading-snug break-words">{item.currentFund.name}</p>
                               ))}
                             </div>
-                            <div className="flex flex-col items-center justify-start pt-4 shrink-0">
+                            <div className="shrink-0 sm:pt-4">
                               <div className="w-7 h-7 rounded-[10px] bg-slate-100 flex items-center justify-center">
-                                <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <svg className="w-3.5 h-3.5 text-slate-400 rotate-90 sm:rotate-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                                 </svg>
                               </div>
                             </div>
-                            <div className="flex-1 min-w-0 text-right">
+                            <div className="min-w-0 sm:flex-1 sm:text-right">
                               <p className="text-[10px] font-semibold uppercase tracking-wider text-accent mb-1">
                                 {isConsolidate ? "Öka i" : "Föreslagen"}
                               </p>
                               <p className="text-sm font-semibold text-ink leading-snug break-words">{suggested.name}</p>
                             </div>
-                            <div className="shrink-0 pt-0.5">
+                            <div className="absolute top-0 right-0 sm:static sm:shrink-0 sm:pt-0.5">
                               <InfoPopover title="Jämförelse" width={340} ariaLabel="Visa jämförelse mellan nuvarande och föreslagen fond">
                                 {suggested.category && (
                                   <p className="text-[11px] text-slate-400 mb-2.5">{suggested.category}</p>

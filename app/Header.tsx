@@ -33,27 +33,27 @@ function AvatarDropdown({ user }: { user: User }) {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-8 h-8 rounded-full bg-info text-accent font-bold text-sm flex items-center justify-center hover:bg-blue-100 transition-colors"
+        className="w-8 h-8 rounded-full bg-info text-accent font-bold text-sm flex items-center justify-center hover:bg-info-line transition-colors"
         aria-label="Kontomeny"
       >
         {initials}
       </button>
       {open && (
         <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl border border-line py-1 z-50 overflow-hidden" style={{ boxShadow: "0 8px 24px rgba(16,24,40,.08)" }}>
-          <div className="px-4 py-2.5 border-b border-slate-100">
-            <p className="text-xs text-slate-400 truncate">{user.email}</p>
+          <div className="px-4 py-2.5 border-b border-line-soft">
+            <p className="text-xs text-ink-4 truncate">{user.email}</p>
           </div>
-          <Link href="/portfolios" onClick={() => setOpen(false)} className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
+          <Link href="/portfolios" onClick={() => setOpen(false)} className="block px-4 py-2.5 text-sm text-ink-2 hover:bg-section transition-colors">
             Mina portföljer
           </Link>
-          <Link href="/risk-profile" onClick={() => setOpen(false)} className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
+          <Link href="/risk-profile" onClick={() => setOpen(false)} className="block px-4 py-2.5 text-sm text-ink-2 hover:bg-section transition-colors">
             Riskprofil
           </Link>
-          <Link href="/account" onClick={() => setOpen(false)} className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
+          <Link href="/account" onClick={() => setOpen(false)} className="block px-4 py-2.5 text-sm text-ink-2 hover:bg-section transition-colors">
             Mitt konto
           </Link>
-          <div className="border-t border-slate-100 mt-1">
-            <button onClick={signOut} className="block w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors">
+          <div className="border-t border-line-soft mt-1">
+            <button onClick={signOut} className="block w-full text-left px-4 py-2.5 text-sm text-neg hover:bg-neg-soft transition-colors">
               Logga ut
             </button>
           </div>
@@ -78,24 +78,24 @@ export default function Header() {
 
   function navClass(href: string) {
     const active = pathname === href || pathname.startsWith(href + "/");
-    return `text-sm font-semibold transition-colors ${active ? "text-slate-900" : "text-slate-600 hover:text-slate-900"}`;
+    return `text-sm font-semibold transition-colors ${active ? "text-accent" : "text-ink-2 hover:text-ink"}`;
   }
 
   function bottomTabClass(href: string, exact = false) {
     const active = exact ? pathname === href : (pathname === href || (href !== "/" && pathname.startsWith(href)));
     return `flex flex-col items-center gap-0.5 py-2 px-2 flex-1 transition-colors min-w-0 ${
-      active ? "text-accent" : "text-slate-400"
+      active ? "text-accent" : "text-ink-4"
     }`;
   }
 
   return (
     <>
-      <header className="bg-white/90 backdrop-blur-sm border-b border-slate-200/70 sticky top-0 z-50">
+      <header className="bg-white/90 backdrop-blur-sm border-b border-line/70 sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between sm:grid sm:grid-cols-3">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 shrink-0">
             <Image src="/logo.svg" alt="Sharpa" width={28} height={28} className="sm:w-8 sm:h-8" />
-            <span className="font-heading text-base font-extrabold tracking-tight text-slate-900">
+            <span className="font-heading text-base font-extrabold tracking-tight text-ink">
               Sharpa
             </span>
           </Link>
@@ -112,14 +112,12 @@ export default function Header() {
               user ? (
                 <AvatarDropdown user={user} />
               ) : (
-                <>
-                  <Link
-                    href="/login"
-                    className="bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold px-4 py-2 rounded-[10px] transition-colors"
-                  >
-                    Logga in eller skapa konto
-                  </Link>
-                </>
+                <Link
+                  href="/login"
+                  className="bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold px-4 py-2 rounded-[10px] transition-colors"
+                >
+                  Logga in
+                </Link>
               )
             )}
           </div>
@@ -130,8 +128,8 @@ export default function Header() {
               user ? (
                 <AvatarDropdown user={user} />
               ) : (
-                <Link href="/login" className="text-sm font-semibold text-slate-600">
-                  Logga in eller skapa konto
+                <Link href="/login" className="text-sm font-semibold text-ink-2">
+                  Logga in
                 </Link>
               )
             )}

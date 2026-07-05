@@ -242,7 +242,7 @@ function OptionCard({ label, desc, onClick }: {
       className="w-full px-4 py-4 rounded-[10px] border text-left transition-colors border-line bg-white hover:border-accent"
     >
       <p className="text-[15px] font-semibold text-slate-800">{label}</p>
-      <p className="text-sm text-slate-400 mt-0.5">{desc}</p>
+      <p className="text-sm text-slate-500 mt-1 leading-snug">{desc}</p>
     </button>
   );
 }
@@ -682,7 +682,7 @@ export default function BuilderClient() {
                       className="w-full px-4 py-3.5 rounded-[10px] border text-left transition-colors border-accent bg-info"
                     >
                       <p className="text-sm font-semibold text-blue-700">{o.label}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">{o.desc}</p>
+                      <p className="text-xs text-slate-500 mt-1 leading-snug">{o.desc}</p>
                     </button>
                   ) : (
                     <OptionCard key={o.value} label={o.label} desc={o.desc} onClick={() => pick("horizon", o.value)} />
@@ -716,7 +716,7 @@ export default function BuilderClient() {
                       className="w-full px-4 py-3.5 rounded-[10px] border text-left transition-colors border-accent bg-info"
                     >
                       <p className="text-sm font-semibold text-blue-700">{o.label}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">{o.desc}</p>
+                      <p className="text-xs text-slate-500 mt-1 leading-snug">{o.desc}</p>
                     </button>
                   ) : (
                     <OptionCard key={o.value} label={o.label} desc={o.desc} onClick={() => pick("reaction", o.value)} />
@@ -750,7 +750,7 @@ export default function BuilderClient() {
                       className="w-full px-4 py-3.5 rounded-[10px] border text-left transition-colors border-accent bg-info"
                     >
                       <p className="text-sm font-semibold text-blue-700">{o.label}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">{o.desc}</p>
+                      <p className="text-xs text-slate-500 mt-1 leading-snug">{o.desc}</p>
                     </button>
                   ) : (
                     <OptionCard key={o.value} label={o.label} desc={o.desc} onClick={() => pick("q3", o.value)} />
@@ -784,7 +784,7 @@ export default function BuilderClient() {
                       className="w-full px-4 py-3.5 rounded-[10px] border text-left transition-colors border-accent bg-info"
                     >
                       <p className="text-sm font-semibold text-blue-700">{o.label}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">{o.desc}</p>
+                      <p className="text-xs text-slate-500 mt-1 leading-snug">{o.desc}</p>
                     </button>
                   ) : (
                     <OptionCard key={o.value} label={o.label} desc={o.desc} onClick={() => pick("q4", o.value)} />
@@ -866,7 +866,7 @@ export default function BuilderClient() {
                                     }`}
                                   >
                                     <p className={`text-sm font-semibold leading-snug ${selected ? "text-blue-700" : "text-slate-800"}`}>{o.label}</p>
-                                    <p className="text-xs text-slate-400 mt-0.5 leading-tight">{o.desc}</p>
+                                    <p className="text-xs text-slate-500 mt-1 leading-snug">{o.desc}</p>
                                   </button>
                                 );
                               })}
@@ -983,15 +983,15 @@ export default function BuilderClient() {
                                   <span className="text-sm font-bold text-accent">{slot.weight}%</span>
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-semibold text-slate-900 truncate">{candidate.name}</p>
-                                  <p className="text-xs text-slate-400">{slot.rationale}</p>
+                                  <p className="text-sm font-semibold text-slate-900 leading-snug break-words sm:truncate">{candidate.name}</p>
+                                  <p className="text-xs text-slate-500 mt-0.5">{slot.rationale}</p>
                                 </div>
                                 <div className="flex items-center gap-1 shrink-0">
-                                  <button type="button" onClick={() => setSlotIndices((prev) => { const n=[...prev]; n[si]=idx-1; return n; })} disabled={!canBack} className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-400 flex items-center justify-center disabled:opacity-20 hover:border-slate-300 hover:text-slate-600 transition-colors">
+                                  <button type="button" onClick={() => setSlotIndices((prev) => { const n=[...prev]; n[si]=idx-1; return n; })} disabled={!canBack} className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-400 flex items-center justify-center disabled:opacity-20 hover:border-slate-300 hover:text-slate-600 transition-colors">
                                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
                                   </button>
                                   <span className="text-[10px] text-slate-300 w-6 text-center">{idx+1}/{slot.candidates?.length ?? 1}</span>
-                                  <button type="button" onClick={() => setSlotIndices((prev) => { const n=[...prev]; n[si]=idx+1; return n; })} disabled={!canNext} className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-400 flex items-center justify-center disabled:opacity-20 hover:border-slate-300 hover:text-slate-600 transition-colors">
+                                  <button type="button" onClick={() => setSlotIndices((prev) => { const n=[...prev]; n[si]=idx+1; return n; })} disabled={!canNext} className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-400 flex items-center justify-center disabled:opacity-20 hover:border-slate-300 hover:text-slate-600 transition-colors">
                                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
                                   </button>
                                 </div>
@@ -1395,7 +1395,7 @@ export default function BuilderClient() {
             type="button"
             onClick={confirmSelections}
             disabled={pending.length === 0}
-            className="w-full bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-6 py-4 rounded-xl text-sm transition-colors"
+            className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-6 py-4 rounded-xl text-sm transition-colors"
           >
             {pending.length === 0 ? "Välj minst ett alternativ" : `Fortsätt — ${pending.length} valda`}
           </button>
