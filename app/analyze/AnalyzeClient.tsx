@@ -565,6 +565,234 @@ function FundSearchInput({
   );
 }
 
+// ── Recently used funds (localStorage) ────────────────────────────────────────
+
+const RECENT_FUNDS_KEY = "fondanalys_recent_funds";
+
+function readRecentFunds(): FundSuggestion[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(RECENT_FUNDS_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr)
+      ? arr.filter((f) => f && typeof f.isin === "string" && typeof f.name === "string").slice(0, 8)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function recordRecentFund(fund: FundSuggestion) {
+  if (typeof window === "undefined") return;
+  try {
+    const existing = readRecentFunds().filter((f) => f.isin !== fund.isin);
+    const next = [{ name: fund.name, isin: fund.isin }, ...existing].slice(0, 8);
+    localStorage.setItem(RECENT_FUNDS_KEY, JSON.stringify(next));
+  } catch {
+    /* ignore quota / privacy-mode errors */
+  }
+}
+
+// ── Full-screen fund search sheet (mobile) ────────────────────────────────────
+// Lets the user pick several funds in one session without the on-screen keyboard
+// clipping the results list. Toggles selection live in the parent; "Klar" closes.
+
+function FundSearchSheet({
+  custodian,
+  selectedIsins,
+  onAdd,
+  onRemove,
+  onClose,
+}: {
+  custodian: string;
+  selectedIsins: string[];
+  onAdd: (isin: string, name: string) => void;
+  onRemove: (isin: string) => void;
+  onClose: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<FundSuggestion[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [noResults, setNoResults] = useState(false);
+  const [recent] = useState<FundSuggestion[]>(() => readRecentFunds());
+  const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const reqSeq = useRef(0);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
+
+  function handleChange(q: string) {
+    setQuery(q);
+    if (debounce.current) clearTimeout(debounce.current);
+    if (q.trim().length < 2) {
+      setSuggestions([]);
+      setNoResults(false);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const seq = ++reqSeq.current;
+    debounce.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/funds/search?q=${encodeURIComponent(q)}&custodian=${encodeURIComponent(custodian)}`);
+        const data: FundSuggestion[] = await res.json();
+        if (seq !== reqSeq.current) return; // a newer query already fired
+        setSuggestions(data);
+        setNoResults(data.length === 0);
+      } catch {
+        if (seq === reqSeq.current) {
+          setSuggestions([]);
+          setNoResults(true);
+        }
+      } finally {
+        if (seq === reqSeq.current) setLoading(false);
+      }
+    }, 200);
+  }
+
+  function toggle(fund: FundSuggestion) {
+    if (selectedIsins.includes(fund.isin)) {
+      onRemove(fund.isin);
+    } else {
+      onAdd(fund.isin, fund.name);
+      recordRecentFund(fund);
+    }
+  }
+
+  const showRecent = query.trim().length < 2;
+  const list = showRecent ? recent : suggestions;
+  const count = selectedIsins.length;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex flex-col bg-white sm:items-center sm:justify-center sm:bg-slate-900/40 sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Lägg till fonder"
+    >
+      <div className="flex h-full w-full flex-col overflow-hidden bg-white sm:h-[85vh] sm:max-w-md sm:rounded-2xl sm:shadow-xl">
+        {/* Header */}
+        <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Stäng"
+            className="-m-2 p-2 text-slate-400 transition-colors hover:text-slate-600"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <span className="font-semibold text-slate-900">Lägg till fonder</span>
+        </div>
+
+        {/* Search */}
+        <div className="px-4 pb-2 pt-3">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(e) => handleChange(e.target.value)}
+              placeholder="Sök fondnamn eller ISIN…"
+              enterKeyHint="search"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-10 pr-9 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => handleChange("")}
+                aria-label="Rensa sökning"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Results */}
+        <div className="flex-1 overflow-y-auto overscroll-contain px-2 pb-2">
+          {showRecent && recent.length > 0 && (
+            <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              Senast använda
+            </p>
+          )}
+          {showRecent && recent.length === 0 && (
+            <p className="px-3 py-12 text-center text-sm text-slate-400">
+              Sök på fondnamn eller ISIN för att lägga till fonder i din portfölj.
+            </p>
+          )}
+          {!showRecent && loading && list.length === 0 && (
+            <p className="px-3 py-8 text-center text-sm text-slate-400">Söker…</p>
+          )}
+          {!showRecent && !loading && noResults && (
+            <p className="px-3 py-8 text-center text-sm text-slate-500">
+              Ingen fond hittades för &ldquo;{query}&rdquo;.
+            </p>
+          )}
+          <ul>
+            {list.map((f, i) => {
+              const isSelected = selectedIsins.includes(f.isin);
+              return (
+                <li key={`${f.isin}-${i}`}>
+                  <button
+                    type="button"
+                    onClick={() => toggle(f)}
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors",
+                      isSelected ? "bg-blue-50" : "hover:bg-slate-50 active:bg-slate-100"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-sm leading-none",
+                        isSelected ? "border-blue-500 bg-blue-500 text-white" : "border-slate-300 text-slate-400"
+                      )}
+                      aria-hidden="true"
+                    >
+                      {isSelected ? "✓" : "+"}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium text-slate-900">{f.name}</span>
+                      <span className="block text-xs text-slate-400">{f.isin}</span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-slate-100 px-4 py-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full rounded-[10px] bg-accent py-3 font-semibold text-white transition-colors hover:bg-accent-hover active:bg-accent-press"
+          >
+            {count > 0 ? `Klar · ${count} ${count === 1 ? "fond vald" : "fonder valda"}` : "Klar"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Custodian dropdown ────────────────────────────────────────────────────────
 
 function CustodianDropdown({ onSelect }: { onSelect: (value: string) => void }) {
@@ -650,6 +878,9 @@ export default function AnalyzeClient() {
 
   // Input method: how the user wants to populate their portfolio
   const [inputMethod, setInputMethod] = useState<"ai" | "manual" | null>(null);
+
+  // Mobile full-screen fund search sheet
+  const [searchSheetOpen, setSearchSheetOpen] = useState(false);
 
   // CSV import state
   const [importing, setImporting] = useState(false);
@@ -946,9 +1177,30 @@ export default function AnalyzeClient() {
   function removeRow(i: number) { setEntries((p) => p.filter((_, idx) => idx !== i)); }
   function selectFund(i: number, isin: string, name: string) {
     setEntries((p) => p.map((e, idx) => idx === i ? { ...e, isin, name } : e));
+    recordRecentFund({ isin, name });
   }
   function clearFund(i: number) {
     setEntries((p) => p.map((e, idx) => idx === i ? { ...e, isin: "", name: "" } : e));
+  }
+
+  // Mobile search sheet: add / remove funds by ISIN, then even-split weights on close.
+  function addFundFromSheet(isin: string, name: string) {
+    setEntries((prev) => {
+      if (prev.some((e) => e.isin === isin)) return prev;
+      const empty = prev.findIndex((e) => !e.isin);
+      if (empty !== -1) return prev.map((e, idx) => idx === empty ? { ...e, isin, name } : e);
+      return [...prev, { isin, name, weight: "", amount: "" }];
+    });
+  }
+  function removeFundByIsin(isin: string) {
+    setEntries((prev) => {
+      const filtered = prev.filter((e) => e.isin !== isin);
+      return filtered.length ? filtered : [{ isin: "", name: "", weight: "" }];
+    });
+  }
+  function closeSearchSheet() {
+    setSearchSheetOpen(false);
+    if (inputMode === "weight") distributeWeights();
   }
   function updateWeight(i: number, value: string) {
     setEntries((p) => p.map((e, idx) => idx === i ? { ...e, weight: value } : e));
@@ -1405,7 +1657,7 @@ export default function AnalyzeClient() {
                 <span />
               </div>
               {entries.map((entry, i) => (
-                <div key={i} className="space-y-2.5 sm:space-y-0 sm:grid sm:grid-cols-[1fr_100px_44px] sm:gap-2 bg-slate-50 sm:bg-transparent rounded-xl sm:rounded-none p-4 sm:p-0 border border-slate-100 sm:border-0">
+                <div key={i} className={cn("space-y-2.5 sm:space-y-0 sm:grid sm:grid-cols-[1fr_100px_44px] sm:gap-2 bg-slate-50 sm:bg-transparent rounded-xl sm:rounded-none p-4 sm:p-0 border border-slate-100 sm:border-0", !entry.isin && "hidden sm:grid")}>
                   {/* Mobil: rubrikrad med ta bort-knapp — desktop har egen knappkolumn */}
                   <div className="flex items-center justify-between sm:hidden">
                     <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Fond {i + 1}</p>
@@ -1422,7 +1674,7 @@ export default function AnalyzeClient() {
                     {inputMode === "weight" ? (
                       <input
                         id={`entry-value-${i}`}
-                        type="number" placeholder="%" min={0} max={100}
+                        type="number" inputMode="decimal" placeholder="%" min={0} max={100}
                         value={entry.weight} onChange={(e) => updateWeight(i, e.target.value)}
                         onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRow(); } }}
                         className="flex-1 min-w-0 sm:w-auto sm:flex-none border border-slate-300 rounded-lg px-3 py-3 text-base bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1430,7 +1682,7 @@ export default function AnalyzeClient() {
                     ) : (
                       <input
                         id={`entry-value-${i}`}
-                        type="number" placeholder="kr" min={0}
+                        type="number" inputMode="numeric" placeholder="kr" min={0}
                         value={entry.amount ?? ""} onChange={(e) => updateAmount(i, e.target.value)}
                         onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRow(); } }}
                         className="flex-1 min-w-0 sm:flex-none border border-slate-300 rounded-lg px-3 py-3 text-base bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1445,9 +1697,21 @@ export default function AnalyzeClient() {
               ))}
             </div>
 
+            {/* Mobile: fund selection happens in a full-screen search sheet */}
+            {inputMethod !== "ai" && (
+              <button
+                type="button"
+                onClick={() => setSearchSheetOpen(true)}
+                className="sm:hidden flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-white py-3.5 text-sm font-semibold text-blue-600 active:bg-slate-50 transition-colors"
+              >
+                <Search className="w-4 h-4" />
+                {entries.some((e) => e.isin) ? "Lägg till fler fonder" : "Lägg till fonder"}
+              </button>
+            )}
+
             <div className="flex items-center justify-between pt-1">
               {inputMethod !== "ai" && (
-                <button onClick={addRow} className="text-sm text-blue-600 hover:underline py-2">+ Lägg till fond</button>
+                <button onClick={addRow} className="hidden sm:inline text-sm text-blue-600 hover:underline py-2">+ Lägg till fond</button>
               )}
               {inputMethod === "ai" && <span />}
               {inputMode === "amount" ? (
@@ -1475,6 +1739,16 @@ export default function AnalyzeClient() {
             >
               {loading ? "Analyserar…" : "Analysera portfölj"}
             </button>
+
+            {searchSheetOpen && (
+              <FundSearchSheet
+                custodian={custodian}
+                selectedIsins={entries.map((e) => e.isin).filter(Boolean)}
+                onAdd={addFundFromSheet}
+                onRemove={removeFundByIsin}
+                onClose={closeSearchSheet}
+              />
+            )}
           </>
         )}
       </section>
@@ -2181,22 +2455,28 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
 }
 
 // ── InfoPopover ───────────────────────────────────────────────────────────────
-// Gemensam infoknapp för nyckeltal och bytesförslag. ⓘ-knappen är den enda
-// triggern: hover på pekarenheter, tap på touch. Panelen positioneras fixed
-// utifrån knappens läge och kläms alltid innanför viewporten, så den aldrig
-// klipps på mobil. Stängs med tap utanför, Escape, scroll eller resize.
+// Gemensam infoknapp för nyckeltal och bytesförslag. På pekarenheter (hover)
+// visas en tooltip som anchoras under knappen och stängs vid tap utanför,
+// Escape, scroll eller resize. På touch öppnas istället en bottom sheet med
+// dimmer och stängkryss — den stängs INTE av scroll, så man hinner läsa klart.
 
 const POPOVER_WIDTH = 288;
 
 function InfoPopover({ title, ariaLabel, width = POPOVER_WIDTH, children }: { title?: string; ariaLabel?: string; width?: number; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  // Touch devices (no hover) get a bottom sheet; pointer devices get a tooltip.
+  // Read once at mount — the panel only renders after interaction, so there is
+  // no hydration mismatch even though the server can't know the device.
+  const [isTouch] = useState(() =>
+    typeof window !== "undefined" && !window.matchMedia("(hover: hover)").matches
+  );
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  const hoverable = () => window.matchMedia("(hover: hover)").matches;
-
   function show() {
+    // Touch → bottom sheet, no anchoring needed
+    if (isTouch) { setOpen(true); return; }
     const r = btnRef.current?.getBoundingClientRect();
     if (!r) return;
     const margin = 12;
@@ -2208,26 +2488,38 @@ function InfoPopover({ title, ariaLabel, width = POPOVER_WIDTH, children }: { ti
 
   useEffect(() => {
     if (!open) return;
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") setOpen(false); }
+    document.addEventListener("keydown", onKey);
+
+    // Touch: lock body scroll behind the sheet; do NOT close on scroll
+    if (isTouch) {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prevOverflow;
+        document.removeEventListener("keydown", onKey);
+      };
+    }
+
+    // Desktop tooltip: dismiss on outside tap, scroll or resize
     function onDown(e: MouseEvent | TouchEvent) {
       const t = e.target as Node;
       if (btnRef.current?.contains(t) || panelRef.current?.contains(t)) return;
       setOpen(false);
     }
     function close() { setOpen(false); }
-    function onKey(e: KeyboardEvent) { if (e.key === "Escape") setOpen(false); }
     document.addEventListener("mousedown", onDown);
     document.addEventListener("touchstart", onDown);
-    document.addEventListener("keydown", onKey);
     window.addEventListener("scroll", close, true);
     window.addEventListener("resize", close);
     return () => {
+      document.removeEventListener("keydown", onKey);
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("touchstart", onDown);
-      document.removeEventListener("keydown", onKey);
       window.removeEventListener("scroll", close, true);
       window.removeEventListener("resize", close);
     };
-  }, [open]);
+  }, [open, isTouch]);
 
   return (
     <>
@@ -2238,18 +2530,52 @@ function InfoPopover({ title, ariaLabel, width = POPOVER_WIDTH, children }: { ti
         aria-expanded={open}
         onClick={(e) => {
           e.stopPropagation();
-          if (open && !hoverable()) setOpen(false);
+          if (open && isTouch) setOpen(false);
           else show();
         }}
-        onMouseEnter={() => { if (hoverable()) show(); }}
-        onMouseLeave={() => { if (hoverable()) setOpen(false); }}
+        onMouseEnter={() => { if (!isTouch) show(); }}
+        onMouseLeave={() => { if (!isTouch) setOpen(false); }}
         className="no-print shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
       >
         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
         </svg>
       </button>
-      {open && pos && (
+
+      {/* Touch: bottom sheet */}
+      {open && isTouch && (
+        <div
+          className="no-print fixed inset-0 z-50 flex flex-col justify-end bg-slate-900/40 normal-case tracking-normal font-normal"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={title ?? "Information"}
+            className="max-h-[80vh] overflow-y-auto overscroll-contain rounded-t-2xl bg-white px-5 pb-8 pt-4 text-left"
+            style={{ boxShadow: "0 -8px 24px rgba(16,24,40,.12)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-start justify-between gap-4">
+              <p className="text-sm font-semibold text-ink">{title ?? "Information"}</p>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="Stäng"
+                className="-m-2 shrink-0 p-2 text-slate-400 transition-colors hover:text-slate-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="text-sm leading-relaxed text-slate-600 whitespace-normal">
+              {children}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hover: anchored tooltip */}
+      {open && !isTouch && pos && (
         <div
           ref={panelRef}
           role="tooltip"

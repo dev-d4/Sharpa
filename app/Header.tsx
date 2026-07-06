@@ -114,7 +114,7 @@ export default function Header() {
               ) : (
                 <Link
                   href="/login"
-                  className="bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold px-4 py-2 rounded-[10px] transition-colors"
+                  className="bg-info hover:bg-blue-100 text-accent text-sm font-semibold px-4 py-2 rounded-[10px] transition-colors"
                 >
                   Logga in
                 </Link>

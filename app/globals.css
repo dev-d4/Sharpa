@@ -99,6 +99,51 @@ body {
   padding-bottom: max(8px, env(safe-area-inset-bottom));
 }
 
+/* Räkna själv-kalkylatorns sliders: platt 2px-hårlinje-track och ett runt
+   handtag i accent med vit ram — ingen fylld/färgad track bakom handtaget. */
+.calc-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 2px;
+  margin: 14px 0 6px;
+  background: rgba(23, 33, 43, 0.15);
+  border-radius: 1px;
+  outline: none;
+  cursor: pointer;
+}
+.calc-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(23, 33, 43, 0.15);
+  cursor: pointer;
+}
+.calc-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(23, 33, 43, 0.15);
+  cursor: pointer;
+}
+.calc-range::-moz-range-track {
+  height: 2px;
+  border-radius: 1px;
+  background: rgba(23, 33, 43, 0.15);
+}
+.calc-range:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px rgba(11, 110, 153, 0.25);
+}
+.calc-range:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 3px rgba(11, 110, 153, 0.25);
+}
+
 /* Main content bottom padding on mobile: clears the fixed bottom nav (~52px) + safe area.
    Scoped to <640px — bottennaven finns bara på mobil, och utan scopingen vann
    klassen över sm:pb-0 och skapade ett tomt band ovanför footern på desktop. */
