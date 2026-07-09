@@ -296,7 +296,7 @@ export default function IntegrationClient() {
             Bygg en URL
           </h2>
           <p className="text-slate-500 text-sm mt-2 max-w-xl">
-            Fyll i parametrarna nedan och se URL:en genereras i realtid. Klicka "Öppna rapport" för att se resultatet.
+            Fyll i parametrarna nedan och se URL:en genereras i realtid. Klicka &ldquo;Öppna rapport&rdquo; för att se resultatet.
           </p>
         </div>
 

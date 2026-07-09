@@ -91,25 +91,8 @@ CREATE POLICY "insert own" ON portfolios FOR INSERT WITH CHECK (auth.uid() = use
 CREATE POLICY "update own" ON portfolios FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "delete own" ON portfolios FOR DELETE USING (auth.uid() = user_id);
 
--- ── Risk profiles ─────────────────────────────────────────────────────────────
-
-CREATE TABLE IF NOT EXISTS risk_profiles (
-  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id    UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
-  q1         INTEGER NOT NULL,
-  q2         INTEGER NOT NULL,
-  q3         INTEGER NOT NULL,
-  q4         INTEGER NOT NULL,
-  score      INTEGER NOT NULL,
-  label      TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE risk_profiles ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "select own" ON risk_profiles FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "insert own" ON risk_profiles FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "update own" ON risk_profiles FOR UPDATE USING (auth.uid() = user_id);
+-- (Risk profiles removed — see migration drop_risk_profiles.sql. The Bygg flow
+--  now asks a single per-session risk-level question and persists nothing.)
 
 -- ── Old tables (can be dropped after migration) ───────────────────────────────
 -- DROP TABLE IF EXISTS avanza_funds;

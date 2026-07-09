@@ -60,14 +60,13 @@ export default function DonutChart({
 
   const sorted = [...slices].sort((a, b) => b.weight - a.weight);
 
-  let cursor = 0;
-  const segments = sorted.map((s, i) => {
-    const from = cursor;
-    const to   = cursor + s.weight;
-    cursor     = to;
-    const activePalette = palette ?? PALETTE;
-    return { from, to, color: s.color ?? activePalette[i % activePalette.length], isFullCircle: s.weight >= 99.999 };
-  });
+  const activePalette = palette ?? PALETTE;
+  const segments = sorted.reduce<{ from: number; to: number; color: string; isFullCircle: boolean }[]>((acc, s, i) => {
+    const from = acc[i - 1]?.to ?? 0;
+    const to   = from + s.weight;
+    acc.push({ from, to, color: s.color ?? activePalette[i % activePalette.length], isFullCircle: s.weight >= 99.999 });
+    return acc;
+  }, []);
 
   function onMove(e: React.MouseEvent, i: number) {
     if (disableHover) return;

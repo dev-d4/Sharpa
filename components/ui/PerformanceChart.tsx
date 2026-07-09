@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import type { TWRData } from "@/lib/twr-mock-data";
 
 type Range = "3M" | "6M" | "1Y" | "3Y" | "Sedan start";
@@ -170,7 +170,7 @@ export default function PerformanceChart({ data }: { data: TWRData }) {
     return out.slice(0, 8);
   }, [yMin, yMax, rangeV]);
 
-  const xLabels = useMemo(() => {
+  const xLabels = (() => {
     if (filtered.length === 0) return [];
     const first = new Date(filtered[0].date);
     const last  = new Date(filtered[filtered.length - 1].date);
@@ -205,19 +205,19 @@ export default function PerformanceChart({ data }: { data: TWRData }) {
       const next = out[i + 1];
       return !next || next.x - lbl.x >= MIN_GAP;
     });
-  }, [filtered, compact]); // eslint-disable-line react-hooks/exhaustive-deps
+  })();
 
   const finalReturn     = filtered[filtered.length - 1]?.value ?? 0;
   const isPositive      = finalReturn >= 0;
 
-  const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+  function handleMouseMove(e: React.MouseEvent<SVGSVGElement>) {
     if (!svgRef.current || filtered.length === 0) return;
     const rect = svgRef.current.getBoundingClientRect();
     const x    = ((e.clientX - rect.left) / rect.width) * W;
     const relX = x - PAD.left;
     const frac = Math.max(0, Math.min(1, relX / innerW));
     setHovIdx(Math.round(frac * (filtered.length - 1)));
-  }, [filtered.length, innerW]);
+  }
 
   const hovPt    = hovIdx !== null ? filtered[hovIdx]  : null;
   const hovSvg   = hovIdx !== null ? svgPoints[hovIdx] : null;

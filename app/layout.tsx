@@ -17,7 +17,7 @@ export const dmSerif = DM_Serif_Display({ // unslop-ignore — används endast a
 });
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sharpa.se";
-const OG_DESCRIPTION = "Sök upp dina fonder och se på 2 minuter hur bra de egentligen presterar — och vilka byten som kan ge dig mer för pengarna. Gratis och oberoende.";
+const OG_DESCRIPTION = "Sök upp dina fonder och se på 2 minuter hur de står sig mot liknande fonder utifrån avgift, avkastning och risk. Gratis och oberoende.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -58,7 +58,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ScrollToTop />
         <Header />
 
-        <Prefetch hrefs={["/analyze", "/risk-profile"]} />
+        <Prefetch hrefs={["/analyze", "/bygg-portfolj"]} />
         <main className="flex-1 pb-nav-safe sm:pb-0">{children}</main>
 
         <Footer />

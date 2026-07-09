@@ -8,7 +8,7 @@ export default function LandingPage() {
       <div className="relative">
         <div className="bg-canvas">
           <Hero />
-          <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 sm:pt-10">
             <div className="h-px bg-line" />
             <StatsRow />
             <div className="h-px bg-line" />

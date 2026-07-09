@@ -28,10 +28,13 @@ export async function POST(req: NextRequest) {
   }
 
   const { score } = computePortfolioScore(analysis);
+  // The `score` column is INTEGER — round the fractional score (e.g. 7.3 → 7)
+  // so Postgres doesn't reject the insert with 22P02 (invalid integer syntax).
+  const storedScore = Math.round(score);
 
   let result = await supabase
     .from("portfolios")
-    .insert({ user_id: user.id, name, custodian, holdings, analysis, score })
+    .insert({ user_id: user.id, name, custodian, holdings, analysis, score: storedScore })
     .select()
     .single();
 

@@ -46,9 +46,6 @@ function AvatarDropdown({ user }: { user: User }) {
           <Link href="/portfolios" onClick={() => setOpen(false)} className="block px-4 py-2.5 text-sm text-ink-2 hover:bg-section transition-colors">
             Mina portföljer
           </Link>
-          <Link href="/risk-profile" onClick={() => setOpen(false)} className="block px-4 py-2.5 text-sm text-ink-2 hover:bg-section transition-colors">
-            Riskprofil
-          </Link>
           <Link href="/account" onClick={() => setOpen(false)} className="block px-4 py-2.5 text-sm text-ink-2 hover:bg-section transition-colors">
             Mitt konto
           </Link>
@@ -66,6 +63,9 @@ function AvatarDropdown({ user }: { user: User }) {
 export default function Header() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const pathname = usePathname();
+  const loginHref = pathname && pathname !== "/" && pathname !== "/login"
+    ? `/login?next=${encodeURIComponent(pathname)}`
+    : "/login";
 
   useEffect(() => {
     const supabase = createClient();
@@ -86,6 +86,10 @@ export default function Header() {
     return `flex flex-col items-center gap-0.5 py-2 px-2 flex-1 transition-colors min-w-0 ${
       active ? "text-accent" : "text-ink-4"
     }`;
+  }
+
+  function notifyBeforeLogin() {
+    window.dispatchEvent(new Event("fondanalys:before-login"));
   }
 
   return (
@@ -113,7 +117,8 @@ export default function Header() {
                 <AvatarDropdown user={user} />
               ) : (
                 <Link
-                  href="/login"
+                  href={loginHref}
+                  onClick={notifyBeforeLogin}
                   className="bg-info hover:bg-blue-100 text-accent text-sm font-semibold px-4 py-2 rounded-[10px] transition-colors"
                 >
                   Logga in
@@ -128,7 +133,7 @@ export default function Header() {
               user ? (
                 <AvatarDropdown user={user} />
               ) : (
-                <Link href="/login" className="text-sm font-semibold text-ink-2">
+                <Link href={loginHref} onClick={notifyBeforeLogin} className="text-sm font-semibold text-ink-2">
                   Logga in
                 </Link>
               )
@@ -165,7 +170,11 @@ export default function Header() {
             <span className="text-[11px] font-semibold">Portföljer</span>
           </Link>
         )}
-        <Link href={user ? "/account" : "/login"} className={bottomTabClass(user ? "/account" : "/login")}>
+        <Link
+          href={user ? "/account" : loginHref}
+          onClick={user ? undefined : notifyBeforeLogin}
+          className={bottomTabClass(user ? "/account" : "/login")}
+        >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
           </svg>

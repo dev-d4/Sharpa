@@ -5,13 +5,11 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
 import type { SavedPortfolio } from "@/lib/portfolio";
-import { RISK_LABELS, RISK_EQUITY, type RiskLevel } from "@/lib/risk";
 
 export default function AccountPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [portfolios, setPortfolios] = useState<SavedPortfolio[]>([]);
-  const [riskProfile, setRiskProfile] = useState<{ score: RiskLevel; label: string } | null | undefined>(undefined);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const router = useRouter();
@@ -27,10 +25,6 @@ export default function AccountPage() {
         .then((r) => r.ok ? r.json() : [])
         .then(setPortfolios)
         .catch(() => {});
-      fetch("/api/risk-profile")
-        .then((r) => r.ok ? r.json() : null)
-        .then((p) => setRiskProfile(p ? { score: p.score as RiskLevel, label: p.label } : null))
-        .catch(() => setRiskProfile(null));
     });
   }, [router]);
 
@@ -115,64 +109,6 @@ export default function AccountPage() {
         </div>
       </section>
 
-      {/* Risk profile */}
-      <section className="space-y-3">
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Din riskprofil</p>
-        {riskProfile === undefined ? (
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 animate-pulse space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-2">
-                <div className="h-6 w-32 rounded bg-slate-100" />
-                <div className="h-4 w-48 rounded bg-slate-100" />
-              </div>
-              <div className="h-4 w-16 rounded bg-slate-100" />
-            </div>
-            <div className="flex gap-1.5">
-              {[1,2,3,4,5].map((i) => <div key={i} className="flex-1 h-2 rounded-full bg-slate-100" />)}
-            </div>
-          </div>
-        ) : riskProfile === null ? (
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-4 sm:px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <p className="font-semibold text-slate-900 text-sm">Du har ingen riskprofil ännu</p>
-              <p className="text-xs text-slate-400 mt-0.5">Svara på 4 frågor för att se om dina portföljer matchar din risknivå.</p>
-            </div>
-            <button
-              onClick={() => router.push("/risk-profile")}
-              className="shrink-0 bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold px-4 py-3 rounded-[10px] transition-colors"
-            >
-              Kom igång →
-            </button>
-          </div>
-        ) : (
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xl font-bold text-slate-900">{riskProfile.label}</p>
-                <p className="text-sm text-slate-500">{RISK_EQUITY[riskProfile.score]}</p>
-              </div>
-              <button
-                onClick={() => router.push("/risk-profile")}
-                className="text-xs text-slate-400 hover:text-slate-600 underline transition-colors"
-              >
-                Uppdatera
-              </button>
-            </div>
-            <div className="flex gap-1.5">
-              {([1, 2, 3, 4, 5] as RiskLevel[]).map((lvl) => (
-                <div key={lvl} className="flex-1 space-y-1">
-                  <div className={`h-2 rounded-full ${lvl <= riskProfile.score ? "bg-blue-500" : "bg-slate-100"}`} />
-                  <p className={`hidden sm:block text-xs text-center truncate ${lvl === riskProfile.score ? "text-blue-600 font-semibold" : "text-slate-400"}`}>
-                    {RISK_LABELS[lvl]}
-                  </p>
-                </div>
-              ))}
-            </div>
-            <p className="text-xs text-blue-600 font-semibold sm:hidden">{RISK_LABELS[riskProfile.score]}</p>
-          </div>
-        )}
-      </section>
-
       {/* Portfolios link */}
       <section>
         <button
@@ -226,7 +162,7 @@ export default function AccountPage() {
           <div className="px-6 py-4 space-y-3">
             <p className="text-sm font-semibold text-slate-900">Är du säker?</p>
             <p className="text-xs text-slate-500">
-              Ditt konto, alla portföljer och din riskprofil raderas permanent. Det går inte att ångra.
+              Ditt konto och alla dina sparade portföljer raderas permanent. Det går inte att ångra.
             </p>
             <div className="flex gap-2">
               <button

@@ -444,7 +444,7 @@ export default function PrintClient() {
                 </div>
                 {sm && (
                   <div className="fee-box suggested">
-                    <div className="label" style={{ marginBottom: 8, color: "#16a34a" }}>Föreslagen portfölj</div>
+                    <div className="label" style={{ marginBottom: 8, color: "#16a34a" }}>Alternativt scenario</div>
                     <div className="fee-row">
                       <span className="fee-label">Avgift per år</span>
                       <span className="fee-val green">{sugFee != null ? fmtKr(sugFee) : "–"}</span>
@@ -589,7 +589,7 @@ export default function PrintClient() {
                   {finalSugg != null && (
                     <span style={{ color: "#555" }}>
                       <span style={{ display: "inline-block", width: 16, height: 2, background: "#10B981", verticalAlign: "middle", marginRight: 5 }} />
-                      Föreslagen portfölj: <strong style={{ color: "#15803d" }}>{fmtKr(finalSugg)}</strong>
+                      Alternativt scenario: <strong style={{ color: "#15803d" }}>{fmtKr(finalSugg)}</strong>
                       {finalSugg > finalCurr && <strong style={{ color: "#15803d" }}> (+{fmtKr(finalSugg - finalCurr)})</strong>}
                     </span>
                   )}
@@ -608,7 +608,7 @@ export default function PrintClient() {
 
               {hasSwaps && (
                 <div style={{ marginBottom: hasBest ? 14 : 0 }}>
-                  <div className="label" style={{ marginBottom: 8 }}>Förslag på byte</div>
+                  <div className="label" style={{ marginBottom: 8 }}>Jämförbart alternativ</div>
                   {(analysis.swapSuggestions ?? []).map((swap, i) => {
                     const chips: string[] = [];
                     if (swap.improvement.sharpe)    chips.push(`Sharpe +${swap.improvement.sharpe.toFixed(2)}`);
@@ -623,7 +623,7 @@ export default function PrintClient() {
                         </div>
                         <div className="swap-arrow">→</div>
                         <div className="swap-fund">
-                          <div className="swap-fund-label buy">{swap.consolidate ? "Öka i befintlig fond" : "Föreslagen fond"}</div>
+                          <div className="swap-fund-label buy">{swap.consolidate ? "Alternativ viktning" : "Alternativ fond"}</div>
                           <div className="swap-fund-name">{swap.suggestedFund.name}</div>
                           <div className="swap-fund-isin">{swap.suggestedFund.isin}</div>
                         </div>

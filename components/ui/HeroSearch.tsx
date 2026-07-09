@@ -28,17 +28,16 @@ function swapReasonText(swap: SwapSuggestion): string {
     return `Lägre avgift: ${fmtPct(fundCost(swap.suggestedFund))} i stället för ${fmtPct(fundCost(swap.currentFund))} per år.`;
   }
   if (swap.improvement.sharpe !== undefined) {
-    return "Bättre riskjusterad avkastning än din nuvarande fond.";
+    return "Starkare riskjusterade historiska nyckeltal än den analyserade fonden.";
   }
   if (swap.improvement.return1yr !== undefined) {
-    return "Starkare historisk avkastning än din nuvarande fond.";
+    return "Starkare historisk avkastning än den analyserade fonden.";
   }
-  return "Bättre helhet när vi väger samman avgift, avkastning och risk.";
+  return "Starkare helhet i jämförelsen när vi väger samman avgift, avkastning och risk.";
 }
 
 function buildFundSummary(analysis: PortfolioAnalysis, swap: SwapSuggestion | null): string {
-  // Vid bytesförslag måste fondtexten hänga ihop med bytesskälet —
-  // annars kan kortet berömma avgiften och sedan föreslå byte av annat skäl.
+  // Vid jämförbara alternativ måste fondtexten hänga ihop med jämförelseskälet.
   if (swap) {
     const cost = analysis.avgCost;
 
@@ -87,7 +86,7 @@ function buildFundVerdict(
     return {
       tone: "warn",
       title: "Fonden kan förbättras",
-      comparison: "Vi hittade en bättre fond i samma kategori.",
+      comparison: "Vi hittade ett alternativ med starkare nyckeltal i samma kategori.",
     };
   }
 
@@ -102,7 +101,7 @@ function buildFundVerdict(
   return {
     tone: "neutral",
     title: "Fonden klarar sig helt okej",
-    comparison: "Den sticker inte ut som bäst i sin kategori, men vi hittar inget tydligt bättre byte just nu.",
+      comparison: "Den sticker inte ut som bäst i sin kategori, men vi hittar inget tydligt starkare alternativ just nu.",
   };
 }
 
@@ -158,7 +157,7 @@ function FundPanelView({
 
         {swap ? (
           <div className="mt-5 rounded-[12px] bg-section p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-4 mb-3">Bättre fond i samma kategori</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-4 mb-3">Alternativ i samma kategori</p>
             <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center">
               <div className="min-w-0 rounded-[10px] bg-white border border-line-soft px-3 py-2.5">
                 <p className="text-[10px] font-medium uppercase tracking-[0.05em] text-ink-4 mb-1">Nuvarande</p>
@@ -170,7 +169,7 @@ function FundPanelView({
                 </svg>
               </div>
               <div className="min-w-0 rounded-[10px] bg-white border border-pos/15 px-3 py-2.5">
-                <p className="text-[10px] font-medium uppercase tracking-[0.05em] text-pos mb-1">Föreslagen</p>
+                <p className="text-[10px] font-medium uppercase tracking-[0.05em] text-pos mb-1">Alternativ</p>
                 <p className="text-sm font-semibold text-ink leading-snug break-words">{swap.suggestedFund.name}</p>
               </div>
             </div>
@@ -344,8 +343,8 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
 
       <div className="mt-8 sm:mt-10 relative w-full max-w-[720px]">
           <div
-            className="flex items-center gap-3.5 bg-white border-[1.5px] border-[rgba(23,33,43,0.14)] rounded-[14px] px-5 sm:px-7 py-4 sm:py-[22px] focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/15 transition-colors"
-            style={{ boxShadow: "0 8px 24px rgba(23,33,43,.07)" }}
+            className="flex items-center gap-3.5 bg-[rgba(255,255,255,0.72)] backdrop-blur-[12px] border-[1.5px] border-[rgba(255,255,255,0.7)] rounded-[14px] px-5 sm:px-7 py-4 sm:py-[22px] focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/15 transition-colors"
+            style={{ boxShadow: "0 12px 32px rgba(23,33,43,.1)" }}
           >
             <Search className="w-[22px] h-[22px] text-[#8b95a1] shrink-0" strokeWidth={2} aria-hidden="true" />
             <div className="relative flex-1 min-w-0">

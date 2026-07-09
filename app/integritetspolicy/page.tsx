@@ -18,7 +18,8 @@ export default function IntegritetspolicyPage() {
           <h2 className="text-lg font-bold text-slate-900">1. Personuppgiftsansvarig</h2>
           <p>
             Sharpa är personuppgiftsansvarig för behandlingen av dina personuppgifter.
-            Har du frågor om hur vi hanterar dina uppgifter är du välkommen att kontakta oss.
+            Har du frågor om hur vi hanterar dina uppgifter är du välkommen att kontakta oss på
+            {" "}<a href="mailto:kontakt@sharpa.se" className="text-blue-600 hover:underline">kontakt@sharpa.se</a>.
           </p>
         </section>
 
@@ -29,7 +30,6 @@ export default function IntegritetspolicyPage() {
             <li><strong>E-postadress</strong> — när du skapar ett konto eller loggar in via magisk länk.</li>
             <li><strong>Autentiseringsuppgifter via Google</strong> — om du väljer att logga in med Google.</li>
             <li><strong>Portföljdata</strong> — fondnamn, vikter och analys som du sparar i tjänsten.</li>
-            <li><strong>Riskprofil</strong> — dina svar på riskprofilfrågorna och beräknat riskbetyg.</li>
             <li><strong>Tekniska uppgifter</strong> — sessionskakor som krävs för inloggning.</li>
           </ul>
           <p>
@@ -45,7 +45,7 @@ export default function IntegritetspolicyPage() {
         <section className="space-y-3">
           <h2 className="text-lg font-bold text-slate-900">3. Varför behandlar vi dina uppgifter?</h2>
           <ul className="list-disc pl-5 space-y-1">
-            <li><strong>Tillhandahålla tjänsten</strong> — för att du ska kunna logga in, spara portföljer och se din riskprofil.</li>
+            <li><strong>Tillhandahålla tjänsten</strong> — för att du ska kunna logga in och spara portföljer.</li>
             <li><strong>Autentisering</strong> — sessionskakor krävs tekniskt för att hålla dig inloggad.</li>
           </ul>
           <p>Rättslig grund: <em>berättigat intresse</em> och <em>fullgörande av avtal</em> (tjänstens tillhandahållande).</p>
@@ -75,7 +75,7 @@ export default function IntegritetspolicyPage() {
           <h2 className="text-lg font-bold text-slate-900">6. Lagringstid</h2>
           <p>
             Vi lagrar dina uppgifter så länge ditt konto är aktivt. Om du raderar ditt konto
-            raderas alla dina uppgifter (portföljer, riskprofil, e-postadress) inom 30 dagar.
+            raderas alla dina uppgifter (portföljer, e-postadress) inom 30 dagar.
           </p>
         </section>
 
@@ -95,7 +95,7 @@ export default function IntegritetspolicyPage() {
           <h2 className="text-lg font-bold text-slate-900">8. Kontakt</h2>
           <p>
             Har du frågor om din integritet eller vill utöva dina rättigheter, hör av dig via
-            e-post (kontaktuppgifter publiceras inom kort).
+            e-post till <a href="mailto:kontakt@sharpa.se" className="text-blue-600 hover:underline">kontakt@sharpa.se</a>.
           </p>
         </section>
 

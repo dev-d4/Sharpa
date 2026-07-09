@@ -49,7 +49,7 @@ export default function VillkorPage() {
         <section className="space-y-3">
           <h2 className="text-lg font-bold text-slate-900">3. Konto och tillgång</h2>
           <p>
-            För att spara portföljer och riskprofil behöver du skapa ett konto. Du ansvarar för att
+            För att spara portföljer behöver du skapa ett konto. Du ansvarar för att
             hålla din inloggningsinformation säker och för all aktivitet som sker från ditt konto.
           </p>
           <p>

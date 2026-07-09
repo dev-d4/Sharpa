@@ -7,7 +7,7 @@ import { ChevronDown } from "lucide-react";
 const FAQS = [
   {
     q: "Är detta finansiell rådgivning?",
-    a: "Nej. Sharpa är ett automatiserat analysverktyg som sammanställer historiska nyckeltal och jämför fonder utifrån generella kriterier. Vi står inte under Finansinspektionens tillsyn och har inget tillstånd att bedriva investeringsrådgivning. Analyserna tar inte hänsyn till din personliga situation och utgör inte rekommendationer — alla investeringsbeslut fattar du själv och på egen risk. Rådgör med en auktoriserad finansiell rådgivare innan du fattar investeringsbeslut.",
+    a: "Nej. Sharpa är ett automatiserat analysverktyg som sammanställer historiska nyckeltal och jämför fonder utifrån generella kriterier. Vi står inte under Finansinspektionens tillsyn och har inget tillstånd att bedriva investeringsrådgivning. Analyser och portföljexempel utgör inte personliga rekommendationer — alla investeringsbeslut fattar du själv och på egen risk. Rådgör med en auktoriserad finansiell rådgivare innan du fattar investeringsbeslut.",
   },
   {
     q: "Är Sharpa gratis?",
@@ -15,7 +15,7 @@ const FAQS = [
   },
   {
     q: "Hur skapas analyserna och bytesförslagen?",
-    a: "Automatiskt. Varje fond jämförs med andra fonder i samma kategori utifrån riskjusterad avkastning (Sharpe-kvot), historisk avkastning och avgift. En fond lyfts fram som alternativ när den har bättre nyckeltal än din nuvarande fond i samma kategori.",
+    a: "Automatiskt. Varje fond jämförs med andra fonder i samma kategori utifrån riskjusterad avkastning (Sharpe-kvot), historisk avkastning och avgift. En fond visas som jämförbart alternativ när den har starkare nyckeltal än den analyserade fonden i samma kategori.",
   },
   {
     q: "Hur aktuell är fonddatan?",
@@ -23,11 +23,11 @@ const FAQS = [
   },
   {
     q: "Behöver jag ett konto?",
-    a: "Nej. Du kan analysera och bygga portföljer utan konto. Ett konto behövs bara om du vill spara dina portföljer och din riskprofil.",
+    a: "Nej. Du kan analysera och bygga portföljer utan konto. Ett konto behövs bara om du vill spara dina portföljer.",
   },
   {
     q: "Vilka uppgifter sparar ni om mig?",
-    a: "Om du skapar ett konto sparar vi din e-postadress samt de portföljer och den riskprofil du väljer att spara. Du kan när som helst radera ditt konto och all data under Mitt konto. Läs mer i vår integritetspolicy.",
+    a: "Om du skapar ett konto sparar vi din e-postadress samt de portföljer du väljer att spara. Du kan när som helst radera ditt konto och all data under Mitt konto. Läs mer i vår integritetspolicy.",
   },
 ];
 

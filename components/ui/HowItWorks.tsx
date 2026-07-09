@@ -2,18 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import DonutChart from "@/components/ui/DonutChart";
-import { CHART_PALETTE } from "@/lib/chart-palette";
 
 // ── Feature cards ─────────────────────────────────────────────────────────────
-// Varje kort leds av beviset (fondjämförelse resp. donut), avskilt med en tunn
+// Varje kort leds av beviset (fondjämförelse resp. byggflöde), avskilt med en tunn
 // linje. Under: kort rubrik, en mening, och en textlänk som CTA — ingen knapp.
 
-const BUILD_SLICES = [
-  { label: "Global",   weight: 45 },
-  { label: "Räntor",   weight: 30 },
-  { label: "Sverige",  weight: 15 },
-  { label: "Tillväxt", weight: 10 },
+const BUILD_STEPS = [
+  { step: "01", label: "Frågor", value: "7 st" },
+  { step: "02", label: "Risk", value: "Balanserad" },
+  { step: "03", label: "Portfölj", value: "Färdigt exempel" },
 ];
 
 const CARD_SHADOW = { boxShadow: "0 1px 2px rgba(16,24,40,.04)" };
@@ -33,7 +30,7 @@ function FeatureCard({
 }) {
   return (
     <article className="group flex h-full flex-col rounded-[14px] border border-line bg-white p-5 sm:p-7 transition-colors hover:border-info-line" style={CARD_SHADOW}>
-      <div className="mb-5 flex h-[140px] items-center justify-center border-b border-line-soft pb-5">{proof}</div>
+      <div className="mb-5 flex h-[96px] items-center justify-center border-b border-line-soft pb-5">{proof}</div>
       <h3 className="font-heading text-[15px] font-bold text-ink">{title}</h3>
       <p className="mt-1.5 flex-1 text-[13px] text-ink-2 leading-[1.6]">{description}</p>
       <Link
@@ -60,7 +57,7 @@ function SwapProof() {
         <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
       </svg>
       <div className="min-w-0">
-        <p className="text-[10px] font-medium uppercase tracking-[0.05em] text-ink-4 mb-1">Föreslagen</p>
+        <p className="text-[10px] font-medium uppercase tracking-[0.05em] text-ink-4 mb-1">Alternativ</p>
         <p className="font-heading text-sm font-bold text-ink truncate">Avanza Zero</p>
       </div>
     </div>
@@ -69,16 +66,25 @@ function SwapProof() {
 
 function PortfolioProof() {
   return (
-    <DonutChart
-      slices={BUILD_SLICES}
-      palette={CHART_PALETTE}
-      centerLabel="70%"
-      centerSub="Aktier"
-      size={104}
-      thickness={16}
-      horizontal
-      disableHover
-    />
+    <div className="w-full" aria-label="Från 4 frågor till risknivå och portföljexempel">
+      <div className="grid grid-cols-3 items-start gap-2">
+        {BUILD_STEPS.map((item, index) => (
+          <div key={item.step} className="relative min-w-0 text-center">
+            {index < BUILD_STEPS.length - 1 && (
+              <span
+                aria-hidden="true"
+                className="absolute left-1/2 top-[17px] h-px w-full bg-line-soft"
+              />
+            )}
+            <div className="relative z-10 mx-auto flex h-8 w-8 items-center justify-center rounded-full border border-info-line bg-info text-[11px] font-bold tabular-nums text-accent">
+              {item.step}
+            </div>
+            <p className="mt-2 truncate text-[11px] font-semibold text-ink">{item.label}</p>
+            <p className="mt-0.5 truncate text-[10px] text-ink-3">{item.value}</p>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -87,7 +93,7 @@ function PortfolioProof() {
 const TRUST_ITEMS = [
   {
     title: "Oberoende analys",
-    desc: "Vi tar inga provisioner från fondbolag. Våra rekommendationer är alltid neutrala.",
+    desc: "Vi tar inga provisioner från fondbolag. Våra jämförelser bygger på förutbestämda kriterier.",
   },
   {
     title: "Datadrivna beslut",
@@ -99,7 +105,7 @@ const TRUST_ITEMS = [
   },
   {
     title: "Du behåller kontrollen",
-    desc: "Du bestämmer alltid. Vi ger verktygen och insikterna — inga råd mot din vilja.",
+    desc: "Du bestämmer alltid. Vi visar data, jämförelser och begränsningar — inte personliga råd.",
   },
 ];
 
@@ -128,7 +134,7 @@ function PortfolioCalculator() {
       <div className="mb-5">
         <div className="flex items-baseline justify-between">
           <span className="text-[13px] text-ink-2">Sparkapital</span>
-          <span className="text-sm font-semibold text-ink tabular-nums">{kr(capital)}</span>
+          <span className="text-base font-semibold text-ink tabular-nums">{kr(capital)}</span>
         </div>
         <input type="range" className="calc-range" min={10000} max={2000000} step={10000} value={capital}
           onChange={(e) => setCapital(Number(e.target.value))} aria-label="Sparkapital" />
@@ -140,7 +146,7 @@ function PortfolioCalculator() {
       <div className="mb-5">
         <div className="flex items-baseline justify-between">
           <span className="text-[13px] text-ink-2">Din förväntade avkastning</span>
-          <span className="text-sm font-semibold text-ink tabular-nums">{grossReturn.toLocaleString("sv-SE", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %</span>
+          <span className="text-base font-semibold text-ink tabular-nums">{grossReturn.toLocaleString("sv-SE", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %</span>
         </div>
         <input type="range" className="calc-range" min={1} max={15} step={0.5} value={grossReturn}
           onChange={(e) => setGrossReturn(Number(e.target.value))} aria-label="Din förväntade avkastning" />
@@ -152,7 +158,7 @@ function PortfolioCalculator() {
       <div className="mb-7">
         <div className="flex items-baseline justify-between">
           <span className="text-[13px] text-ink-2">Dina fonders avgift</span>
-          <span className="text-sm font-semibold text-ink tabular-nums">{fee.toLocaleString("sv-SE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %</span>
+          <span className="text-base font-semibold text-ink tabular-nums">{fee.toLocaleString("sv-SE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %</span>
         </div>
         <input type="range" className="calc-range" min={0} max={2} step={0.05} value={fee}
           onChange={(e) => setFee(Number(e.target.value))} aria-label="Dina fonders avgift" />
@@ -165,15 +171,15 @@ function PortfolioCalculator() {
       <div className="border-t border-line pt-5">
         <div className="flex justify-between border-b border-dashed border-line py-2">
           <span className="text-[13px] text-ink-2">Nuvarande portfölj, 10 år ({net.toLocaleString("sv-SE", { minimumFractionDigits: 1, maximumFractionDigits: 2 })} %/år netto)</span>
-          <span className="text-sm font-semibold text-ink tabular-nums shrink-0 pl-3">{kr(endValue)}</span>
+          <span className="text-base font-semibold text-ink tabular-nums shrink-0 pl-3">{kr(endValue)}</span>
         </div>
         <div className="flex justify-between py-2">
           <span className="text-[13px] text-ink-2">Optimerad avgift (0,15 %), 10 år</span>
-          <span className="text-sm font-semibold text-accent tabular-nums shrink-0 pl-3">{kr(endValueOpt)}</span>
+          <span className="text-base font-semibold text-accent tabular-nums shrink-0 pl-3">{kr(endValueOpt)}</span>
         </div>
         <div className="flex items-center justify-between pt-4">
           <span className="font-heading text-[15px] font-bold text-pos">Skillnad efter 10 år</span>
-          <span className="font-heading text-[19px] font-extrabold text-pos tabular-nums shrink-0 pl-3">
+          <span className="font-heading text-[22px] font-extrabold text-pos tabular-nums shrink-0 pl-3">
             {(diff >= 0 ? "+" : "") + kr(diff)}
           </span>
         </div>
@@ -191,7 +197,7 @@ function PortfolioCalculator() {
 const FAQS = [
   { q: "Är detta finansiell rådgivning?", a: "Nej. Sharpa är ett automatiserat analysverktyg som jämför fonder utifrån historiska nyckeltal. Vi har inget tillstånd att bedriva investeringsrådgivning och analyserna tar inte hänsyn till din personliga situation — alla investeringsbeslut fattar du själv." },
   { q: "Är Sharpa verkligen gratis?", a: "Ja, helt gratis. Ingen avgift, inget kreditkort och inget konto krävs för grundfunktionerna." },
-  { q: "Hur skapar ni portföljförslagen?", a: "Automatiskt. Vi beräknar din risknivå baserat på dina svar och matchar sedan bäst rankade fonder inom varje kategori — rangordnade på Sharpe-kvot, historisk avkastning och avgift." },
+  { q: "Hur skapar ni portföljexemplen?", a: "Automatiskt. Vi beräknar en risknivå baserat på dina svar och visar ett illustrativt exempel med fonder som rankas högt inom varje kategori — utifrån Sharpe-kvot, historisk avkastning och avgift." },
   { q: "Behöver jag logga in?", a: "Nej. Du kan bygga och analysera portföljer utan konto. Du behöver ett konto bara om du vill spara dina portföljer." },
 ];
 
@@ -227,20 +233,20 @@ export default function HowItWorks() {
           Allt du behöver för smartare fondsparande
         </h2>
         <p className="mt-3 text-[15px] text-ink-2 leading-[1.7]">
-          Från att bygga din första portfölj till att optimera en befintlig.
+          Från att optimera en befintlig portfölj till att bygga din första.
         </p>
 
         <div className="mt-8 grid gap-8 sm:grid-cols-2 sm:gap-6">
           <FeatureCard
             title="Förbättra det du redan har."
-            description="Se om du kan få mer för pengarna, på samma risknivå."
+            description="Se om du kan få mer för pengarna."
             cta="Analysera mina fonder"
             href="/analyze"
             proof={<SwapProof />}
           />
           <FeatureCard
             title="Din portfölj på 2 minuter."
-            description="Svara på 6 frågor — vi sätter ihop portföljen."
+            description="Svara på 4 frågor och se ett illustrativt portföljexempel."
             cta="Bygg din portfölj gratis"
             href="/bygg-portfolj"
             proof={<PortfolioProof />}

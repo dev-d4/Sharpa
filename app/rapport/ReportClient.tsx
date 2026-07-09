@@ -173,7 +173,7 @@ function FeeCalculatorSection({ amount, analysis }: { amount: number; analysis: 
         </div>
         {sm && (
           <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 space-y-2">
-            <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-3">Föreslagen portfölj</p>
+            <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-3">Alternativt scenario</p>
             <StatRow label="Avgift per år" value={sugFee != null ? fmtKr(sugFee) : "–"} accent="good" />
             <StatRow label="Avgift i %" value={sm.avgCost != null ? `${sm.avgCost.toFixed(2)}% / år` : "–"} />
           </div>
@@ -364,7 +364,7 @@ function ProjectionSection({ amount, analysis }: { amount: number; analysis: Por
             <svg width="20" height="2" className="shrink-0">
               <line x1="0" y1="1" x2="20" y2="1" stroke="#10B981" strokeWidth="2" strokeDasharray="5 2" />
             </svg>
-            <span className="text-slate-600">Föreslagen portfölj</span>
+            <span className="text-slate-600">Alternativt scenario</span>
             <span className="font-bold text-emerald-600">{fmtKr(finalSugg)}</span>
             {finalSugg > finalCurr && (
               <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
@@ -397,13 +397,13 @@ function SwapCard({ swap, onAccept, readonly = false }: { swap: SwapSuggestion; 
     <div className={cn("border rounded-xl p-4 space-y-2 transition-colors", accepted ? "bg-emerald-50/60 border-emerald-200" : "bg-slate-50 border-slate-200")}>
       <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{swap.consolidate ? "Överväg att sälja" : "Nuvarande fond"}</p>
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Nuvarande fond</p>
           <p className="font-semibold text-sm text-slate-900 break-words">{swap.currentFund.name}</p>
           <p className="text-xs text-slate-400">{swap.currentFund.isin}</p>
         </div>
         <span className="text-slate-400 text-lg self-start sm:mt-3"><span className="sm:hidden">↓</span><span className="hidden sm:inline">→</span></span>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wide">{swap.consolidate ? "Öka i befintlig fond" : "Föreslagen fond"}</p>
+          <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wide">{swap.consolidate ? "Alternativ viktning" : "Alternativ fond"}</p>
           <p className="font-semibold text-sm text-slate-900 break-words">{swap.suggestedFund.name}</p>
           <p className="text-xs text-slate-400">{swap.suggestedFund.isin}</p>
         </div>
@@ -420,7 +420,7 @@ function SwapCard({ swap, onAccept, readonly = false }: { swap: SwapSuggestion; 
             onClick={handleAccept} disabled={accepted}
             className={cn("shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all", accepted ? "text-emerald-600 cursor-default" : "bg-blue-600 hover:bg-blue-700 text-white")}
           >
-            {accepted ? "Accepterat ✓" : "Acceptera"}
+            {accepted ? "Tillagd ✓" : "Lägg till i jämförelse"}
           </button>
         )}
       </div>
@@ -651,13 +651,13 @@ function SectionContent({ id, data }: { id: SectionId; data: SectionData }) {
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Fondgranskning</p>
             <h2 className="text-base font-bold text-slate-900 mt-1">Analys per fond</h2>
-            <p className="text-sm text-slate-500 mt-0.5">Fonder som kan bytas ut och fonder som redan är bäst i sin kategori.</p>
+            <p className="text-sm text-slate-500 mt-0.5">Fonder med jämförbara alternativ i samma kategori, och fonder som redan rankas högst i sin kategori.</p>
           </div>
 
           {/* Applied swaps */}
           {appliedSwaps.length > 0 && (
             <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 sm:p-4 space-y-2">
-              <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest">Genomförda ändringar</p>
+              <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest">Medtagna i jämförelsen</p>
               {appliedSwaps.map((s, i) => (
                 <div key={i} className="flex items-center gap-2 text-sm">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
@@ -672,7 +672,7 @@ function SectionContent({ id, data }: { id: SectionId; data: SectionData }) {
           {/* Swap suggestions */}
           {hasSwaps && (
             <div className="space-y-3">
-              <p className="text-xs font-semibold text-slate-500">Förslag på byte</p>
+              <p className="text-xs font-semibold text-slate-500">Jämförbart alternativ</p>
               {(analysis.swapSuggestions ?? []).map((swap, i) => (
                 <SwapCard key={`${swap.currentFund.isin}-${i}`} swap={swap} readonly={readonly} onAccept={() => onApplySwap(swap.currentFund.isin, swap.suggestedFund.isin, swap.currentFund.name, swap.suggestedFund.name)} />
               ))}

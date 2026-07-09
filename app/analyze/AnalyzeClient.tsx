@@ -860,6 +860,14 @@ function loadSession() {
   } catch { return null; }
 }
 
+function hasMeaningfulAnalyzeState(custodian: string | null, entries: Entry[], analysis: PortfolioAnalysis | null) {
+  return Boolean(
+    custodian ||
+    analysis ||
+    entries.some((entry) => entry.isin.trim() || entry.name.trim() || entry.weight.trim() || entry.amount?.trim())
+  );
+}
+
 
 export default function AnalyzeClient() {
   const router = useRouter();
@@ -872,8 +880,6 @@ export default function AnalyzeClient() {
   const [loadingStep, setLoadingStep] = useState(0);
   const [analysis, setAnalysis] = useState<PortfolioAnalysis | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [riskProfile, setRiskProfile] = useState<object | null | undefined>(undefined);
-  const [nudgeDismissed, setNudgeDismissed] = useState(false);
   const [inputMode, setInputMode] = useState<"weight" | "amount">("weight");
 
   // Input method: how the user wants to populate their portfolio
@@ -954,9 +960,6 @@ export default function AnalyzeClient() {
       if (saved.entries?.length) { setEntries(saved.entries); setInputMethod("manual"); }
       if (saved.analysis) setAnalysis(saved.analysis);
       sessionStorage.removeItem(SESSION_KEY);
-    } else {
-      const preferred = localStorage.getItem("fondanalys_preferred_custodian");
-      if (preferred) setCustodian(preferred);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -974,12 +977,6 @@ export default function AnalyzeClient() {
           .then(setSavedPortfolios)
           .catch(() => {})
           .finally(() => setSavedPortfoliosLoading(false));
-        fetch("/api/risk-profile")
-          .then((r) => r.ok ? r.json() : null)
-          .then((p) => setRiskProfile(p ?? null))
-          .catch(() => setRiskProfile(null));
-      } else {
-        setRiskProfile(null);
       }
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
@@ -987,6 +984,18 @@ export default function AnalyzeClient() {
     });
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    function saveBeforeLogin() {
+      if (!hasMeaningfulAnalyzeState(custodian, entries, analysis)) return;
+      try {
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify({ custodian, entries, analysis }));
+      } catch { /* ignore */ }
+    }
+
+    window.addEventListener("fondanalys:before-login", saveBeforeLogin);
+    return () => window.removeEventListener("fondanalys:before-login", saveBeforeLogin);
+  }, [custodian, entries, analysis]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -1212,7 +1221,7 @@ export default function AnalyzeClient() {
   const LOADING_STEPS = [
     "Hämtar fonddata…",
     "Beräknar avkastning och risk…",
-    "Genererar bytesförslag…",
+    "Jämför med liknande alternativ…",
     "Sammanställer analys…",
   ];
 
@@ -1337,7 +1346,7 @@ export default function AnalyzeClient() {
     try {
       sessionStorage.setItem(SESSION_KEY, JSON.stringify({ custodian, entries, analysis }));
     } catch { /* ignore */ }
-    router.push("/login?next=/analyze");
+    router.push("/login?next=/analyze&skip_onboarding=1");
   }
 
   if (portfolioLoading) {
@@ -1372,25 +1381,6 @@ export default function AnalyzeClient() {
     <>
     <div className="min-h-screen">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8">
-      {/* Risk profile nudge — shown when logged in with no risk profile */}
-      {user && riskProfile === null && !nudgeDismissed && (
-        <div className="no-print flex items-start gap-3 bg-warn-soft border border-amber-100 rounded-xl px-4 py-3">
-          <span className="text-amber-500 shrink-0 mt-0.5">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z" />
-            </svg>
-          </span>
-          <p className="text-sm text-amber-800 flex-1 leading-relaxed">
-            Du har ingen riskprofil ännu.{" "}
-            <a href="/risk-profile" className="font-medium underline hover:text-amber-900">Ta fram din →</a>
-          </p>
-          <button onClick={() => setNudgeDismissed(true)} className="text-amber-400 hover:text-amber-600 shrink-0 mt-0.5">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      )}
 
       {/* Saved portfolios switcher — dropdown, shown when logged in with saved portfolios */}
       {savedPortfoliosLoading && (
@@ -1437,7 +1427,7 @@ export default function AnalyzeClient() {
                 <div className="border-t border-slate-100">
                   <button
                     type="button"
-                    onClick={() => { setPortfolioId(null); setEntries([{ isin: "", name: "", weight: "" }]); setAnalysis(null); setError(null); setInputMethod(null); setPortfolioDropdownOpen(false); }}
+                    onClick={() => { setPortfolioId(null); setCustodian(null); setEntries([{ isin: "", name: "", weight: "" }]); setAnalysis(null); setError(null); setInputMethod(null); setPortfolioDropdownOpen(false); }}
                     className={cn(
                       "w-full text-left px-3 py-2.5 text-sm transition-colors hover:bg-blue-50",
                       !portfolioId ? "text-blue-700 font-medium bg-blue-50" : "text-slate-500"
@@ -1502,7 +1492,6 @@ export default function AnalyzeClient() {
                     setPortfolioId(null);
                   }
                   setCustodian(c.value);
-                  localStorage.setItem("fondanalys_preferred_custodian", c.value);
                 }}
                 className={cn(
                   "flex flex-col items-center justify-center gap-0.5 rounded-xl border p-3 text-center transition-all min-h-[56px]",
@@ -1975,8 +1964,13 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
     if (analysis.weightedSharpe > 0.7) strengths.push("Stark riskjusterad avkastning");
     else if (analysis.weightedSharpe < 0.3) warnings.push("Svag riskjusterad avkastning");
   }
-  if (analysis.categoryBreakdown?.length) {
-    const n = analysis.categoryBreakdown.filter(c => c.weight > 5).length;
+  // Riskspridning mäts på de detaljerade kategorierna (regioner/byggkategorier) —
+  // samma källa som portföljbetyget använder — inte de grova tillgångsslagen, så
+  // en portfölj spridd över många kategorier räknas som välspridd och etiketten
+  // blir konsekvent med betyget.
+  const diversitySource = analysis.detailedBreakdown ?? analysis.categoryBreakdown;
+  if (diversitySource?.length) {
+    const n = diversitySource.filter(c => c.weight > 5).length;
     if (n >= 3) strengths.push("Bra riskspridning");
     else warnings.push("Låg riskspridning");
   }
@@ -2008,7 +2002,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
             </div>
             {potentialGainKr !== null && (
               <div className="text-right">
-                <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-slate-400 mb-1">Förbättringspotential</p>
+                <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-slate-400 mb-1">Beräknad skillnad</p>
                 <p className="text-2xl font-bold text-green-700">+{Math.round(potentialGainKr).toLocaleString("sv-SE")} kr</p>
                 <p className="text-xs text-slate-400 mt-0.5">per år{assumed ? " (vid 100 000 kr)" : ""}</p>
               </div>
@@ -2058,7 +2052,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
           </div>
           {potentialGainKr !== null && (
             <div className="sm:text-right">
-              <p className="text-xs font-semibold tracking-[0.08em] uppercase text-ink-3 mb-2">Förbättringspotential</p>
+              <p className="text-xs font-semibold tracking-[0.08em] uppercase text-ink-3 mb-2">Beräknad skillnad</p>
               <p className="text-2xl sm:text-3xl font-bold text-pos tabular-nums">+{Math.round(potentialGainKr).toLocaleString("sv-SE")} kr</p>
               <p className="text-xs text-ink-3 mt-1">per år{assumed ? " (vid 100 000 kr)" : ""}</p>
               <p className="text-[10px] text-ink-4 mt-0.5">inkl. historisk avkastningsskillnad</p>
@@ -2203,8 +2197,8 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
       {((analysis.swapSuggestions?.length ?? 0) > 0 ||
         (analysis.bestInCategory?.length ?? 0) > 0) && (
         <section className="relative bg-white rounded-xl p-6 sm:p-8" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)", border: "1px solid #D9E0E6" }}>
-            <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-1">Fondbytesförslag</p>
-            <p className="text-lg font-semibold text-ink mb-4">Förslag på förbättringar</p>
+            <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-1">Jämförbara alternativ</p>
+            <p className="text-lg font-semibold text-ink mb-4">Alternativ med starkare nyckeltal</p>
 
             {showBlur ? (
             <div>
@@ -2227,7 +2221,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                       </div>
                     </div>
                     <div className="min-w-0 sm:flex-1 sm:text-right">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-accent mb-1">Föreslagen</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-accent mb-1">Alternativ</p>
                       <p className="text-sm font-semibold text-ink leading-snug">{sug}</p>
                     </div>
                   </div>
@@ -2238,8 +2232,8 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
               <div className="no-print absolute inset-0 z-10 flex flex-col items-center justify-center text-center px-6 space-y-3">
                 <p className="text-base font-semibold text-ink leading-snug max-w-md">
                   {potentialGainKr !== null
-                    ? `Logga in för att se fondbytena med +${Math.round(potentialGainKr).toLocaleString("sv-SE")} kr/år i förbättringspotential`
-                    : "Logga in för att se personliga fondbytesförslag"}
+                    ? `Logga in för att se jämförbara alternativ med +${Math.round(potentialGainKr).toLocaleString("sv-SE")} kr/år i beräknad skillnad`
+                    : "Logga in för att se jämförbara fondalternativ"}
                 </p>
                 {potentialGainKr !== null && assumed && (
                   <p className="text-xs text-ink-3 max-w-sm">Beräknat på ett antaget sparkapital om 100 000 kr.</p>
@@ -2348,19 +2342,19 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                             </div>
                             <div className="min-w-0 sm:flex-1 sm:text-right">
                               <p className="text-[10px] font-semibold uppercase tracking-wider text-accent mb-1">
-                                {isConsolidate ? "Öka i" : "Föreslagen"}
+                                {isConsolidate ? "Alternativ vägning" : "Alternativ"}
                               </p>
                               <p className="text-sm font-semibold text-ink leading-snug break-words">{suggested.name}</p>
                             </div>
                             <div className="absolute top-0 right-0 sm:static sm:shrink-0 sm:pt-0.5">
-                              <InfoPopover title="Jämförelse" width={340} ariaLabel="Visa jämförelse mellan nuvarande och föreslagen fond">
+                              <InfoPopover title="Jämförelse" width={340} ariaLabel="Visa jämförelse mellan nuvarande fond och alternativ fond">
                                 {suggested.category && (
                                   <p className="text-[11px] text-slate-400 mb-2.5">{suggested.category}</p>
                                 )}
                                 <div className="grid grid-cols-[1fr_auto_auto] gap-x-5 gap-y-2 items-baseline">
                                   <span />
                                   <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400 text-right whitespace-nowrap">Nuvarande</span>
-                                  <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400 text-right whitespace-nowrap">{isConsolidate ? "Öka i" : "Föreslagen"}</span>
+                                  <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400 text-right whitespace-nowrap">{isConsolidate ? "Alternativ vikt" : "Alternativ"}</span>
 
                                   <span className="text-xs text-slate-500">Avgift</span>
                                   <span className="text-xs font-semibold text-ink tabular-nums text-right">{curCost !== null ? `${curCost.toFixed(2)}%` : "–"}</span>
@@ -2419,7 +2413,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
 
       {showBlur && (analysis.swapSuggestions?.length ?? 0) === 0 && (analysis.bestInCategory?.length ?? 0) === 0 && (
         <section className="no-print bg-white rounded-xl p-6 sm:p-8 text-center space-y-3" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)", border: "1px solid #D9E0E6" }}>
-          <p className="text-base font-semibold text-ink leading-snug max-w-md mx-auto">Logga in för att se personliga fondbytesförslag</p>
+          <p className="text-base font-semibold text-ink leading-snug max-w-md mx-auto">Logga in för att se jämförbara fondalternativ</p>
           <p className="text-xs text-ink-4">Gratis · Klart på under en minut</p>
           <button
             onClick={onLoginClick}
@@ -2455,7 +2449,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
 }
 
 // ── InfoPopover ───────────────────────────────────────────────────────────────
-// Gemensam infoknapp för nyckeltal och bytesförslag. På pekarenheter (hover)
+// Gemensam infoknapp för nyckeltal och jämförelser. På pekarenheter (hover)
 // visas en tooltip som anchoras under knappen och stängs vid tap utanför,
 // Escape, scroll eller resize. På touch öppnas istället en bottom sheet med
 // dimmer och stängkryss — den stängs INTE av scroll, så man hinner läsa klart.
@@ -2635,8 +2629,8 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
 
   return (
     <section className="bg-white rounded-xl p-6 sm:p-8" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)", border: "1px solid #D9E0E6" }}>
-      <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-1">Föreslagen portfölj</p>
-      <p className="text-lg font-semibold text-ink mb-6">Nyckeltal efter föreslagna byten</p>
+      <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-1">Alternativt scenario</p>
+      <p className="text-lg font-semibold text-ink mb-6">Nyckeltal med jämförbara alternativ</p>
 
       <div className="mb-6">
         <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-3">Fondinnehav</p>
@@ -2661,7 +2655,7 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
               <tr className="bg-slate-50 text-[10px] sm:text-xs font-semibold tracking-[0.06em] uppercase text-slate-400">
                 <th className="text-left py-2.5 px-3 sm:px-4 font-semibold">Nyckeltal</th>
                 <th className="text-right py-2.5 px-2 sm:px-4 font-semibold">Nuvarande</th>
-                <th className="text-right py-2.5 px-2 sm:px-4 font-semibold">Efter byten</th>
+                <th className="text-right py-2.5 px-2 sm:px-4 font-semibold">Scenario</th>
                 <th className="text-right py-2.5 px-3 sm:px-4 font-semibold">Förändring</th>
               </tr>
             </thead>
@@ -2701,7 +2695,7 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-ink">Avgiftsbesparing</p>
-                  <p className="text-xs text-slate-400">Garanterad vid fondbyte</p>
+                  <p className="text-xs text-slate-400">Beräknad utifrån redovisad avgift</p>
                 </div>
                 <p className={`text-base font-bold tabular-nums ${feeSavingsKr >= 0 ? "text-pos" : "text-red-500"}`}>
                   {`${feeSavingsKr >= 0 ? "+" : ""}${Math.round(feeSavingsKr).toLocaleString("sv-SE")} kr`}
@@ -2721,7 +2715,7 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
             )}
           </div>
           <p className="text-[10px] text-slate-400 leading-snug border-t border-slate-200 pt-3">
-            Avgiftsbesparing realiseras vid fondbyte. Historisk avkastning är ingen garanti för framtida resultat — avkastningssiffran ska ses som referens, inte som en prognos.
+            Avgiftsbesparing är en beräkning utifrån redovisade avgifter. Kontrollera alltid aktuella villkor hos fondbolag eller depåplattform. Historisk avkastning är ingen garanti för framtida resultat — avkastningssiffran ska ses som referens, inte som en prognos.
           </p>
         </div>
       )}
@@ -2746,7 +2740,7 @@ function OptimalPortfolioProjection({ current, portfolioValue }: { current: Curr
         </div>
         <div>
           <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-0.5">Analys</p>
-          <p className="text-lg font-semibold text-ink">Din portfölj är redan optimal</p>
+          <p className="text-lg font-semibold text-ink">Vi hittar inget tydligt starkare alternativ just nu</p>
         </div>
       </div>
 
