@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import { Plus, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
 
@@ -81,11 +83,19 @@ export default function Header() {
     return `text-sm font-semibold transition-colors ${active ? "text-accent" : "text-ink-2 hover:text-ink"}`;
   }
 
-  function bottomTabClass(href: string, exact = false) {
-    const active = exact ? pathname === href : (pathname === href || (href !== "/" && pathname.startsWith(href)));
-    return `flex flex-col items-center gap-0.5 py-2 px-2 flex-1 transition-colors min-w-0 ${
-      active ? "text-accent" : "text-ink-4"
+  function isActivePath(href: string) {
+    return pathname === href || pathname.startsWith(href + "/");
+  }
+
+  function mobileActionClass(href: string) {
+    const active = isActivePath(href);
+    return `mobile-glass-button relative flex min-h-10 flex-1 items-center justify-center gap-2 rounded-[14px] px-3 text-sm font-semibold transition-colors duration-200 ${
+      active ? "text-accent" : "text-ink-2 hover:text-ink"
     }`;
+  }
+
+  function mobileAriaCurrent(href: string) {
+    return isActivePath(href) ? "page" : undefined;
   }
 
   function notifyBeforeLogin() {
@@ -142,45 +152,33 @@ export default function Header() {
         </div>
       </header>
 
-      {/* Mobile bottom navigation */}
-      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-sm border-t border-slate-200/70 flex pb-safe">
-        <Link href="/" className={bottomTabClass("/", true)}>
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-          </svg>
-          <span className="text-[11px] font-semibold">Hem</span>
-        </Link>
-        <Link href="/analyze" className={bottomTabClass("/analyze")}>
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
-          </svg>
-          <span className="text-[11px] font-semibold">Analysera</span>
-        </Link>
-        <Link href="/bygg-portfolj" className={bottomTabClass("/bygg-portfolj")}>
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span className="text-[11px] font-semibold">Bygg</span>
-        </Link>
-        {user && (
-          <Link href="/portfolios" className={bottomTabClass("/portfolios")}>
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776" />
-            </svg>
-            <span className="text-[11px] font-semibold">Portföljer</span>
+      {/* Mobile quick actions */}
+      <motion.nav layoutRoot aria-label="Snabbnavigering" className="sm:hidden fixed inset-x-3 bottom-3 z-50 pointer-events-none pb-safe">
+        <div className="mobile-liquid-glass pointer-events-auto mx-auto flex max-w-sm items-center gap-1.5 rounded-[20px] p-1.5">
+          <Link href="/analyze" aria-current={mobileAriaCurrent("/analyze")} className={mobileActionClass("/analyze")}>
+            {isActivePath("/analyze") && (
+              <motion.span
+                layoutId="mobileNavGlass"
+                className="mobile-glass-pill"
+                transition={{ type: "spring", bounce: 0.3, duration: 0.77 }}
+              />
+            )}
+            <Search className="relative z-[1] h-4 w-4" strokeWidth={2} aria-hidden="true" />
+            <span className="relative z-[1]">Analysera</span>
           </Link>
-        )}
-        <Link
-          href={user ? "/account" : loginHref}
-          onClick={user ? undefined : notifyBeforeLogin}
-          className={bottomTabClass(user ? "/account" : "/login")}
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-          </svg>
-          <span className="text-[11px] font-semibold">Konto</span>
-        </Link>
-      </nav>
+          <Link href="/bygg-portfolj" aria-current={mobileAriaCurrent("/bygg-portfolj")} className={mobileActionClass("/bygg-portfolj")}>
+            {isActivePath("/bygg-portfolj") && (
+              <motion.span
+                layoutId="mobileNavGlass"
+                className="mobile-glass-pill"
+                transition={{ type: "spring", bounce: 0.3, duration: 0.7 }}
+              />
+            )}
+            <Plus className="relative z-[1] h-4 w-4" strokeWidth={2} aria-hidden="true" />
+            <span className="relative z-[1]">Bygg portfölj</span>
+          </Link>
+        </div>
+      </motion.nav>
     </>
   );
 }
