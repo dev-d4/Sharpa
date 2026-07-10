@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, RotateCcw } from "lucide-react";
 import { createClient } from "@/lib/supabase-browser";
-import { RISK_LABELS, type RiskLevel } from "@/lib/risk";
+import { RISK_LABELS, RISK_EQUITY, type RiskLevel } from "@/lib/risk";
 import type { User } from "@supabase/supabase-js";
 import DonutChart from "@/components/ui/DonutChart";
 import { CHART_PALETTE } from "@/lib/chart-palette";
@@ -16,7 +16,7 @@ type Platform   = "avanza" | "nordnet" | "both";
 type Horizon    = "short" | "medium" | "long" | "verylong";
 type Reaction   = "sell" | "wait" | "buy";
 type Management = "passive" | "mixed" | "active";
-type Step       = "platform" | "horizon" | "reaction" | "q3" | "q4" | "selections" | "management" | "results";
+type Step       = "platform" | "risk" | "horizon" | "reaction" | "q3" | "q4" | "selections" | "management" | "results";
 
 export type SelectionId =
   | "global" | "sweden" | "usa" | "europe" | "nordic" | "emerging" | "asia"
@@ -31,6 +31,7 @@ type Answers = {
   reaction:      Reaction    | null;
   q3:            number      | null;   // 1–5: Hur viktig är investeringen?
   q4:            number      | null;   // 1–5: Vad är viktigast?
+  riskDirect:    number      | null;   // 1–5: direkt vald risknivå (SIMPLE_RISK_FLOW)
   selections:    SelectionId[] | null;
   priorities:    Record<string, number> | null;
   management:    Management  | null;
@@ -78,9 +79,28 @@ type BuildResult = {
   fundExplanations:  FundExplanation[];
 };
 
+type ExistingPortfolio = {
+  id: string;
+  name: string;
+};
+
 // ── Option data ───────────────────────────────────────────────────────────────
 
-const STEPS: Step[] = ["horizon", "reaction", "q3", "q4", "selections", "management", "platform"];
+// Slå om till true för enkel-fråge-varianten (en ren risk-preferensfråga i stället
+// för fyra profileringsfrågor). false = det ursprungliga fyra-frågeflödet.
+const SIMPLE_RISK_FLOW = true;
+
+const STEPS: Step[] = SIMPLE_RISK_FLOW
+  ? ["risk", "selections", "management", "platform"]
+  : ["horizon", "reaction", "q3", "q4", "selections", "management", "platform"];
+
+const RISK_OPTIONS: { value: number; label: string; desc: string }[] = [
+  { value: 1, label: RISK_LABELS[1], desc: `${RISK_EQUITY[1]} · minst svängningar` },
+  { value: 2, label: RISK_LABELS[2], desc: RISK_EQUITY[2] },
+  { value: 3, label: RISK_LABELS[3], desc: `${RISK_EQUITY[3]} · jämn mix aktier/räntor` },
+  { value: 4, label: RISK_LABELS[4], desc: RISK_EQUITY[4] },
+  { value: 5, label: RISK_LABELS[5], desc: `${RISK_EQUITY[5]} · störst svängningar` },
+];
 
 const PLATFORM_OPTIONS: { value: Platform; label: string; desc: string }[] = [
   { value: "avanza",  label: "Avanza",  desc: "Jag handlar fonder via Avanza" },
@@ -105,10 +125,10 @@ const Q4_OPTIONS: { value: number; label: string; desc: string }[] = [
 ];
 
 const HORIZON_OPTIONS: { value: Horizon; label: string; desc: string }[] = [
-  { value: "short",    label: "Under 3 år",   desc: "Kort sikt — kapitalet kan behövas snart" },
+  { value: "short",    label: "Under 3 år",   desc: "Kort sikt" },
   { value: "medium",   label: "3–7 år",       desc: "Mellanlång sikt" },
-  { value: "long",     label: "7–15 år",      desc: "Lång sikt — kapitalet är bundet länge" },
-  { value: "verylong", label: "Mer än 15 år", desc: "Mycket lång sikt, t.ex. pension" },
+  { value: "long",     label: "7–15 år",      desc: "Lång sikt" },
+  { value: "verylong", label: "Mer än 15 år", desc: "Mycket lång sikt" },
 ];
 
 const REACTION_OPTIONS: { value: Reaction; label: string; desc: string }[] = [
@@ -158,19 +178,20 @@ const MANAGEMENT_OPTIONS: { value: Management; label: string; desc: string }[] =
 const STEP_META: Record<Step, { title: string; subtitle: string }> = {
   platform:   { title: "Sista steget — var handlar du fonder?",             subtitle: "Vi anpassar fondvalen till tillgängliga fonder på din plattform" },
   horizon:    { title: "Hur länge planerar du att spara?",                   subtitle: "Längre horisont ger utrymme för mer risk" },
-  reaction:   { title: "Portföljen faller 20% — vad gör du?",               subtitle: "Din faktiska reaktion avslöjar din verkliga risktolerans" },
-  q3:         { title: "Hur viktig är den här investeringen för dig?",       subtitle: "Tänk på konsekvenserna om du förlorar en stor del av kapitalet" },
+  reaction:   { title: "Portföljen faller 20% — vad skulle du välja?",       subtitle: "Ditt svar hjälper oss välja aktieandel i exemplet" },
+  q3:         { title: "Hur mycket svängningar vill du utgå från?",           subtitle: "Välj den nivå av kursrörelser exemplet ska bygga på" },
   q4:         { title: "Vad är viktigast för dig?",                          subtitle: "Välj det alternativ som bäst speglar din inställning till risk och avkastning" },
   selections: { title: "Vad vill du investera i?",                          subtitle: "Välj marknader, branscher och stilar — justera sedan viktningen längst ner" },
   management: { title: "Aktiv eller passiv förvaltning?",                   subtitle: "Indexfonder har generellt lägre avgifter och slår ofta aktiva fonder" },
-  results:    { title: "Din föreslagna portfölj",                           subtitle: "" },
+  risk:       { title: "Vilken risknivå vill du se ett exempel för?",        subtitle: "Högre risk = större andel aktier och större svängningar" },
+  results:    { title: "Ditt illustrativa portföljexempel",                  subtitle: "" },
 };
 
-const EMPTY: Answers = { platform: null, horizon: null, reaction: null, q3: null, q4: null, selections: null, priorities: null, management: null, equityOverride: null };
+const EMPTY: Answers = { platform: null, horizon: null, reaction: null, q3: null, q4: null, riskDirect: null, selections: null, priorities: null, management: null, equityOverride: null };
 
 // ── Auto-suggestion ───────────────────────────────────────────────────────────
 
-function computeRiskScoreClient(a: Answers): number {
+function scoreFromFourQuestions(a: Answers): number {
   const q1Map: Record<string, number> = { short: 2, medium: 3, long: 4, verylong: 5 };
   const q2Map: Record<string, number> = { sell: 1, wait: 3, buy: 5 };
   const v1 = (a.horizon  && q1Map[a.horizon])  ? q1Map[a.horizon]  : 3;
@@ -178,6 +199,16 @@ function computeRiskScoreClient(a: Answers): number {
   const v3 = a.q3 ?? 3;
   const v4 = a.q4 ?? 3;
   return Math.max(1, Math.min(5, Math.round((v1 + v2 + v3 + v4) / 4)));
+}
+
+function computeRiskScoreClient(a: Answers): number {
+  // Simple flow: the single risk answer decides. Fall back to the four-question
+  // score when riskDirect is unset (e.g. a logged-in user prefilled from a saved
+  // risk profile) so the auto-selection still lands on the right level.
+  if (SIMPLE_RISK_FLOW && a.riskDirect != null) {
+    return Math.max(1, Math.min(5, a.riskDirect));
+  }
+  return scoreFromFourQuestions(a);
 }
 
 const AUTO_EXPLANATION: Record<number, string> = {
@@ -242,7 +273,7 @@ function OptionCard({ label, desc, onClick }: {
       className="w-full px-4 py-4 rounded-[10px] border text-left transition-colors border-line bg-white hover:border-accent"
     >
       <p className="text-[15px] font-semibold text-slate-800">{label}</p>
-      <p className="text-sm text-slate-400 mt-0.5">{desc}</p>
+      <p className="text-sm text-slate-500 mt-1 leading-snug">{desc}</p>
     </button>
   );
 }
@@ -252,7 +283,7 @@ function OptionCard({ label, desc, onClick }: {
 export default function BuilderClient() {
   const router = useRouter();
 
-  const [step, setStep]             = useState<Step>("horizon");
+  const [step, setStep]             = useState<Step>(STEPS[0]);
   const [answers, setAnswers]       = useState<Answers>(EMPTY);
   const [pending, setPending]       = useState<SelectionId[]>([]);
   const [priorities, setPriorities] = useState<Record<string, number>>({});
@@ -267,19 +298,18 @@ export default function BuilderClient() {
   const [autoExplanation, setAutoExplanation] = useState<string | null>(null);
   const [showManualSelections, setShowManualSelections] = useState(false);
   const [user, setUser]             = useState<User | null>(null);
-  const [prefilled, setPrefilled]   = useState<Set<keyof Answers>>(new Set());
   const [showSaveForm, setShowSaveForm] = useState(false);
   const [savingName, setSavingName] = useState("");
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [duplicatePortfolio, setDuplicatePortfolio] = useState<ExistingPortfolio | null>(null);
   const [authModal, setAuthModal]   = useState(false);
   const [authEmail, setAuthEmail]   = useState("");
   const [authSent, setAuthSent]     = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError]   = useState<string | null>(null);
+  const saveNameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const Q1_TO_HORIZON: Record<number, Horizon> = { 1: "short", 2: "short", 3: "medium", 4: "long", 5: "verylong" };
-    const Q2_TO_REACTION: Record<number, Reaction> = { 1: "sell", 2: "sell", 3: "wait", 4: "buy", 5: "buy" };
 
     // Restore quiz state saved before login redirect — apply immediately for instant UI
     let savedAnswers: Answers | null = null;
@@ -288,13 +318,24 @@ export default function BuilderClient() {
       const saved = sessionStorage.getItem("fondanalys_builder_quiz");
       if (saved) {
         sessionStorage.removeItem("fondanalys_builder_quiz");
-        const { answers: a, result: r, priorities: p, localEquity: le } = JSON.parse(saved);
+        const {
+          answers: a,
+          result: r,
+          priorities: p,
+          localEquity: le,
+          step: savedStep,
+          pending: savedPending,
+          slotIndices: savedSlotIndices,
+        } = JSON.parse(saved);
         if (a) { setAnswers(a); savedAnswers = a; }
         if (p) setPriorities(p);
-        if (a?.selections) setPending(a.selections);
+        if (savedPending?.length) setPending(savedPending);
+        else if (a?.selections) setPending(a.selections);
+        if (savedStep && STEPS.includes(savedStep)) setStep(savedStep);
         if (r) {
           setResult(r);
           setLocalEquity(le ?? r.equityPct);
+          setSlotIndices(savedSlotIndices?.length ? savedSlotIndices : r.portfolio.map(() => 0));
           setStep("results");
           setShowSaveForm(true);
           savedRiskScore = r.riskScore ?? null;
@@ -304,35 +345,13 @@ export default function BuilderClient() {
 
     const supabase = createClient();
 
-    supabase.auth.getUser().then(async ({ data }) => {
+    supabase.auth.getUser().then(({ data }) => {
       setUser(data.user);
-      if (data.user) {
-        try {
-          const res = await fetch("/api/risk-profile");
-          if (res.ok) {
-            const profile = await res.json();
-            // Only prefill from risk profile if no saved quiz state
-            if (!savedAnswers && profile?.q1 && profile?.q2) {
-              const horizon  = Q1_TO_HORIZON[profile.q1];
-              const reaction = Q2_TO_REACTION[profile.q2];
-              const q3 = profile.q3 ?? null;
-              const q4 = profile.q4 ?? null;
-              if (horizon && reaction) {
-                setAnswers((prev) => ({ ...prev, horizon, reaction, q3, q4 }));
-                const prefilledKeys: (keyof Answers)[] = ["horizon", "reaction"];
-                if (q3) prefilledKeys.push("q3");
-                if (q4) prefilledKeys.push("q4");
-                setPrefilled(new Set(prefilledKeys));
-              }
-            }
-            // If the saved result used a different risk score than what we'd now compute,
-            // regenerate so the portfolio reflects the current formula output.
-            if (savedAnswers && savedRiskScore !== null) {
-              const recomputedScore = computeRiskScoreClient(savedAnswers);
-              if (recomputedScore !== savedRiskScore) submit(savedAnswers, true);
-            }
-          }
-        } catch { /* ignore */ }
+      // If the saved result used a different risk score than what we'd now compute,
+      // regenerate so the portfolio reflects the current formula output.
+      if (data.user && savedAnswers && savedRiskScore !== null) {
+        const recomputedScore = computeRiskScoreClient(savedAnswers);
+        if (recomputedScore !== savedRiskScore) submit(savedAnswers, true);
       }
     });
 
@@ -381,8 +400,22 @@ export default function BuilderClient() {
     };
   }, []);
 
+  const saveBuilderSession = useCallback(() => {
+    try {
+      sessionStorage.setItem(
+        "fondanalys_builder_quiz",
+        JSON.stringify({ answers, result, priorities, localEquity, step, pending, slotIndices })
+      );
+    } catch { /* ignore */ }
+  }, [answers, result, priorities, localEquity, step, pending, slotIndices]);
+
+  useEffect(() => {
+    window.addEventListener("fondanalys:before-login", saveBuilderSession);
+    return () => window.removeEventListener("fondanalys:before-login", saveBuilderSession);
+  }, [saveBuilderSession]);
+
   function openAuthModal() {
-    try { sessionStorage.setItem("fondanalys_builder_quiz", JSON.stringify({ answers, result, priorities, localEquity })); } catch { /* ignore */ }
+    saveBuilderSession();
     setAuthModal(true);
   }
 
@@ -391,7 +424,7 @@ export default function BuilderClient() {
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent("/bygg-portfolj")}`,
+        redirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent("/bygg-portfolj")}&skip_onboarding=1`,
         queryParams: { prompt: "select_account" },
       },
     });
@@ -404,11 +437,18 @@ export default function BuilderClient() {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
       email: authEmail,
-      options: { emailRedirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent("/bygg-portfolj")}` },
+      options: { emailRedirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent("/bygg-portfolj")}&skip_onboarding=1` },
     });
     if (error) setAuthError(error.message);
     else setAuthSent(true);
     setAuthLoading(false);
+  }
+
+  function resetSaveState() {
+    setShowSaveForm(false);
+    setSavingName("");
+    setSaveStatus("idle");
+    setDuplicatePortfolio(null);
   }
 
   // Auto-apply selections when entering that step (if not already set)
@@ -472,7 +512,7 @@ export default function BuilderClient() {
   async function submit(next: Answers, loggedIn?: boolean) {
     setStep("results");
     setLoading(true);
-    setShowSaveForm(false);
+    resetSaveState();
     setError(null);
     try {
       const res  = await fetch("/api/build-portfolio", {
@@ -500,16 +540,6 @@ export default function BuilderClient() {
     if (idx > 0) setStep(STEPS[idx - 1]);
   }
 
-  function restart() {
-    setDirection(-1);
-    setStep("platform");
-    setAnswers(EMPTY);
-    setPending([]);
-    setPriorities({});
-    setResult(null);
-    setError(null);
-  }
-
   function activePortfolio() {
     if (!result) return [];
     return result.portfolio.map((slot, si) => {
@@ -518,11 +548,26 @@ export default function BuilderClient() {
     });
   }
 
-  async function handleSave() {
+  async function handleSave(overwrite = false) {
     if (!savingName.trim() || !result || !answers.platform) return;
     setSaveStatus("saving");
     try {
       const custodian = answers.platform === "avanza" ? "avanza" : answers.platform === "nordnet" ? "nordnet" : "övrigt";
+      const normalizedName = savingName.trim().toLocaleLowerCase("sv-SE");
+      let existing = duplicatePortfolio;
+      if (!overwrite) {
+        const portfoliosRes = await fetch("/api/portfolios");
+        if (portfoliosRes.ok) {
+          const portfolios = await portfoliosRes.json() as ExistingPortfolio[];
+          existing = portfolios.find((p) => p.name.trim().toLocaleLowerCase("sv-SE") === normalizedName) ?? null;
+          if (existing) {
+            setDuplicatePortfolio(existing);
+            setSaveStatus("idle");
+            return;
+          }
+        }
+      }
+
       const active    = activePortfolio();
       const holdings  = active.map((f) => ({ isin: f.isin, name: f.name, weight: f.weight }));
       const validEntries = active.map((f) => ({ isin: f.isin, weight: f.weight }));
@@ -532,8 +577,9 @@ export default function BuilderClient() {
         body: JSON.stringify({ custodian, entries: validEntries }),
       });
       const analysis = await analysisRes.json();
-      const saveRes  = await fetch("/api/portfolios", {
-        method: "POST",
+
+      const saveRes  = await fetch(overwrite && existing ? `/api/portfolios/${existing.id}` : "/api/portfolios", {
+        method: overwrite && existing ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: savingName.trim(), custodian, holdings, analysis }),
       });
@@ -541,13 +587,14 @@ export default function BuilderClient() {
       setSaveStatus("saved");
       setShowSaveForm(false);
       setSavingName("");
+      setDuplicatePortfolio(null);
     } catch {
       setSaveStatus("error");
     }
   }
 
   function resetQuiz() {
-    setStep("horizon");
+    setStep(STEPS[0]);
     setAnswers(EMPTY);
     setPending([]);
     setPriorities({});
@@ -594,8 +641,9 @@ export default function BuilderClient() {
     return acc;
   }, {});
 
-  // Live preview panel data
-  const previewRiskScore = computeRiskScoreClient(answers);
+  // Live preview panel data — reflects the answers given so far.
+  const confirmedAnswers: Answers = answers;
+  const previewRiskScore = computeRiskScoreClient(confirmedAnswers);
   const previewEquity = previewRiskScore === 1 ? 20 : previewRiskScore === 2 ? 35 : previewRiskScore === 3 ? 55 : previewRiskScore === 4 ? 75 : 100;
   const showPreview = !isResults && stepIdx >= 1;
 
@@ -606,7 +654,7 @@ export default function BuilderClient() {
       <div className="text-center mb-8">
         <h1 className="font-heading text-2xl sm:text-3xl font-bold text-slate-900">Bygg din portfölj</h1>
         <p className="text-slate-500 mt-2 text-sm">
-          Svara på {totalSteps} frågor — vi föreslår en komplett portfölj
+          Svara på {totalSteps} frågor — vi visar ett komplett portföljexempel
         </p>
       </div>
 
@@ -657,141 +705,29 @@ export default function BuilderClient() {
               <OptionCard key={o.value} label={o.label} desc={o.desc} onClick={() => pick("platform", o.value)} />
             ))}
 
+            {step === "risk" && RISK_OPTIONS.map((o) => (
+              <OptionCard key={o.value} label={o.label} desc={o.desc} onClick={() => pick("riskDirect", o.value)} />
+            ))}
+
             {/* Horizon */}
-            {step === "horizon" && (
-              <>
-                {prefilled.has("horizon") && answers.horizon && (
-                  <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-xl px-4 py-2.5 mb-1">
-                    <p className="text-xs text-blue-700 font-medium">Förifylld från din riskprofil</p>
-                    <button
-                      type="button"
-                      onClick={() => pick("horizon", answers.horizon!)}
-                      className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors"
-                    >
-                      Bekräfta →
-                    </button>
-                  </div>
-                )}
-                {HORIZON_OPTIONS.map((o) => {
-                  const isPreSelected = prefilled.has("horizon") && answers.horizon === o.value;
-                  return isPreSelected ? (
-                    <button
-                      key={o.value}
-                      type="button"
-                      onClick={() => pick("horizon", o.value)}
-                      className="w-full px-4 py-3.5 rounded-[10px] border text-left transition-colors border-accent bg-info"
-                    >
-                      <p className="text-sm font-semibold text-blue-700">{o.label}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">{o.desc}</p>
-                    </button>
-                  ) : (
-                    <OptionCard key={o.value} label={o.label} desc={o.desc} onClick={() => pick("horizon", o.value)} />
-                  );
-                })}
-              </>
-            )}
+            {step === "horizon" && HORIZON_OPTIONS.map((o) => (
+              <OptionCard key={o.value} label={o.label} desc={o.desc} onClick={() => pick("horizon", o.value)} />
+            ))}
 
             {/* Reaction */}
-            {step === "reaction" && (
-              <>
-                {prefilled.has("reaction") && answers.reaction && (
-                  <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-xl px-4 py-2.5 mb-1">
-                    <p className="text-xs text-blue-700 font-medium">Förifylld från din riskprofil</p>
-                    <button
-                      type="button"
-                      onClick={() => pick("reaction", answers.reaction!)}
-                      className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors"
-                    >
-                      Bekräfta →
-                    </button>
-                  </div>
-                )}
-                {REACTION_OPTIONS.map((o) => {
-                  const isPreSelected = prefilled.has("reaction") && answers.reaction === o.value;
-                  return isPreSelected ? (
-                    <button
-                      key={o.value}
-                      type="button"
-                      onClick={() => pick("reaction", o.value)}
-                      className="w-full px-4 py-3.5 rounded-[10px] border text-left transition-colors border-accent bg-info"
-                    >
-                      <p className="text-sm font-semibold text-blue-700">{o.label}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">{o.desc}</p>
-                    </button>
-                  ) : (
-                    <OptionCard key={o.value} label={o.label} desc={o.desc} onClick={() => pick("reaction", o.value)} />
-                  );
-                })}
-              </>
-            )}
+            {step === "reaction" && REACTION_OPTIONS.map((o) => (
+              <OptionCard key={o.value} label={o.label} desc={o.desc} onClick={() => pick("reaction", o.value)} />
+            ))}
 
             {/* Q3 — how important is the investment */}
-            {step === "q3" && (
-              <>
-                {prefilled.has("q3") && answers.q3 !== null && (
-                  <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-xl px-4 py-2.5 mb-1">
-                    <p className="text-xs text-blue-700 font-medium">Förifylld från din riskprofil</p>
-                    <button
-                      type="button"
-                      onClick={() => pick("q3", answers.q3!)}
-                      className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors"
-                    >
-                      Bekräfta →
-                    </button>
-                  </div>
-                )}
-                {Q3_OPTIONS.map((o) => {
-                  const isPreSelected = prefilled.has("q3") && answers.q3 === o.value;
-                  return isPreSelected ? (
-                    <button
-                      key={o.value}
-                      type="button"
-                      onClick={() => pick("q3", o.value)}
-                      className="w-full px-4 py-3.5 rounded-[10px] border text-left transition-colors border-accent bg-info"
-                    >
-                      <p className="text-sm font-semibold text-blue-700">{o.label}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">{o.desc}</p>
-                    </button>
-                  ) : (
-                    <OptionCard key={o.value} label={o.label} desc={o.desc} onClick={() => pick("q3", o.value)} />
-                  );
-                })}
-              </>
-            )}
+            {step === "q3" && Q3_OPTIONS.map((o) => (
+              <OptionCard key={o.value} label={o.label} desc={o.desc} onClick={() => pick("q3", o.value)} />
+            ))}
 
             {/* Q4 — risk vs return priority */}
-            {step === "q4" && (
-              <>
-                {prefilled.has("q4") && answers.q4 !== null && (
-                  <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-xl px-4 py-2.5 mb-1">
-                    <p className="text-xs text-blue-700 font-medium">Förifylld från din riskprofil</p>
-                    <button
-                      type="button"
-                      onClick={() => pick("q4", answers.q4!)}
-                      className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors"
-                    >
-                      Bekräfta →
-                    </button>
-                  </div>
-                )}
-                {Q4_OPTIONS.map((o) => {
-                  const isPreSelected = prefilled.has("q4") && answers.q4 === o.value;
-                  return isPreSelected ? (
-                    <button
-                      key={o.value}
-                      type="button"
-                      onClick={() => pick("q4", o.value)}
-                      className="w-full px-4 py-3.5 rounded-[10px] border text-left transition-colors border-accent bg-info"
-                    >
-                      <p className="text-sm font-semibold text-blue-700">{o.label}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">{o.desc}</p>
-                    </button>
-                  ) : (
-                    <OptionCard key={o.value} label={o.label} desc={o.desc} onClick={() => pick("q4", o.value)} />
-                  );
-                })}
-              </>
-            )}
+            {step === "q4" && Q4_OPTIONS.map((o) => (
+              <OptionCard key={o.value} label={o.label} desc={o.desc} onClick={() => pick("q4", o.value)} />
+            ))}
 
             {/* Selections — auto-suggested by default */}
             {step === "selections" && (
@@ -807,7 +743,7 @@ export default function BuilderClient() {
                 {/* Auto-selected chips — shown when not in manual mode */}
                 {!showManualSelections && (
                   <div className="space-y-2">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Föreslagna kategorier</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Exempelkategorier</p>
                     <div className="flex flex-wrap gap-2">
                       {pending.map((id) => {
                         const opt = SELECTION_OPTIONS.find((o) => o.value === id)!;
@@ -841,7 +777,7 @@ export default function BuilderClient() {
                       onClick={() => setShowManualSelections(false)}
                       className="text-xs text-blue-600 hover:text-blue-800 transition-colors mb-1"
                     >
-                      ← Tillbaka till föreslagen mix
+                      ← Tillbaka till exempelmix
                     </button>
 
                     <div className="flex flex-col sm:grid sm:grid-cols-2 sm:gap-4 sm:items-start gap-0">
@@ -866,7 +802,7 @@ export default function BuilderClient() {
                                     }`}
                                   >
                                     <p className={`text-sm font-semibold leading-snug ${selected ? "text-blue-700" : "text-slate-800"}`}>{o.label}</p>
-                                    <p className="text-xs text-slate-400 mt-0.5 leading-tight">{o.desc}</p>
+                                    <p className="text-xs text-slate-500 mt-1 leading-snug">{o.desc}</p>
                                   </button>
                                 );
                               })}
@@ -957,6 +893,17 @@ export default function BuilderClient() {
                 {!loading && !error && result && (
                   <div className="space-y-4">
 
+                    {/* ── Icke-rådgivningsnotis — överst där risken är störst ── */}
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Ett exempel — inte en rekommendation</p>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                        Fördelningen är automatiskt genererad utifrån den risknivå du valt och generella
+                        nyckeltal. Den tar inte hänsyn till din personliga ekonomiska situation och utgör
+                        varken investeringsrådgivning eller en personlig rekommendation. Alla investeringsbeslut
+                        fattar du själv och på egen risk.
+                      </p>
+                    </div>
+
                     {/* ── Fondlista & slider — alltid synliga ── */}
                     <div className="space-y-3">
 
@@ -983,15 +930,15 @@ export default function BuilderClient() {
                                   <span className="text-sm font-bold text-accent">{slot.weight}%</span>
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-semibold text-slate-900 truncate">{candidate.name}</p>
-                                  <p className="text-xs text-slate-400">{slot.rationale}</p>
+                                  <p className="text-sm font-semibold text-slate-900 leading-snug break-words sm:truncate">{candidate.name}</p>
+                                  <p className="text-xs text-slate-500 mt-0.5">{slot.rationale}</p>
                                 </div>
                                 <div className="flex items-center gap-1 shrink-0">
-                                  <button type="button" onClick={() => setSlotIndices((prev) => { const n=[...prev]; n[si]=idx-1; return n; })} disabled={!canBack} className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-400 flex items-center justify-center disabled:opacity-20 hover:border-slate-300 hover:text-slate-600 transition-colors">
+                                  <button type="button" onClick={() => { resetSaveState(); setSlotIndices((prev) => { const n=[...prev]; n[si]=idx-1; return n; }); }} disabled={!canBack} className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-400 flex items-center justify-center disabled:opacity-20 hover:border-slate-300 hover:text-slate-600 transition-colors">
                                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
                                   </button>
                                   <span className="text-[10px] text-slate-300 w-6 text-center">{idx+1}/{slot.candidates?.length ?? 1}</span>
-                                  <button type="button" onClick={() => setSlotIndices((prev) => { const n=[...prev]; n[si]=idx+1; return n; })} disabled={!canNext} className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-400 flex items-center justify-center disabled:opacity-20 hover:border-slate-300 hover:text-slate-600 transition-colors">
+                                  <button type="button" onClick={() => { resetSaveState(); setSlotIndices((prev) => { const n=[...prev]; n[si]=idx+1; return n; }); }} disabled={!canNext} className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-400 flex items-center justify-center disabled:opacity-20 hover:border-slate-300 hover:text-slate-600 transition-colors">
                                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
                                   </button>
                                 </div>
@@ -1013,20 +960,17 @@ export default function BuilderClient() {
                         </div>
                         <input type="range" min={0} max={100} step={10} value={localEquity} onChange={(e) => setLocalEquity(Number(e.target.value))} className="w-full accent-accent" />
                         {localEquity !== result.equityPct ? (
-                          <p className="text-xs text-blue-600 text-center font-medium">{localEquity}% aktier / {100 - localEquity}% räntor — klicka "Generera om" för att uppdatera</p>
+                          <p className="text-xs text-blue-600 text-center font-medium">{localEquity}% aktier / {100 - localEquity}% räntor — klicka &ldquo;Generera om&rdquo; för att uppdatera</p>
                         ) : (
                           <p className="text-xs text-slate-400 text-center">Nuvarande: {result.equityPct}% aktier / {100 - result.equityPct}% räntor</p>
                         )}
                       </div>
 
-                      {/* Restart buttons */}
-                      <div className="flex items-center justify-between pt-1">
-                        <button onClick={restart} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 transition-colors">
+                      {/* Restart button */}
+                      <div className="flex items-center justify-center pt-1">
+                        <button onClick={resetQuiz} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 transition-colors">
                           <RotateCcw className="w-3 h-3" />
                           Börja om
-                        </button>
-                        <button onClick={resetQuiz} className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
-                          Börja om med nya svar
                         </button>
                       </div>
                     </div>
@@ -1041,7 +985,7 @@ export default function BuilderClient() {
                           <div className="px-4 py-3.5 space-y-2">
                             <p className="text-xs leading-relaxed text-slate-600">Din portfölj har en god riskspridning mellan regioner och tillgångsslag.</p>
                             <p className="text-xs leading-relaxed text-slate-600">Den genomsnittliga avgiften ligger under snittet för jämförbara portföljer.</p>
-                            <p className="text-xs leading-relaxed text-slate-600">Räntedelen dämpar svängningar och passar den valda risknivån.</p>
+                            <p className="text-xs leading-relaxed text-slate-600">Räntedelen dämpar svängningar och utgår från den valda risknivån.</p>
                             <p className="text-xs leading-relaxed text-slate-600">Fonderna är topprankade i sina kategorier utifrån Sharpe-kvot och avgift.</p>
                             <p className="text-xs leading-relaxed text-slate-600">Spara portföljen för att följa utvecklingen över tid.</p>
                           </div>
@@ -1195,18 +1139,33 @@ export default function BuilderClient() {
                                       <p className="text-sm font-semibold text-slate-900">Spara din portfölj</p>
                                       <p className="text-xs text-slate-400 mt-0.5">Kom åt den när som helst från Mina portföljer.</p>
                                     </div>
-                                    <button onClick={() => setShowSaveForm(true)} className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold py-3.5 rounded-[10px] transition-colors">
+                                    <button onClick={() => { setShowSaveForm(true); requestAnimationFrame(() => saveNameRef.current?.focus({ preventScroll: true })); }} className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold py-3.5 rounded-[10px] transition-colors">
                                       Spara portfölj
                                     </button>
                                   </>
                                 ) : (
                                   <div className="space-y-2">
-                                    <input autoFocus type="text" placeholder="t.ex. ISK, Pension, Barnspar…" value={savingName} onChange={(e) => setSavingName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSave()} className="w-full border border-slate-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                    <input ref={saveNameRef} type="text" placeholder="t.ex. ISK, Pension, Barnspar…" value={savingName} onChange={(e) => { setSavingName(e.target.value); setDuplicatePortfolio(null); setSaveStatus("idle"); }} onKeyDown={(e) => e.key === "Enter" && handleSave()} className="w-full border border-slate-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                    {duplicatePortfolio && (
+                                      <div className="rounded-xl border border-amber-200 bg-warn-soft px-3 py-3 space-y-2">
+                                        <p className="text-xs font-medium text-amber-800">
+                                          Du har redan en portfölj med namnet &ldquo;{duplicatePortfolio.name}&rdquo;. Vill du skriva över den?
+                                        </p>
+                                        <div className="flex gap-2">
+                                          <button type="button" onClick={() => { setDuplicatePortfolio(null); setSaveStatus("idle"); saveNameRef.current?.focus(); }} className="flex-1 rounded-[10px] border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-50">
+                                            Ändra namn
+                                          </button>
+                                          <button type="button" onClick={() => handleSave(true)} disabled={saveStatus === "saving"} className="flex-1 rounded-[10px] bg-accent px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-40">
+                                            Skriv över
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
                                     <div className="flex gap-2">
-                                      <button onClick={handleSave} disabled={!savingName.trim() || saveStatus === "saving"} className="flex-1 bg-accent hover:bg-accent-hover active:bg-accent-press disabled:opacity-40 text-white text-sm font-semibold py-3 rounded-[10px] transition-colors">
+                                      <button onClick={() => handleSave()} disabled={!savingName.trim() || saveStatus === "saving"} className="flex-1 bg-accent hover:bg-accent-hover active:bg-accent-press disabled:opacity-40 text-white text-sm font-semibold py-3 rounded-[10px] transition-colors">
                                         {saveStatus === "saving" ? "Sparar…" : "Spara"}
                                       </button>
-                                      <button onClick={() => { setShowSaveForm(false); setSavingName(""); setSaveStatus("idle"); }} className="text-sm text-slate-400 hover:text-slate-600 px-3 transition-colors">
+                                      <button onClick={() => { setShowSaveForm(false); setSavingName(""); setSaveStatus("idle"); setDuplicatePortfolio(null); }} className="text-sm text-slate-400 hover:text-slate-600 px-3 transition-colors">
                                         Avbryt
                                       </button>
                                     </div>
@@ -1222,8 +1181,8 @@ export default function BuilderClient() {
                               </button>
 
                               <p className="text-[10px] text-slate-400 leading-relaxed">
-                                Förslaget är automatiskt genererat utifrån historiska nyckeltal och utgör inte
-                                finansiell rådgivning. Historisk avkastning är ingen garanti för framtida resultat.
+                                Exemplet är automatiskt genererat utifrån historiska nyckeltal och generella kriterier och utgör inte
+                                finansiell rådgivning eller en personlig rekommendation. Historisk avkastning är ingen garanti för framtida resultat.
                               </p>
                             </div>
                           </div>
@@ -1252,12 +1211,12 @@ export default function BuilderClient() {
       {showPreview && (
         <div className="hidden lg:block sticky top-20 space-y-3">
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Din profil hittills</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Dina val hittills</p>
 
             {/* Risk score bar */}
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-500">Risknivå</span>
+                <span className="text-xs text-slate-500">Din valda risknivå</span>
                 <span className="text-xs font-semibold text-slate-700">{RISK_LABELS[previewRiskScore as RiskLevel]}</span>
               </div>
               <div className="flex gap-1">
@@ -1297,24 +1256,42 @@ export default function BuilderClient() {
               </div>
             )}
 
-            {/* Answers summary */}
+            {/* Answers summary — only confirmed answers, in flow order */}
             <div className="border-t border-slate-100 pt-3 space-y-1">
-              {answers.horizon && (
+              {confirmedAnswers.riskDirect != null && (
+                <p className="text-[10px] text-slate-400 leading-snug">
+                  <span className="font-semibold text-slate-500">Vald risknivå:</span>{" "}
+                  {RISK_OPTIONS.find(o => o.value === confirmedAnswers.riskDirect)?.label}
+                </p>
+              )}
+              {confirmedAnswers.horizon && (
                 <p className="text-[10px] text-slate-400 leading-snug">
                   <span className="font-semibold text-slate-500">Horisont:</span>{" "}
-                  {HORIZON_OPTIONS.find(o => o.value === answers.horizon)?.label}
+                  {HORIZON_OPTIONS.find(o => o.value === confirmedAnswers.horizon)?.label}
                 </p>
               )}
-              {answers.q3 !== null && (
+              {confirmedAnswers.reaction && (
+                <p className="text-[10px] text-slate-400 leading-snug">
+                  <span className="font-semibold text-slate-500">Vid kursfall:</span>{" "}
+                  {REACTION_OPTIONS.find(o => o.value === confirmedAnswers.reaction)?.label}
+                </p>
+              )}
+              {confirmedAnswers.q3 !== null && (
                 <p className="text-[10px] text-slate-400 leading-snug">
                   <span className="font-semibold text-slate-500">Investeringsvikt:</span>{" "}
-                  {Q3_OPTIONS.find(o => o.value === answers.q3)?.label}
+                  {Q3_OPTIONS.find(o => o.value === confirmedAnswers.q3)?.label}
                 </p>
               )}
-              {answers.q4 !== null && (
+              {confirmedAnswers.q4 !== null && (
                 <p className="text-[10px] text-slate-400 leading-snug">
                   <span className="font-semibold text-slate-500">Prioritet:</span>{" "}
-                  {Q4_OPTIONS.find(o => o.value === answers.q4)?.label}
+                  {Q4_OPTIONS.find(o => o.value === confirmedAnswers.q4)?.label}
+                </p>
+              )}
+              {confirmedAnswers.management && (
+                <p className="text-[10px] text-slate-400 leading-snug">
+                  <span className="font-semibold text-slate-500">Förvaltning:</span>{" "}
+                  {MANAGEMENT_OPTIONS.find(o => o.value === confirmedAnswers.management)?.label}
                 </p>
               )}
             </div>
@@ -1395,7 +1372,7 @@ export default function BuilderClient() {
             type="button"
             onClick={confirmSelections}
             disabled={pending.length === 0}
-            className="w-full bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-6 py-4 rounded-xl text-sm transition-colors"
+            className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-6 py-4 rounded-xl text-sm transition-colors"
           >
             {pending.length === 0 ? "Välj minst ett alternativ" : `Fortsätt — ${pending.length} valda`}
           </button>

@@ -5,13 +5,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase-browser";
 import type { SavedPortfolio } from "@/lib/portfolio";
-import type { RiskLevel } from "@/lib/risk";
 import type { SwapSuggestion } from "@/lib/analysis";
 import { computePortfolioScore, SCORE_COLOR_CLASSES } from "@/lib/portfolio-score";
 
 export default function PortfoliosClient() {
   const [portfolios, setPortfolios] = useState<SavedPortfolio[]>([]);
-  const [riskProfile, setRiskProfile] = useState<{ score: RiskLevel; label: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedSwaps, setExpandedSwaps] = useState<Set<string>>(new Set());
   const [expandedDetails, setExpandedDetails] = useState<Set<string>>(new Set());
@@ -23,14 +21,10 @@ export default function PortfoliosClient() {
     const supabase = createClient();
     supabase.auth.getSession().then(({ data }) => {
       if (!data.session?.user) { router.replace("/login"); return; }
-      Promise.all([
-        fetch("/api/portfolios").then((r) => r.ok ? r.json() : []),
-        fetch("/api/risk-profile").then((r) => r.ok ? r.json() : null),
-      ]).then(([p, rp]) => {
-        setPortfolios(p);
-        setRiskProfile(rp ? { score: rp.score as RiskLevel, label: rp.label as string } : null);
-        setLoading(false);
-      }).catch(() => setLoading(false));
+      fetch("/api/portfolios")
+        .then((r) => r.ok ? r.json() : [])
+        .then((p) => { setPortfolios(p); setLoading(false); })
+        .catch(() => setLoading(false));
     });
   }, [router]);
 
@@ -84,44 +78,10 @@ export default function PortfoliosClient() {
         </div>
       </div>
 
-      {/* Risk profile widget */}
-      {riskProfile ? (
-        <div className="bg-white border border-slate-200 rounded-xl px-5 py-4 flex items-center justify-between gap-4">
-          <div className="space-y-0.5">
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Din risknivå</p>
-            <p className="font-semibold text-slate-900">{riskProfile.label}</p>
-          </div>
-          <div className="flex items-center gap-1.5">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div
-                key={i}
-                className={`w-5 h-5 rounded-md ${i < riskProfile.score ? "bg-blue-500" : "bg-slate-100"}`}
-              />
-            ))}
-            <Link href="/risk-profile" className="ml-2 text-xs text-blue-500 hover:text-blue-700 font-medium transition-colors">
-              Uppdatera
-            </Link>
-          </div>
-        </div>
-      ) : (
-        <div className="bg-warn-soft border border-amber-100 rounded-xl px-5 py-4 flex items-center justify-between gap-4">
-          <div>
-            <p className="font-semibold text-slate-900 text-sm">Du saknar riskprofil</p>
-            <p className="text-xs text-slate-500 mt-0.5">Den hjälper oss matcha portföljer mot din risknivå</p>
-          </div>
-          <Link
-            href="/risk-profile"
-            className="shrink-0 text-sm font-medium text-amber-700 hover:text-amber-800 border border-amber-200 hover:border-amber-300 px-3 py-2 rounded-xl transition-colors bg-white"
-          >
-            Gör riskprofil
-          </Link>
-        </div>
-      )}
-
       {portfolios.length === 0 ? (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-6 py-20 text-center space-y-5">
           <p className="text-slate-900 font-semibold text-lg">Du har inga sparade portföljer än</p>
-          <p className="text-slate-400 text-sm max-w-sm mx-auto">Bygg din första portfölj på 2 minuter — vi ställer 6 frågor och sätter ihop en komplett portfölj åt dig. Eller lägg in din befintliga portfölj, analysera den och spara den här.</p>
+          <p className="text-slate-400 text-sm max-w-sm mx-auto">Bygg din första portfölj på 2 minuter — vi ställer 4 frågor och sätter ihop en komplett portfölj åt dig. Eller lägg in din befintliga portfölj, analysera den och spara den här.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/bygg-portfolj" className="inline-block bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold px-6 py-3 rounded-[10px] transition-colors">
               Bygg din första portfölj →
@@ -269,7 +229,7 @@ export default function PortfoliosClient() {
                         <svg className={`w-4 h-4 transition-transform ${showSwaps ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                         </svg>
-                        {showSwaps ? "Dölj fondbytesförslag" : `Visa fondbytesförslag (${p.analysis.swapSuggestions?.length ?? 0})`}
+                        {showSwaps ? "Dölj fondalternativ" : `Visa fondalternativ (${p.analysis.swapSuggestions?.length ?? 0})`}
                       </button>
 
                       {showSwaps && (
@@ -294,7 +254,7 @@ export default function PortfoliosClient() {
                                     </span>
                                     <div>
                                       <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-0.5">
-                                        {isConsolidate ? "Redan i din portfölj" : "Föreslagen fond"}
+                                        {isConsolidate ? "Redan i din portfölj" : "Alternativ fond"}
                                       </p>
                                       <p className="font-bold text-slate-900">{suggested.name}</p>
                                       <p className="text-xs text-slate-400">{suggested.isin}</p>
@@ -321,7 +281,7 @@ export default function PortfoliosClient() {
                                     <>
                                       <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
                                         <div className="flex-1 min-w-0">
-                                          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Överväg att sälja</p>
+                                          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Nuvarande fond</p>
                                           <p className="font-semibold text-sm text-slate-900 break-words">{s.currentFund.name}</p>
                                         </div>
                                         <span className="text-slate-400 text-lg sm:mt-3">↓</span>
@@ -345,7 +305,7 @@ export default function PortfoliosClient() {
                                         </div>
                                         <span className="text-slate-400 text-lg sm:mt-3">↓</span>
                                         <div className="flex-1 min-w-0">
-                                          <p className="text-xs font-semibold text-green-600 uppercase tracking-wide">Föreslagen fond</p>
+                                          <p className="text-xs font-semibold text-green-600 uppercase tracking-wide">Alternativ fond</p>
                                           <p className="font-semibold text-sm text-slate-900 break-words">{s.suggestedFund.name}</p>
                                         </div>
                                       </div>

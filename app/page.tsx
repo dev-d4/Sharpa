@@ -1,4 +1,5 @@
 import Hero from "@/components/ui/hero";
+import StatsRow from "@/components/ui/StatsRow";
 import HowItWorks from "@/components/ui/HowItWorks";
 
 export default function LandingPage() {
@@ -7,14 +8,17 @@ export default function LandingPage() {
       <div className="relative">
         <div className="bg-canvas">
           <Hero />
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-24 sm:pb-32">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 sm:pt-10">
+            <div className="h-px bg-line" />
+            <StatsRow />
+            <div className="h-px bg-line" />
             <HowItWorks />
           </div>
         </div>
 
         {/* För företag */}
         <section className="bg-blue-800 mobile-dark-extend">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-24 sm:py-32">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-32">
             <div className="max-w-2xl mb-10 sm:mb-12">
               <p className="text-xs font-semibold text-blue-300 uppercase tracking-[0.08em] mb-3">För företag och rådgivare</p>
               <h2 className="font-heading text-2xl sm:text-3xl font-bold text-white leading-tight">

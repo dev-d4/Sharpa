@@ -154,8 +154,8 @@ export default function FondguideTab({
 
   // Load details whenever compared list changes
   useEffect(() => {
-    if (!compared.length) { setDetails([]); return; }
-    setLoadingDetails(true);
+    if (!compared.length) { queueMicrotask(() => setDetails([])); return; }
+    queueMicrotask(() => setLoadingDetails(true));
     fetch(`/api/funds/details?isins=${compared.join(",")}&custodian=${custodian}`)
       .then(r => r.json())
       .then((data: FundDetail[]) => {

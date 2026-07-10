@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
     }
 
     // ── Persist updated score and notification timestamps ────────────────────
-    const patch: Record<string, unknown> = { score: newScore };
+    const patch: Record<string, unknown> = { score: Math.round(newScore) };
     if (scoreDrop && !notifiedRecently) patch.score_notified_at = now.toISOString();
     if (daysSince >= REMINDER_DAYS && !reminderRecently) patch.reminder_sent_at = now.toISOString();
 

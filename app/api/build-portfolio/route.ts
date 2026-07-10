@@ -16,6 +16,7 @@ type Answers = {
   reaction:      "sell" | "wait" | "buy";
   q3:            number | null;   // 1–5: Hur viktig är investeringen?
   q4:            number | null;   // 1–5: Vad är viktigast?
+  riskDirect?:   number | null;  // 1–5: direkt vald risknivå (enkel-fråge-flödet)
   selections:    SelectionId[];
   priorities:    Record<string, number> | null;
   management:    "passive" | "mixed" | "active";
@@ -53,6 +54,10 @@ const EQUITY_PCT: Record<number, number> = {
 // Same formula as calcRiskScore in lib/risk.ts — round((q1+q2+q3+q4)/4).
 // Builder and risk profile now ask identical questions so scores are always in sync.
 function computeRiskScore(a: Answers): number {
+  // Enkel-fråge-flödet skickar en direkt vald risknivå — använd den rakt av.
+  if (a.riskDirect != null) {
+    return Math.max(1, Math.min(5, Math.round(a.riskDirect)));
+  }
   const q1Map: Record<string, number> = { short: 2, medium: 3, long: 4, verylong: 5 };
   const q2Map: Record<string, number> = { sell: 1, wait: 3, buy: 5 };
   const v1 = q1Map[a.horizon]  ?? 3;
@@ -67,7 +72,7 @@ function computeRiskScore(a: Answers): number {
 // `selection_id` column in the DB, which gets wiped to null whenever the cron job
 // refreshes fund data via fetchAvanzaFunds/fetchNordnetFunds upserts.
 
-function classifyFund(category: string | null, categoryGroup: string | null): SelectionId | null {
+export function classifyFund(category: string | null, categoryGroup: string | null): SelectionId | null {
   if (!category) return null;
   const cat = category.trim();
   const low = cat.toLowerCase();
@@ -112,9 +117,15 @@ function classifyFund(category: string | null, categoryGroup: string | null): Se
   return null;
 }
 
+export function isBroadGlobalEquityCategory(category: string | null): boolean {
+  if (!category) return false;
+  const cat = category.trim().toLowerCase();
+  return cat === "global" || cat === "global, mix bolag" || cat === "global & sverige";
+}
+
 // ── Selection → fund category mapping ────────────────────────────────────────
-const SELECTION_FILTER: Record<SelectionId, (f: FundRow) => boolean> = {
-  global:        (f) => classifyFund(f.category, f.category_group) === "global",
+export const SELECTION_FILTER: Record<SelectionId, (f: FundRow) => boolean> = {
+  global:        (f) => isBroadGlobalEquityCategory(f.category),
   sweden:        (f) => classifyFund(f.category, f.category_group) === "sweden",
   usa:           (f) => classifyFund(f.category, f.category_group) === "usa",
   europe:        (f) => classifyFund(f.category, f.category_group) === "europe",
@@ -233,7 +244,7 @@ function getSupabase() {
   return createClient(url, key);
 }
 
-async function fetchAllFunds(supabase: SupabaseClient<any, any, any>, view: string, group: string | string[]): Promise<FundRow[]> {
+async function fetchAllFunds(supabase: SupabaseClient, view: string, group: string | string[]): Promise<FundRow[]> {
   const PAGE = 1000;
   const cols = "isin, name, category, category_group, selection_id, equity_style_box, sharpe_3yr, return_1yr, return_3yr, ongoing_cost_actual, ongoing_cost_estimated, investment_type";
   const all: FundRow[] = [];
@@ -338,9 +349,9 @@ function buildReasoning(
     ].filter(Boolean) as string[];
     if (factors.length > 0) {
       const factorCount = factors.length === 1 ? "faktorn" : `${factors.length} faktorer`;
-      lines.push(`Din risknivå är ${riskScore} av 5 (${riskLabel}), beräknad utifrån ${factorCount}: ${factors.join(", ")}.`);
+      lines.push(`Din valda risknivå är ${riskScore} av 5 (${riskLabel}), beräknad utifrån ${factorCount}: ${factors.join(", ")}.`);
     } else {
-      lines.push(`Din risknivå är ${riskScore} av 5 (${riskLabel}).`);
+      lines.push(`Din valda risknivå är ${riskScore} av 5 (${riskLabel}).`);
     }
   }
 

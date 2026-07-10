@@ -15,12 +15,21 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const supabase = createClient();
 
+  function getCallbackUrl(next: string) {
+    const callbackUrl = new URL("/auth/callback", location.origin);
+    callbackUrl.searchParams.set("next", next);
+    if (searchParams.get("skip_onboarding") === "1") {
+      callbackUrl.searchParams.set("skip_onboarding", "1");
+    }
+    return callbackUrl.toString();
+  }
+
   async function handleGoogle() {
     const next = searchParams.get("next") ?? "/portfolios";
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+        redirectTo: getCallbackUrl(next),
         queryParams: { prompt: "select_account" },
       },
     });
@@ -33,7 +42,7 @@ function LoginForm() {
     const next = searchParams.get("next") ?? "/portfolios";
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
+      options: { emailRedirectTo: getCallbackUrl(next) },
     });
     if (error) setError(error.message);
     else setSent(true);
@@ -100,7 +109,7 @@ function LoginForm() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 disabled:from-blue-300 disabled:to-blue-300 text-white font-medium rounded-xl py-2.5 text-sm transition-all shadow-sm shadow-blue-200"
+                  className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press disabled:bg-blue-300 text-white font-semibold rounded-[10px] py-2.5 text-sm transition-colors"
                 >
                   {loading ? "Skickar…" : "Skicka inloggningslänk"}
                 </button>

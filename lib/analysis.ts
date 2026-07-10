@@ -258,17 +258,13 @@ function generateSwaps(
         geographicMatch(currentGeo, geographicFocus(f.category, f.name))
     );
 
-    // Avgiftsvakt: ett bytesförslag får aldrig höja avgiften mer än marginellt.
-    // Sajtens löfte är "mer för pengarna" — förslag som ökar årskostnaden
-    // undergräver det oavsett hur bra fondens historik ser ut.
-    const SWAP_COST_TOLERANCE = 0.1; // procentenheter
-    const currentCost = current.ongoing_cost_actual ?? current.ongoing_cost_estimated;
-    const eligible = peers.filter((f) => {
-      if (currentCost === null) return true;
-      const fCost = f.ongoing_cost_actual ?? f.ongoing_cost_estimated;
-      if (fCost === null) return false; // föreslå aldrig fond med okänd avgift
-      return fCost <= currentCost + SWAP_COST_TOLERANCE;
-    });
+    // Ingen kostnadsvakt: byten begränsas inte av avgiften, utan sidan pekar alltid
+    // ut kategorins högst rankade fond (avgiften väger redan in i absoluteScore).
+    // Enda undantaget: föreslå aldrig en fond med okänd avgift — den skulle se
+    // konstlat billig ut i rankningen (kostnadsstraff 0) och vinna felaktigt.
+    const eligible = peers.filter(
+      (f) => (f.ongoing_cost_actual ?? f.ongoing_cost_estimated) !== null
+    );
 
     if (eligible.length === 0) {
       // No comparable peers found — still acknowledge the fund so it's not silently dropped
@@ -400,11 +396,11 @@ function buildSummary(
 
   if (avgCost !== null) {
     if (avgCost < 0.5) {
-      lines.push(`Den genomsnittliga avgiften är låg (${avgCost.toFixed(2)}%), vilket är bra för din långsiktiga avkastning.`);
+      lines.push(`Den genomsnittliga avgiften är ${avgCost.toFixed(2)}%, vilket är lågt jämfört med snittet för aktivt förvaltade fonder.`);
     } else if (avgCost < 1.0) {
-      lines.push(`Den genomsnittliga avgiften är ${avgCost.toFixed(2)}%, vilket är rimligt men det kan finnas billigare alternativ.`);
+      lines.push(`Den genomsnittliga avgiften är ${avgCost.toFixed(2)}%.`);
     } else {
-      lines.push(`Den genomsnittliga avgiften är relativt hög (${avgCost.toFixed(2)}%). Det kan löna sig att se över fonderna.`);
+      lines.push(`Den genomsnittliga avgiften är ${avgCost.toFixed(2)}%, vilket är högt jämfört med indexfonder som ofta ligger under 0,40%.`);
     }
   }
 
@@ -415,11 +411,11 @@ function buildSummary(
 
   if (sharpe !== null) {
     if (sharpe > 1)
-      lines.push(`Sharpe-kvoten är ${sharpe.toFixed(2)}, vilket indikerar god riskjusterad avkastning.`);
+      lines.push(`Sharpe-kvoten är ${sharpe.toFixed(2)}. Sharpe mäter historisk avkastning i förhållande till risk — värden över 1 brukar räknas som starka.`);
     else if (sharpe > 0)
-      lines.push(`Sharpe-kvoten är ${sharpe.toFixed(2)}, vilket är godkänt men det finns utrymme för förbättring.`);
+      lines.push(`Sharpe-kvoten är ${sharpe.toFixed(2)}. Sharpe mäter historisk avkastning i förhållande till risk — värden mellan 0 och 1 är positiva men lägre.`);
     else
-      lines.push(`Sharpe-kvoten är ${sharpe.toFixed(2)}, vilket tyder på låg riskjusterad avkastning.`);
+      lines.push(`Sharpe-kvoten är ${sharpe.toFixed(2)}. En negativ Sharpe innebär att avkastningen inte kompenserade för risken under perioden.`);
   }
 
   if (Math.abs(totalWeight - 100) > 0.01)

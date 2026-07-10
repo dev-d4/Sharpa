@@ -58,8 +58,16 @@ export async function GET(req: NextRequest) {
 
   const funds = await getFundsForCustodian(custodian);
 
+  // Relevanssortering: namn som börjar med söktermen först, därefter svenskt
+  // alfabetiskt — utan den styr ISIN-ordningen från vyn vilka träffar som visas.
   const results = funds
     .filter((f) => f.name.toLowerCase().includes(q) || f.isin.toLowerCase().startsWith(q))
+    .sort((a, b) => {
+      const aPrefix = a.name.toLowerCase().startsWith(q) ? 0 : 1;
+      const bPrefix = b.name.toLowerCase().startsWith(q) ? 0 : 1;
+      if (aPrefix !== bPrefix) return aPrefix - bPrefix;
+      return a.name.localeCompare(b.name, "sv");
+    })
     .slice(0, 100);
 
   return NextResponse.json(results);

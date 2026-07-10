@@ -8,28 +8,26 @@ export type PortfolioScoreResult = {
 
 /**
  * Compute a 0–10 quality score from a PortfolioAnalysis snapshot.
- * Average of up to four dimensions: cost, Sharpe, 3yr return, diversification.
+ * Unweighted average of up to four equally weighted dimensions: cost, Sharpe,
+ * 3yr return, and diversification.
  */
 export function computePortfolioScore(analysis: PortfolioAnalysis): PortfolioScoreResult {
   let total = 0, count = 0;
+  const add = (points: number) => { total += points; count++; };
 
   if (analysis.avgCost !== null) {
-    total += analysis.avgCost < 0.2 ? 10 : analysis.avgCost < 0.4 ? 8 : analysis.avgCost < 0.6 ? 6 : analysis.avgCost < 0.9 ? 4 : 2;
-    count++;
+    add(analysis.avgCost < 0.2 ? 10 : analysis.avgCost < 0.4 ? 8 : analysis.avgCost < 0.6 ? 6 : analysis.avgCost < 0.9 ? 4 : 2);
   }
   if (analysis.weightedSharpe !== null) {
-    total += analysis.weightedSharpe > 1.2 ? 10 : analysis.weightedSharpe > 0.8 ? 8 : analysis.weightedSharpe > 0.5 ? 6 : analysis.weightedSharpe > 0.2 ? 4 : 2;
-    count++;
+    add(analysis.weightedSharpe > 1.2 ? 10 : analysis.weightedSharpe > 0.8 ? 8 : analysis.weightedSharpe > 0.5 ? 6 : analysis.weightedSharpe > 0.2 ? 4 : 2);
   }
   if (analysis.weightedReturn3yr !== null) {
-    total += analysis.weightedReturn3yr > 40 ? 10 : analysis.weightedReturn3yr > 25 ? 9 : analysis.weightedReturn3yr > 15 ? 8 : analysis.weightedReturn3yr > 8 ? 7 : analysis.weightedReturn3yr > 3 ? 5 : 2;
-    count++;
+    add(analysis.weightedReturn3yr > 40 ? 10 : analysis.weightedReturn3yr > 25 ? 9 : analysis.weightedReturn3yr > 15 ? 8 : analysis.weightedReturn3yr > 8 ? 7 : analysis.weightedReturn3yr > 3 ? 5 : 2);
   }
   const diversitySource = analysis.detailedBreakdown ?? analysis.categoryBreakdown;
   if (diversitySource?.length) {
     const n = diversitySource.filter(c => c.weight > 5).length;
-    total += n >= 4 ? 10 : n === 3 ? 8 : n === 2 ? 5 : 2;
-    count++;
+    add(n >= 4 ? 10 : n === 3 ? 8 : n === 2 ? 5 : 2);
   }
 
   const score = count > 0 ? Math.round((total / count) * 10) / 10 : 5.0;

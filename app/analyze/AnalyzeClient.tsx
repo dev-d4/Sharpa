@@ -509,10 +509,10 @@ function FundSearchInput({
 
   if (isin) {
     return (
-      <div className="flex items-center gap-2 border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white min-w-0">
+      <div className="flex items-center gap-2 border border-slate-300 rounded-lg px-3 py-2.5 text-sm bg-white min-w-0">
         <span className="flex-1 truncate font-medium text-slate-900">{name}</span>
-        <span className="text-xs text-slate-400 shrink-0">{isin}</span>
-        <button type="button" onClick={onClear} className="text-slate-400 hover:text-red-500 shrink-0 transition-colors">✕</button>
+        <span className="hidden sm:inline text-xs text-slate-400 shrink-0">{isin}</span>
+        <button type="button" onClick={onClear} aria-label="Rensa vald fond" className="-m-1 p-1 text-slate-400 hover:text-red-500 shrink-0 transition-colors">✕</button>
       </div>
     );
   }
@@ -561,6 +561,234 @@ function FundSearchInput({
           Ingen fond hittades för &ldquo;{query}&rdquo;
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Recently used funds (localStorage) ────────────────────────────────────────
+
+const RECENT_FUNDS_KEY = "fondanalys_recent_funds";
+
+function readRecentFunds(): FundSuggestion[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(RECENT_FUNDS_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr)
+      ? arr.filter((f) => f && typeof f.isin === "string" && typeof f.name === "string").slice(0, 8)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function recordRecentFund(fund: FundSuggestion) {
+  if (typeof window === "undefined") return;
+  try {
+    const existing = readRecentFunds().filter((f) => f.isin !== fund.isin);
+    const next = [{ name: fund.name, isin: fund.isin }, ...existing].slice(0, 8);
+    localStorage.setItem(RECENT_FUNDS_KEY, JSON.stringify(next));
+  } catch {
+    /* ignore quota / privacy-mode errors */
+  }
+}
+
+// ── Full-screen fund search sheet (mobile) ────────────────────────────────────
+// Lets the user pick several funds in one session without the on-screen keyboard
+// clipping the results list. Toggles selection live in the parent; "Klar" closes.
+
+function FundSearchSheet({
+  custodian,
+  selectedIsins,
+  onAdd,
+  onRemove,
+  onClose,
+}: {
+  custodian: string;
+  selectedIsins: string[];
+  onAdd: (isin: string, name: string) => void;
+  onRemove: (isin: string) => void;
+  onClose: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<FundSuggestion[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [noResults, setNoResults] = useState(false);
+  const [recent] = useState<FundSuggestion[]>(() => readRecentFunds());
+  const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const reqSeq = useRef(0);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
+
+  function handleChange(q: string) {
+    setQuery(q);
+    if (debounce.current) clearTimeout(debounce.current);
+    if (q.trim().length < 2) {
+      setSuggestions([]);
+      setNoResults(false);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const seq = ++reqSeq.current;
+    debounce.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/funds/search?q=${encodeURIComponent(q)}&custodian=${encodeURIComponent(custodian)}`);
+        const data: FundSuggestion[] = await res.json();
+        if (seq !== reqSeq.current) return; // a newer query already fired
+        setSuggestions(data);
+        setNoResults(data.length === 0);
+      } catch {
+        if (seq === reqSeq.current) {
+          setSuggestions([]);
+          setNoResults(true);
+        }
+      } finally {
+        if (seq === reqSeq.current) setLoading(false);
+      }
+    }, 200);
+  }
+
+  function toggle(fund: FundSuggestion) {
+    if (selectedIsins.includes(fund.isin)) {
+      onRemove(fund.isin);
+    } else {
+      onAdd(fund.isin, fund.name);
+      recordRecentFund(fund);
+    }
+  }
+
+  const showRecent = query.trim().length < 2;
+  const list = showRecent ? recent : suggestions;
+  const count = selectedIsins.length;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex flex-col bg-white sm:items-center sm:justify-center sm:bg-slate-900/40 sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Lägg till fonder"
+    >
+      <div className="flex h-full w-full flex-col overflow-hidden bg-white sm:h-[85vh] sm:max-w-md sm:rounded-2xl sm:shadow-xl">
+        {/* Header */}
+        <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Stäng"
+            className="-m-2 p-2 text-slate-400 transition-colors hover:text-slate-600"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <span className="font-semibold text-slate-900">Lägg till fonder</span>
+        </div>
+
+        {/* Search */}
+        <div className="px-4 pb-2 pt-3">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(e) => handleChange(e.target.value)}
+              placeholder="Sök fondnamn eller ISIN…"
+              enterKeyHint="search"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-10 pr-9 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => handleChange("")}
+                aria-label="Rensa sökning"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Results */}
+        <div className="flex-1 overflow-y-auto overscroll-contain px-2 pb-2">
+          {showRecent && recent.length > 0 && (
+            <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              Senast använda
+            </p>
+          )}
+          {showRecent && recent.length === 0 && (
+            <p className="px-3 py-12 text-center text-sm text-slate-400">
+              Sök på fondnamn eller ISIN för att lägga till fonder i din portfölj.
+            </p>
+          )}
+          {!showRecent && loading && list.length === 0 && (
+            <p className="px-3 py-8 text-center text-sm text-slate-400">Söker…</p>
+          )}
+          {!showRecent && !loading && noResults && (
+            <p className="px-3 py-8 text-center text-sm text-slate-500">
+              Ingen fond hittades för &ldquo;{query}&rdquo;.
+            </p>
+          )}
+          <ul>
+            {list.map((f, i) => {
+              const isSelected = selectedIsins.includes(f.isin);
+              return (
+                <li key={`${f.isin}-${i}`}>
+                  <button
+                    type="button"
+                    onClick={() => toggle(f)}
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors",
+                      isSelected ? "bg-blue-50" : "hover:bg-slate-50 active:bg-slate-100"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-sm leading-none",
+                        isSelected ? "border-blue-500 bg-blue-500 text-white" : "border-slate-300 text-slate-400"
+                      )}
+                      aria-hidden="true"
+                    >
+                      {isSelected ? "✓" : "+"}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium text-slate-900">{f.name}</span>
+                      <span className="block text-xs text-slate-400">{f.isin}</span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-slate-100 px-4 py-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full rounded-[10px] bg-accent py-3 font-semibold text-white transition-colors hover:bg-accent-hover active:bg-accent-press"
+          >
+            {count > 0 ? `Klar · ${count} ${count === 1 ? "fond vald" : "fonder valda"}` : "Klar"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -632,6 +860,14 @@ function loadSession() {
   } catch { return null; }
 }
 
+function hasMeaningfulAnalyzeState(custodian: string | null, entries: Entry[], analysis: PortfolioAnalysis | null) {
+  return Boolean(
+    custodian ||
+    analysis ||
+    entries.some((entry) => entry.isin.trim() || entry.name.trim() || entry.weight.trim() || entry.amount?.trim())
+  );
+}
+
 
 export default function AnalyzeClient() {
   const router = useRouter();
@@ -644,12 +880,13 @@ export default function AnalyzeClient() {
   const [loadingStep, setLoadingStep] = useState(0);
   const [analysis, setAnalysis] = useState<PortfolioAnalysis | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [riskProfile, setRiskProfile] = useState<object | null | undefined>(undefined);
-  const [nudgeDismissed, setNudgeDismissed] = useState(false);
   const [inputMode, setInputMode] = useState<"weight" | "amount">("weight");
 
   // Input method: how the user wants to populate their portfolio
   const [inputMethod, setInputMethod] = useState<"ai" | "manual" | null>(null);
+
+  // Mobile full-screen fund search sheet
+  const [searchSheetOpen, setSearchSheetOpen] = useState(false);
 
   // CSV import state
   const [importing, setImporting] = useState(false);
@@ -723,9 +960,6 @@ export default function AnalyzeClient() {
       if (saved.entries?.length) { setEntries(saved.entries); setInputMethod("manual"); }
       if (saved.analysis) setAnalysis(saved.analysis);
       sessionStorage.removeItem(SESSION_KEY);
-    } else {
-      const preferred = localStorage.getItem("fondanalys_preferred_custodian");
-      if (preferred) setCustodian(preferred);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -743,12 +977,6 @@ export default function AnalyzeClient() {
           .then(setSavedPortfolios)
           .catch(() => {})
           .finally(() => setSavedPortfoliosLoading(false));
-        fetch("/api/risk-profile")
-          .then((r) => r.ok ? r.json() : null)
-          .then((p) => setRiskProfile(p ?? null))
-          .catch(() => setRiskProfile(null));
-      } else {
-        setRiskProfile(null);
       }
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
@@ -756,6 +984,18 @@ export default function AnalyzeClient() {
     });
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    function saveBeforeLogin() {
+      if (!hasMeaningfulAnalyzeState(custodian, entries, analysis)) return;
+      try {
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify({ custodian, entries, analysis }));
+      } catch { /* ignore */ }
+    }
+
+    window.addEventListener("fondanalys:before-login", saveBeforeLogin);
+    return () => window.removeEventListener("fondanalys:before-login", saveBeforeLogin);
+  }, [custodian, entries, analysis]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -946,9 +1186,30 @@ export default function AnalyzeClient() {
   function removeRow(i: number) { setEntries((p) => p.filter((_, idx) => idx !== i)); }
   function selectFund(i: number, isin: string, name: string) {
     setEntries((p) => p.map((e, idx) => idx === i ? { ...e, isin, name } : e));
+    recordRecentFund({ isin, name });
   }
   function clearFund(i: number) {
     setEntries((p) => p.map((e, idx) => idx === i ? { ...e, isin: "", name: "" } : e));
+  }
+
+  // Mobile search sheet: add / remove funds by ISIN, then even-split weights on close.
+  function addFundFromSheet(isin: string, name: string) {
+    setEntries((prev) => {
+      if (prev.some((e) => e.isin === isin)) return prev;
+      const empty = prev.findIndex((e) => !e.isin);
+      if (empty !== -1) return prev.map((e, idx) => idx === empty ? { ...e, isin, name } : e);
+      return [...prev, { isin, name, weight: "", amount: "" }];
+    });
+  }
+  function removeFundByIsin(isin: string) {
+    setEntries((prev) => {
+      const filtered = prev.filter((e) => e.isin !== isin);
+      return filtered.length ? filtered : [{ isin: "", name: "", weight: "" }];
+    });
+  }
+  function closeSearchSheet() {
+    setSearchSheetOpen(false);
+    if (inputMode === "weight") distributeWeights();
   }
   function updateWeight(i: number, value: string) {
     setEntries((p) => p.map((e, idx) => idx === i ? { ...e, weight: value } : e));
@@ -960,7 +1221,7 @@ export default function AnalyzeClient() {
   const LOADING_STEPS = [
     "Hämtar fonddata…",
     "Beräknar avkastning och risk…",
-    "Genererar bytesförslag…",
+    "Jämför med liknande alternativ…",
     "Sammanställer analys…",
   ];
 
@@ -1085,7 +1346,7 @@ export default function AnalyzeClient() {
     try {
       sessionStorage.setItem(SESSION_KEY, JSON.stringify({ custodian, entries, analysis }));
     } catch { /* ignore */ }
-    router.push("/login?next=/analyze");
+    router.push("/login?next=/analyze&skip_onboarding=1");
   }
 
   if (portfolioLoading) {
@@ -1120,25 +1381,6 @@ export default function AnalyzeClient() {
     <>
     <div className="min-h-screen">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8">
-      {/* Risk profile nudge — shown when logged in with no risk profile */}
-      {user && riskProfile === null && !nudgeDismissed && (
-        <div className="no-print flex items-start gap-3 bg-warn-soft border border-amber-100 rounded-xl px-4 py-3">
-          <span className="text-amber-500 shrink-0 mt-0.5">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z" />
-            </svg>
-          </span>
-          <p className="text-sm text-amber-800 flex-1 leading-relaxed">
-            Du har ingen riskprofil ännu.{" "}
-            <a href="/risk-profile" className="font-medium underline hover:text-amber-900">Ta fram din →</a>
-          </p>
-          <button onClick={() => setNudgeDismissed(true)} className="text-amber-400 hover:text-amber-600 shrink-0 mt-0.5">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      )}
 
       {/* Saved portfolios switcher — dropdown, shown when logged in with saved portfolios */}
       {savedPortfoliosLoading && (
@@ -1185,7 +1427,7 @@ export default function AnalyzeClient() {
                 <div className="border-t border-slate-100">
                   <button
                     type="button"
-                    onClick={() => { setPortfolioId(null); setEntries([{ isin: "", name: "", weight: "" }]); setAnalysis(null); setError(null); setInputMethod(null); setPortfolioDropdownOpen(false); }}
+                    onClick={() => { setPortfolioId(null); setCustodian(null); setEntries([{ isin: "", name: "", weight: "" }]); setAnalysis(null); setError(null); setInputMethod(null); setPortfolioDropdownOpen(false); }}
                     className={cn(
                       "w-full text-left px-3 py-2.5 text-sm transition-colors hover:bg-blue-50",
                       !portfolioId ? "text-blue-700 font-medium bg-blue-50" : "text-slate-500"
@@ -1207,7 +1449,7 @@ export default function AnalyzeClient() {
         </div>
       )}
 
-      <section className="no-print bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6 space-y-5">
+      <section className="no-print bg-white rounded-xl shadow-sm border border-slate-200 p-5 sm:p-6 space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between gap-2">
           <h2 className="font-heading text-lg font-bold text-slate-900 shrink-0">Din portfölj</h2>
@@ -1250,7 +1492,6 @@ export default function AnalyzeClient() {
                     setPortfolioId(null);
                   }
                   setCustodian(c.value);
-                  localStorage.setItem("fondanalys_preferred_custodian", c.value);
                 }}
                 className={cn(
                   "flex flex-col items-center justify-center gap-0.5 rounded-xl border p-3 text-center transition-all min-h-[56px]",
@@ -1405,37 +1646,61 @@ export default function AnalyzeClient() {
                 <span />
               </div>
               {entries.map((entry, i) => (
-                <div key={i} className="space-y-2 sm:space-y-0 sm:grid sm:grid-cols-[1fr_100px_44px] sm:gap-2 bg-slate-50 sm:bg-transparent rounded-xl sm:rounded-none p-3 sm:p-0 border border-slate-100 sm:border-0">
-                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide sm:hidden">Fond {i + 1}</p>
+                <div key={i} className={cn("space-y-2.5 sm:space-y-0 sm:grid sm:grid-cols-[1fr_100px_44px] sm:gap-2 bg-slate-50 sm:bg-transparent rounded-xl sm:rounded-none p-4 sm:p-0 border border-slate-100 sm:border-0", !entry.isin && "hidden sm:grid")}>
+                  {/* Mobil: rubrikrad med ta bort-knapp — desktop har egen knappkolumn */}
+                  <div className="flex items-center justify-between sm:hidden">
+                    <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Fond {i + 1}</p>
+                    <button
+                      onClick={() => removeRow(i)} disabled={entries.length === 1} aria-label={`Ta bort fond ${i + 1}`}
+                      className="-m-2 p-2 text-slate-400 hover:text-red-500 disabled:opacity-30 transition-colors"
+                    >✕</button>
+                  </div>
                   <FundSearchInput isin={entry.isin} name={entry.name} custodian={custodian} excludeIsins={entries.filter((_, idx) => idx !== i).map((e) => e.isin).filter(Boolean)} onSelect={(isin, name) => selectFund(i, isin, name)} onClear={() => clearFund(i)} />
-                  <div className="flex items-center gap-2 sm:contents">
+                  <div className="flex items-center gap-3 sm:contents">
+                    <label htmlFor={`entry-value-${i}`} className="sm:hidden w-24 shrink-0 text-[13px] font-medium text-slate-500">
+                      {inputMode === "weight" ? "Vikt (%)" : "Belopp (kr)"}
+                    </label>
                     {inputMode === "weight" ? (
                       <input
-                        type="number" placeholder="%" min={0} max={100}
+                        id={`entry-value-${i}`}
+                        type="number" inputMode="decimal" placeholder="%" min={0} max={100}
                         value={entry.weight} onChange={(e) => updateWeight(i, e.target.value)}
                         onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRow(); } }}
-                        className="flex-1 sm:w-auto sm:flex-none border border-slate-300 rounded-lg px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="flex-1 min-w-0 sm:w-auto sm:flex-none border border-slate-300 rounded-lg px-3 py-3 text-base bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     ) : (
                       <input
-                        type="number" placeholder="kr" min={0}
+                        id={`entry-value-${i}`}
+                        type="number" inputMode="numeric" placeholder="kr" min={0}
                         value={entry.amount ?? ""} onChange={(e) => updateAmount(i, e.target.value)}
                         onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRow(); } }}
-                        className="flex-1 sm:flex-none border border-slate-300 rounded-lg px-3 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="flex-1 min-w-0 sm:flex-none border border-slate-300 rounded-lg px-3 py-3 text-base bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     )}
                     <button
-                      onClick={() => removeRow(i)} disabled={entries.length === 1}
-                      className="h-11 w-11 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-200 disabled:opacity-30 transition-colors shrink-0"
+                      onClick={() => removeRow(i)} disabled={entries.length === 1} aria-label={`Ta bort fond ${i + 1}`}
+                      className="hidden sm:flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-200 disabled:opacity-30 transition-colors shrink-0"
                     >✕</button>
                   </div>
                 </div>
               ))}
             </div>
 
+            {/* Mobile: fund selection happens in a full-screen search sheet */}
+            {inputMethod !== "ai" && (
+              <button
+                type="button"
+                onClick={() => setSearchSheetOpen(true)}
+                className="sm:hidden flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-white py-3.5 text-sm font-semibold text-blue-600 active:bg-slate-50 transition-colors"
+              >
+                <Search className="w-4 h-4" />
+                {entries.some((e) => e.isin) ? "Lägg till fler fonder" : "Lägg till fonder"}
+              </button>
+            )}
+
             <div className="flex items-center justify-between pt-1">
               {inputMethod !== "ai" && (
-                <button onClick={addRow} className="text-sm text-blue-600 hover:underline py-2">+ Lägg till fond</button>
+                <button onClick={addRow} className="hidden sm:inline text-sm text-blue-600 hover:underline py-2">+ Lägg till fond</button>
               )}
               {inputMethod === "ai" && <span />}
               {inputMode === "amount" ? (
@@ -1463,6 +1728,16 @@ export default function AnalyzeClient() {
             >
               {loading ? "Analyserar…" : "Analysera portfölj"}
             </button>
+
+            {searchSheetOpen && (
+              <FundSearchSheet
+                custodian={custodian}
+                selectedIsins={entries.map((e) => e.isin).filter(Boolean)}
+                onAdd={addFundFromSheet}
+                onRemove={removeFundByIsin}
+                onClose={closeSearchSheet}
+              />
+            )}
           </>
         )}
       </section>
@@ -1689,8 +1964,13 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
     if (analysis.weightedSharpe > 0.7) strengths.push("Stark riskjusterad avkastning");
     else if (analysis.weightedSharpe < 0.3) warnings.push("Svag riskjusterad avkastning");
   }
-  if (analysis.categoryBreakdown?.length) {
-    const n = analysis.categoryBreakdown.filter(c => c.weight > 5).length;
+  // Riskspridning mäts på de detaljerade kategorierna (regioner/byggkategorier) —
+  // samma källa som portföljbetyget använder — inte de grova tillgångsslagen, så
+  // en portfölj spridd över många kategorier räknas som välspridd och etiketten
+  // blir konsekvent med betyget.
+  const diversitySource = analysis.detailedBreakdown ?? analysis.categoryBreakdown;
+  if (diversitySource?.length) {
+    const n = diversitySource.filter(c => c.weight > 5).length;
     if (n >= 3) strengths.push("Bra riskspridning");
     else warnings.push("Låg riskspridning");
   }
@@ -1722,7 +2002,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
             </div>
             {potentialGainKr !== null && (
               <div className="text-right">
-                <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-slate-400 mb-1">Förbättringspotential</p>
+                <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-slate-400 mb-1">Beräknad skillnad</p>
                 <p className="text-2xl font-bold text-green-700">+{Math.round(potentialGainKr).toLocaleString("sv-SE")} kr</p>
                 <p className="text-xs text-slate-400 mt-0.5">per år{assumed ? " (vid 100 000 kr)" : ""}</p>
               </div>
@@ -1760,7 +2040,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
 
       {/* Sammanfattande betygskort */}
       <section className="no-print bg-white rounded-xl border border-line p-6 sm:p-8" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)" }}>
-        <div className="flex items-start justify-between gap-6 flex-wrap">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs font-semibold tracking-[0.08em] uppercase text-ink-3 mb-2">Portföljbetyg</p>
             <div className="flex items-baseline gap-1.5">
@@ -1771,8 +2051,8 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
             </div>
           </div>
           {potentialGainKr !== null && (
-            <div className="text-right">
-              <p className="text-xs font-semibold tracking-[0.08em] uppercase text-ink-3 mb-2">Förbättringspotential</p>
+            <div className="sm:text-right">
+              <p className="text-xs font-semibold tracking-[0.08em] uppercase text-ink-3 mb-2">Beräknad skillnad</p>
               <p className="text-2xl sm:text-3xl font-bold text-pos tabular-nums">+{Math.round(potentialGainKr).toLocaleString("sv-SE")} kr</p>
               <p className="text-xs text-ink-3 mt-1">per år{assumed ? " (vid 100 000 kr)" : ""}</p>
               <p className="text-[10px] text-ink-4 mt-0.5">inkl. historisk avkastningsskillnad</p>
@@ -1917,8 +2197,8 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
       {((analysis.swapSuggestions?.length ?? 0) > 0 ||
         (analysis.bestInCategory?.length ?? 0) > 0) && (
         <section className="relative bg-white rounded-xl p-6 sm:p-8" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)", border: "1px solid #D9E0E6" }}>
-            <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-1">Fondbytesförslag</p>
-            <p className="text-lg font-semibold text-ink mb-4">Förslag på förbättringar</p>
+            <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-1">Jämförbara alternativ</p>
+            <p className="text-lg font-semibold text-ink mb-4">Alternativ med starkare nyckeltal</p>
 
             {showBlur ? (
             <div>
@@ -1928,20 +2208,20 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                   ["Länsförsäkringar Global Aktiv A", "Avanza Global"],
                   ["SEB Sverigefond Stora bolag", "PLUS Allabolag Sverige Index"],
                 ].map(([cur, sug], i) => (
-                  <div key={i} className="py-4 flex items-start gap-2">
-                    <div className="flex-1 min-w-0">
+                  <div key={i} className="py-4 flex flex-col gap-2.5 sm:flex-row sm:items-start sm:gap-2">
+                    <div className="min-w-0 sm:flex-1">
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-accent mb-1">Nuvarande</p>
                       <p className="text-sm font-semibold text-ink leading-snug">{cur}</p>
                     </div>
-                    <div className="flex flex-col items-center justify-start pt-4 shrink-0">
+                    <div className="shrink-0 sm:pt-4">
                       <div className="w-7 h-7 rounded-[10px] bg-slate-100 flex items-center justify-center">
-                        <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <svg className="w-3.5 h-3.5 text-slate-400 rotate-90 sm:rotate-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                         </svg>
                       </div>
                     </div>
-                    <div className="flex-1 min-w-0 text-right">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-accent mb-1">Föreslagen</p>
+                    <div className="min-w-0 sm:flex-1 sm:text-right">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-accent mb-1">Alternativ</p>
                       <p className="text-sm font-semibold text-ink leading-snug">{sug}</p>
                     </div>
                   </div>
@@ -1952,8 +2232,8 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
               <div className="no-print absolute inset-0 z-10 flex flex-col items-center justify-center text-center px-6 space-y-3">
                 <p className="text-base font-semibold text-ink leading-snug max-w-md">
                   {potentialGainKr !== null
-                    ? `Logga in för att se fondbytena med +${Math.round(potentialGainKr).toLocaleString("sv-SE")} kr/år i förbättringspotential`
-                    : "Logga in för att se personliga fondbytesförslag"}
+                    ? `Logga in för att se jämförbara alternativ med +${Math.round(potentialGainKr).toLocaleString("sv-SE")} kr/år i beräknad skillnad`
+                    : "Logga in för att se jämförbara fondalternativ"}
                 </p>
                 {potentialGainKr !== null && assumed && (
                   <p className="text-xs text-ink-3 max-w-sm">Beräknat på ett antaget sparkapital om 100 000 kr.</p>
@@ -2046,35 +2326,35 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                               </span>
                             </div>
                           )}
-                          <div className="flex items-start gap-2">
-                            <div className="flex-1 min-w-0">
+                          <div className="relative flex flex-col gap-2.5 sm:flex-row sm:items-start sm:gap-2">
+                            <div className="min-w-0 pr-8 sm:pr-0 sm:flex-1">
                               <p className="text-[10px] font-semibold uppercase tracking-wider text-accent mb-1">Nuvarande</p>
                               {group.map((item, si) => (
                                 <p key={si} className="text-sm font-semibold text-ink leading-snug break-words">{item.currentFund.name}</p>
                               ))}
                             </div>
-                            <div className="flex flex-col items-center justify-start pt-4 shrink-0">
+                            <div className="shrink-0 sm:pt-4">
                               <div className="w-7 h-7 rounded-[10px] bg-slate-100 flex items-center justify-center">
-                                <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <svg className="w-3.5 h-3.5 text-slate-400 rotate-90 sm:rotate-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                                 </svg>
                               </div>
                             </div>
-                            <div className="flex-1 min-w-0 text-right">
+                            <div className="min-w-0 sm:flex-1 sm:text-right">
                               <p className="text-[10px] font-semibold uppercase tracking-wider text-accent mb-1">
-                                {isConsolidate ? "Öka i" : "Föreslagen"}
+                                {isConsolidate ? "Alternativ vägning" : "Alternativ"}
                               </p>
                               <p className="text-sm font-semibold text-ink leading-snug break-words">{suggested.name}</p>
                             </div>
-                            <div className="shrink-0 pt-0.5">
-                              <InfoPopover title="Jämförelse" width={340} ariaLabel="Visa jämförelse mellan nuvarande och föreslagen fond">
+                            <div className="absolute top-0 right-0 sm:static sm:shrink-0 sm:pt-0.5">
+                              <InfoPopover title="Jämförelse" width={340} ariaLabel="Visa jämförelse mellan nuvarande fond och alternativ fond">
                                 {suggested.category && (
                                   <p className="text-[11px] text-slate-400 mb-2.5">{suggested.category}</p>
                                 )}
                                 <div className="grid grid-cols-[1fr_auto_auto] gap-x-5 gap-y-2 items-baseline">
                                   <span />
                                   <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400 text-right whitespace-nowrap">Nuvarande</span>
-                                  <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400 text-right whitespace-nowrap">{isConsolidate ? "Öka i" : "Föreslagen"}</span>
+                                  <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400 text-right whitespace-nowrap">{isConsolidate ? "Alternativ vikt" : "Alternativ"}</span>
 
                                   <span className="text-xs text-slate-500">Avgift</span>
                                   <span className="text-xs font-semibold text-ink tabular-nums text-right">{curCost !== null ? `${curCost.toFixed(2)}%` : "–"}</span>
@@ -2133,7 +2413,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
 
       {showBlur && (analysis.swapSuggestions?.length ?? 0) === 0 && (analysis.bestInCategory?.length ?? 0) === 0 && (
         <section className="no-print bg-white rounded-xl p-6 sm:p-8 text-center space-y-3" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)", border: "1px solid #D9E0E6" }}>
-          <p className="text-base font-semibold text-ink leading-snug max-w-md mx-auto">Logga in för att se personliga fondbytesförslag</p>
+          <p className="text-base font-semibold text-ink leading-snug max-w-md mx-auto">Logga in för att se jämförbara fondalternativ</p>
           <p className="text-xs text-ink-4">Gratis · Klart på under en minut</p>
           <button
             onClick={onLoginClick}
@@ -2169,22 +2449,28 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
 }
 
 // ── InfoPopover ───────────────────────────────────────────────────────────────
-// Gemensam infoknapp för nyckeltal och bytesförslag. ⓘ-knappen är den enda
-// triggern: hover på pekarenheter, tap på touch. Panelen positioneras fixed
-// utifrån knappens läge och kläms alltid innanför viewporten, så den aldrig
-// klipps på mobil. Stängs med tap utanför, Escape, scroll eller resize.
+// Gemensam infoknapp för nyckeltal och jämförelser. På pekarenheter (hover)
+// visas en tooltip som anchoras under knappen och stängs vid tap utanför,
+// Escape, scroll eller resize. På touch öppnas istället en bottom sheet med
+// dimmer och stängkryss — den stängs INTE av scroll, så man hinner läsa klart.
 
 const POPOVER_WIDTH = 288;
 
 function InfoPopover({ title, ariaLabel, width = POPOVER_WIDTH, children }: { title?: string; ariaLabel?: string; width?: number; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  // Touch devices (no hover) get a bottom sheet; pointer devices get a tooltip.
+  // Read once at mount — the panel only renders after interaction, so there is
+  // no hydration mismatch even though the server can't know the device.
+  const [isTouch] = useState(() =>
+    typeof window !== "undefined" && !window.matchMedia("(hover: hover)").matches
+  );
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  const hoverable = () => window.matchMedia("(hover: hover)").matches;
-
   function show() {
+    // Touch → bottom sheet, no anchoring needed
+    if (isTouch) { setOpen(true); return; }
     const r = btnRef.current?.getBoundingClientRect();
     if (!r) return;
     const margin = 12;
@@ -2196,26 +2482,38 @@ function InfoPopover({ title, ariaLabel, width = POPOVER_WIDTH, children }: { ti
 
   useEffect(() => {
     if (!open) return;
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") setOpen(false); }
+    document.addEventListener("keydown", onKey);
+
+    // Touch: lock body scroll behind the sheet; do NOT close on scroll
+    if (isTouch) {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prevOverflow;
+        document.removeEventListener("keydown", onKey);
+      };
+    }
+
+    // Desktop tooltip: dismiss on outside tap, scroll or resize
     function onDown(e: MouseEvent | TouchEvent) {
       const t = e.target as Node;
       if (btnRef.current?.contains(t) || panelRef.current?.contains(t)) return;
       setOpen(false);
     }
     function close() { setOpen(false); }
-    function onKey(e: KeyboardEvent) { if (e.key === "Escape") setOpen(false); }
     document.addEventListener("mousedown", onDown);
     document.addEventListener("touchstart", onDown);
-    document.addEventListener("keydown", onKey);
     window.addEventListener("scroll", close, true);
     window.addEventListener("resize", close);
     return () => {
+      document.removeEventListener("keydown", onKey);
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("touchstart", onDown);
-      document.removeEventListener("keydown", onKey);
       window.removeEventListener("scroll", close, true);
       window.removeEventListener("resize", close);
     };
-  }, [open]);
+  }, [open, isTouch]);
 
   return (
     <>
@@ -2226,18 +2524,52 @@ function InfoPopover({ title, ariaLabel, width = POPOVER_WIDTH, children }: { ti
         aria-expanded={open}
         onClick={(e) => {
           e.stopPropagation();
-          if (open && !hoverable()) setOpen(false);
+          if (open && isTouch) setOpen(false);
           else show();
         }}
-        onMouseEnter={() => { if (hoverable()) show(); }}
-        onMouseLeave={() => { if (hoverable()) setOpen(false); }}
+        onMouseEnter={() => { if (!isTouch) show(); }}
+        onMouseLeave={() => { if (!isTouch) setOpen(false); }}
         className="no-print shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
       >
         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
         </svg>
       </button>
-      {open && pos && (
+
+      {/* Touch: bottom sheet */}
+      {open && isTouch && (
+        <div
+          className="no-print fixed inset-0 z-50 flex flex-col justify-end bg-slate-900/40 normal-case tracking-normal font-normal"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={title ?? "Information"}
+            className="max-h-[80vh] overflow-y-auto overscroll-contain rounded-t-2xl bg-white px-5 pb-8 pt-4 text-left"
+            style={{ boxShadow: "0 -8px 24px rgba(16,24,40,.12)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-start justify-between gap-4">
+              <p className="text-sm font-semibold text-ink">{title ?? "Information"}</p>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="Stäng"
+                className="-m-2 shrink-0 p-2 text-slate-400 transition-colors hover:text-slate-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="text-sm leading-relaxed text-slate-600 whitespace-normal">
+              {children}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hover: anchored tooltip */}
+      {open && !isTouch && pos && (
         <div
           ref={panelRef}
           role="tooltip"
@@ -2297,8 +2629,8 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
 
   return (
     <section className="bg-white rounded-xl p-6 sm:p-8" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)", border: "1px solid #D9E0E6" }}>
-      <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-1">Föreslagen portfölj</p>
-      <p className="text-lg font-semibold text-ink mb-6">Nyckeltal efter föreslagna byten</p>
+      <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-1">Alternativt scenario</p>
+      <p className="text-lg font-semibold text-ink mb-6">Nyckeltal med jämförbara alternativ</p>
 
       <div className="mb-6">
         <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-3">Fondinnehav</p>
@@ -2323,7 +2655,7 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
               <tr className="bg-slate-50 text-[10px] sm:text-xs font-semibold tracking-[0.06em] uppercase text-slate-400">
                 <th className="text-left py-2.5 px-3 sm:px-4 font-semibold">Nyckeltal</th>
                 <th className="text-right py-2.5 px-2 sm:px-4 font-semibold">Nuvarande</th>
-                <th className="text-right py-2.5 px-2 sm:px-4 font-semibold">Efter byten</th>
+                <th className="text-right py-2.5 px-2 sm:px-4 font-semibold">Scenario</th>
                 <th className="text-right py-2.5 px-3 sm:px-4 font-semibold">Förändring</th>
               </tr>
             </thead>
@@ -2363,7 +2695,7 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-ink">Avgiftsbesparing</p>
-                  <p className="text-xs text-slate-400">Garanterad vid fondbyte</p>
+                  <p className="text-xs text-slate-400">Beräknad utifrån redovisad avgift</p>
                 </div>
                 <p className={`text-base font-bold tabular-nums ${feeSavingsKr >= 0 ? "text-pos" : "text-red-500"}`}>
                   {`${feeSavingsKr >= 0 ? "+" : ""}${Math.round(feeSavingsKr).toLocaleString("sv-SE")} kr`}
@@ -2383,7 +2715,7 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
             )}
           </div>
           <p className="text-[10px] text-slate-400 leading-snug border-t border-slate-200 pt-3">
-            Avgiftsbesparing realiseras vid fondbyte. Historisk avkastning är ingen garanti för framtida resultat — avkastningssiffran ska ses som referens, inte som en prognos.
+            Avgiftsbesparing är en beräkning utifrån redovisade avgifter. Kontrollera alltid aktuella villkor hos fondbolag eller depåplattform. Historisk avkastning är ingen garanti för framtida resultat — avkastningssiffran ska ses som referens, inte som en prognos.
           </p>
         </div>
       )}
@@ -2408,7 +2740,7 @@ function OptimalPortfolioProjection({ current, portfolioValue }: { current: Curr
         </div>
         <div>
           <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-0.5">Analys</p>
-          <p className="text-lg font-semibold text-ink">Din portfölj är redan optimal</p>
+          <p className="text-lg font-semibold text-ink">Vi hittar inget tydligt starkare alternativ just nu</p>
         </div>
       </div>
 
