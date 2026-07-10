@@ -89,7 +89,7 @@ export default function Header() {
 
   function mobileActionClass(href: string) {
     const active = isActivePath(href);
-    return `mobile-glass-button relative flex min-h-10 flex-1 items-center justify-center gap-2 rounded-[14px] px-3 text-sm font-semibold transition-colors duration-200 ${
+    return `mobile-glass-button relative flex min-h-8 flex-1 items-center justify-center gap-1.5 rounded-[10px] px-3 text-xs font-semibold transition-colors duration-200 ${
       active ? "text-accent" : "text-ink-2 hover:text-ink"
     }`;
   }
@@ -153,8 +153,12 @@ export default function Header() {
       </header>
 
       {/* Mobile quick actions */}
-      <motion.nav layoutRoot aria-label="Snabbnavigering" className="sm:hidden fixed inset-x-3 bottom-3 z-50 pointer-events-none pb-safe">
-        <div className="mobile-liquid-glass pointer-events-auto mx-auto flex max-w-sm items-center gap-1.5 rounded-[20px] p-1.5">
+      <motion.nav
+        layoutRoot
+        aria-label="Snabbnavigering"
+        className="sm:hidden fixed inset-x-0 bottom-0 z-50 flex justify-center px-3 pb-safe pointer-events-none"
+      >
+        <div className="mobile-liquid-glass pointer-events-auto flex w-full max-w-xs items-center gap-1 rounded-[16px] p-1">
           <Link href="/analyze" aria-current={mobileAriaCurrent("/analyze")} className={mobileActionClass("/analyze")}>
             {isActivePath("/analyze") && (
               <motion.span
@@ -163,7 +167,7 @@ export default function Header() {
                 transition={{ type: "spring", bounce: 0.3, duration: 0.77 }}
               />
             )}
-            <Search className="relative z-[1] h-4 w-4" strokeWidth={2} aria-hidden="true" />
+            <Search className="relative z-[1] h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
             <span className="relative z-[1]">Analysera</span>
           </Link>
           <Link href="/bygg-portfolj" aria-current={mobileAriaCurrent("/bygg-portfolj")} className={mobileActionClass("/bygg-portfolj")}>
@@ -174,7 +178,7 @@ export default function Header() {
                 transition={{ type: "spring", bounce: 0.3, duration: 0.7 }}
               />
             )}
-            <Plus className="relative z-[1] h-4 w-4" strokeWidth={2} aria-hidden="true" />
+            <Plus className="relative z-[1] h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
             <span className="relative z-[1]">Bygg portfölj</span>
           </Link>
         </div>
