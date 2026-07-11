@@ -24,16 +24,26 @@ function fmtSigned(v: number, decimals = 1) {
 type VerdictTone = "good" | "warn" | "neutral";
 
 function swapReasonText(swap: SwapSuggestion): string {
-  if (swap.improvement.cost !== undefined) {
-    return `Lägre avgift: ${fmtPct(fundCost(swap.suggestedFund))} i stället för ${fmtPct(fundCost(swap.currentFund))} per år.`;
+  const imp = swap.improvement;
+  const reasons: string[] = [];
+
+  // Ett prestandaskäl (riskjusterat före rått), sedan avgift — så avgiften
+  // inte alltid dominerar utan de starkaste skälen vävs ihop till en mening.
+  if (imp.sharpe !== undefined) {
+    reasons.push("starkare riskjusterad avkastning historiskt");
+  } else if (imp.return1yr !== undefined) {
+    reasons.push(`högre historisk avkastning (${fmtPct(swap.suggestedFund.return_1yr!, 1)} mot ${fmtPct(swap.currentFund.return_1yr!, 1)})`);
   }
-  if (swap.improvement.sharpe !== undefined) {
-    return "Starkare riskjusterade historiska nyckeltal än den analyserade fonden.";
+  if (imp.cost !== undefined) {
+    reasons.push(`lägre avgift (${fmtPct(fundCost(swap.suggestedFund))} mot ${fmtPct(fundCost(swap.currentFund))})`);
   }
-  if (swap.improvement.return1yr !== undefined) {
-    return "Starkare historisk avkastning än den analyserade fonden.";
+
+  if (reasons.length === 0) {
+    return "Starkare helhet i jämförelsen när vi väger samman avgift, avkastning och risk.";
   }
-  return "Starkare helhet i jämförelsen när vi väger samman avgift, avkastning och risk.";
+
+  const joined = reasons.length === 2 ? `${reasons[0]} och ${reasons[1]}` : reasons[0];
+  return joined.charAt(0).toUpperCase() + joined.slice(1) + ".";
 }
 
 function buildFundSummary(analysis: PortfolioAnalysis, swap: SwapSuggestion | null): string {
@@ -109,7 +119,6 @@ function buildFundVerdict(
 
 function FundPanelView({
   title,
-  badgeLabel,
   live,
   verdictTone,
   verdictTitle,
@@ -119,7 +128,6 @@ function FundPanelView({
   onCta,
 }: {
   title: string;
-  badgeLabel: string;
   live: boolean;
   verdictTone: VerdictTone;
   verdictTitle: string;
@@ -136,16 +144,8 @@ function FundPanelView({
 
   return (
     <div className={`w-full bg-white border border-line rounded-[14px] overflow-hidden${live ? " animate-panel-in" : ""}`} style={PANEL_SHADOW}>
-      {/* Fond + badge */}
-      <div className="flex items-center justify-between gap-3 px-6 py-3.5 border-b border-line-soft">
-        <p className="text-[15px] font-semibold text-ink truncate">{title}</p>
-        <span
-          className={`text-[11px] font-semibold rounded-lg px-2 py-0.5 shrink-0 border ${
-            live ? "text-accent bg-info border-info-line" : "text-ink-4 bg-section border-line-soft"
-          }`}
-        >
-          {badgeLabel}
-        </span>
+      <div className="px-5 pt-4 pb-3.5 sm:px-6 border-b border-line-soft">
+        <p className="text-sm font-semibold text-ink-2 leading-snug break-words">{title}</p>
       </div>
 
       <div className="px-5 py-5 sm:px-6">
@@ -156,24 +156,12 @@ function FundPanelView({
         <p className="mt-2 text-sm text-ink-2 leading-relaxed">{summary}</p>
 
         {swap ? (
-          <div className="mt-5 rounded-[12px] bg-section p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-4 mb-3">Alternativ i samma kategori</p>
-            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center">
-              <div className="min-w-0 rounded-[10px] bg-white border border-line-soft px-3 py-2.5">
-                <p className="text-[10px] font-medium uppercase tracking-[0.05em] text-ink-4 mb-1">Nuvarande</p>
-                <p className="text-sm font-semibold text-ink-2 leading-snug break-words">{title}</p>
-              </div>
-              <div className="hidden sm:flex w-8 h-8 rounded-[10px] bg-white border border-line flex items-center justify-center shrink-0">
-                <svg className="w-4 h-4 text-ink-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                </svg>
-              </div>
-              <div className="min-w-0 rounded-[10px] bg-white border border-pos/15 px-3 py-2.5">
-                <p className="text-[10px] font-medium uppercase tracking-[0.05em] text-pos mb-1">Alternativ</p>
-                <p className="text-sm font-semibold text-ink leading-snug break-words">{swap.suggestedFund.name}</p>
-              </div>
-            </div>
-            <p className="mt-3 pt-3 border-t border-line-soft text-xs text-ink-2 leading-relaxed">
+          <div className="mt-5 rounded-[12px] border border-line-soft bg-section/70 px-4 py-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-4">Alternativ fond i samma kategori</p>
+            <p className="mt-1.5 font-heading text-base sm:text-[17px] font-bold text-ink leading-snug break-words">
+              {swap.suggestedFund.name}
+            </p>
+            <p className="mt-2.5 text-xs text-ink-2 leading-relaxed">
               {swapReasonText(swap)}
             </p>
           </div>
@@ -321,7 +309,6 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
     panel = (
       <FundPanelView
         title={selected.name}
-        badgeLabel="Din fond"
         live
         verdictTone={verdict.tone}
         verdictTitle={verdict.title}
@@ -341,12 +328,12 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
           dyker upp nedanför (resultatpanelen) flödar nedåt och flyttar aldrig rubriken. */}
       {children}
 
-      <div className="mt-8 sm:mt-10 relative w-full max-w-[720px]">
+      <div className="mt-7 sm:mt-10 relative w-full max-w-[720px]">
           <div
-            className="flex items-center gap-3.5 bg-[rgba(255,255,255,0.72)] backdrop-blur-[12px] border-[1.5px] border-[rgba(255,255,255,0.7)] rounded-[14px] px-5 sm:px-7 py-4 sm:py-[22px] focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/15 transition-colors"
+            className="flex items-center gap-3 bg-[rgba(255,255,255,0.72)] backdrop-blur-[12px] border-[1.5px] border-[rgba(255,255,255,0.7)] rounded-[14px] px-4 sm:px-7 py-3.5 sm:py-[22px] focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/15 transition-colors"
             style={{ boxShadow: "0 12px 32px rgba(23,33,43,.1)" }}
           >
-            <Search className="w-[22px] h-[22px] text-[#8b95a1] shrink-0" strokeWidth={2} aria-hidden="true" />
+            <Search className="h-5 w-5 sm:h-[22px] sm:w-[22px] text-[#8b95a1] shrink-0" strokeWidth={2} aria-hidden="true" />
             <div className="relative flex-1 min-w-0">
               <input
                 type="text"
@@ -361,14 +348,14 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
                   aria-hidden="true"
                   className="pointer-events-none absolute inset-y-0 left-0 flex w-full items-center overflow-hidden whitespace-nowrap text-[16px] sm:text-[18px] text-[#8b95a1]"
                 >
-                  Sök din fond, t.ex.&nbsp;
+                  <span className="shrink-0">Sök fond, t.ex.&nbsp;</span>
                   {reducedMotion ? (
                     <span className="truncate">{PLACEHOLDER_EXAMPLES[0]}</span>
                   ) : (
-                    <>
+                    <span className="min-w-0 truncate">
                       {placeholderText}
                       <span className="animate-caret ml-px inline-block h-[1.15em] w-px shrink-0 bg-[#8b95a1]" />
-                    </>
+                    </span>
                   )}
                 </span>
               )}

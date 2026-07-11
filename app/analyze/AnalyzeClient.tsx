@@ -7,11 +7,12 @@ import { createClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { RotateCcw, Search, SlidersHorizontal, X } from "lucide-react"
+import { ArrowRight, FileUp, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react"
 import type { SavedPortfolio } from "@/lib/portfolio"
 import DonutChart from "@/components/ui/DonutChart"
 import { computePortfolioScore } from "@/lib/portfolio-score"
 import { CHART_PALETTE } from "@/lib/chart-palette"
+import { useMobileBottomOverlay } from "@/lib/mobile-bottom-overlay"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -677,7 +678,7 @@ function FundSearchSheet({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col bg-white sm:items-center sm:justify-center sm:bg-slate-900/40 sm:p-4"
+      className="fixed inset-0 z-[70] flex flex-col bg-white sm:items-center sm:justify-center sm:bg-slate-900/40 sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-label="Lägg till fonder"
@@ -881,6 +882,7 @@ export default function AnalyzeClient() {
   const [analysis, setAnalysis] = useState<PortfolioAnalysis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [inputMode, setInputMode] = useState<"weight" | "amount">("weight");
+  const [inputCollapsed, setInputCollapsed] = useState(false);
 
   // Input method: how the user wants to populate their portfolio
   const [inputMethod, setInputMethod] = useState<"ai" | "manual" | null>(null);
@@ -1022,6 +1024,7 @@ export default function AnalyzeClient() {
     setAnalysis(p.analysis);
     setPortfolioId(p.id);
     setInputMethod("manual");
+    setInputCollapsed(true);
     setError(null);
     setInputMode(p.holdings.some((h) => h.amount) ? "amount" : "weight");
   }
@@ -1222,7 +1225,7 @@ export default function AnalyzeClient() {
     "Hämtar fonddata…",
     "Beräknar avkastning och risk…",
     "Jämför med liknande alternativ…",
-    "Sammanställer analys…",
+    "Sammanställer analysen…",
   ];
 
   async function analyze(entriesOverride?: Entry[]) {
@@ -1276,6 +1279,7 @@ export default function AnalyzeClient() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Okänt fel");
       setAnalysis(data);
+      setInputCollapsed(true);
       setTimeout(() => {
         if (resultsRef.current) {
           const top = resultsRef.current.getBoundingClientRect().top + window.scrollY - 88;
@@ -1362,10 +1366,12 @@ export default function AnalyzeClient() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-6 max-w-xs mx-auto px-6">
+      <div className="flex min-h-[calc(100svh-80px)] items-center justify-center px-4 py-16">
+        <div className="mx-auto w-full max-w-xs space-y-6 text-center">
           <div className="w-10 h-10 rounded-full border-2 border-blue-500 border-t-transparent animate-spin mx-auto" />
-          <p className="text-base font-medium text-slate-700">{LOADING_STEPS[loadingStep]}</p>
+          <p className="flex min-h-6 items-center justify-center text-center text-base font-medium text-slate-700">
+            {LOADING_STEPS[loadingStep]}
+          </p>
           <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
             <div
               className="h-full bg-blue-500 rounded-full transition-all duration-500"
@@ -1427,7 +1433,7 @@ export default function AnalyzeClient() {
                 <div className="border-t border-slate-100">
                   <button
                     type="button"
-                    onClick={() => { setPortfolioId(null); setCustodian(null); setEntries([{ isin: "", name: "", weight: "" }]); setAnalysis(null); setError(null); setInputMethod(null); setPortfolioDropdownOpen(false); }}
+                    onClick={() => { setPortfolioId(null); setCustodian(null); setEntries([{ isin: "", name: "", weight: "" }]); setAnalysis(null); setInputCollapsed(false); setError(null); setInputMethod(null); setPortfolioDropdownOpen(false); }}
                     className={cn(
                       "w-full text-left px-3 py-2.5 text-sm transition-colors hover:bg-blue-50",
                       !portfolioId ? "text-blue-700 font-medium bg-blue-50" : "text-slate-500"
@@ -1449,67 +1455,68 @@ export default function AnalyzeClient() {
         </div>
       )}
 
-      <section className="no-print bg-white rounded-xl shadow-sm border border-slate-200 p-5 sm:p-6 space-y-5">
+      <section className="no-print bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6 space-y-5">
+        {analysis && inputCollapsed ? (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="font-heading text-base font-bold text-slate-900">Din portfölj</p>
+              <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                {entries.filter((e) => e.isin).length} fonder analyserade.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setInputCollapsed(false)}
+              className="inline-flex w-full items-center justify-center rounded-[10px] border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-accent transition-colors hover:border-accent hover:bg-info sm:w-auto"
+            >
+              Ändra fonder
+            </button>
+          </div>
+        ) : (
+          <>
         {/* Header */}
         <div className="flex items-center justify-between gap-2">
           <h2 className="font-heading text-lg font-bold text-slate-900 shrink-0">Din portfölj</h2>
-          {inputMethod !== null && custodian && (
-            <div className="flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5" role="group" aria-label="Ange innehav i vikt eller belopp">
-              {([["weight", "Vikt (%)"], ["amount", "Belopp (kr)"]] as const).map(([mode, label]) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setInputMode(mode)}
-                  className={`px-2.5 py-1 text-xs font-semibold rounded-md whitespace-nowrap transition-colors ${
-                    inputMode === mode ? "bg-white text-ink shadow-sm" : "text-slate-400 hover:text-slate-600"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Custodian selector */}
-        <div className="space-y-2.5">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-[0.08em]">Var förvaltar du dina fonder?</p>
-          <div className="grid grid-cols-3 gap-2">
+        <div className="rounded-xl border border-line-soft bg-section/60 p-3 sm:p-4">
+          <div className="pb-3">
+            <p className="font-heading text-base font-bold text-ink">Var finns dina fonder?</p>
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             {[
-              { value: "avanza",  label: "Avanza",  funds: "1 500+" },
-              { value: "nordnet", label: "Nordnet", funds: "1 700+" },
-              { value: "övrigt",  label: "Övrigt",  funds: null },
+              { value: "avanza", label: "Avanza" },
+              { value: "nordnet", label: "Nordnet" },
+              { value: "övrigt", label: "Annat ställe" },
             ].map((c) => (
               <button
                 key={c.value}
                 type="button"
+                aria-label={c.label}
                 onClick={() => {
                   if (custodian !== c.value) {
                     setEntries([{ isin: "", name: "", weight: "" }]);
                     setInputMethod(null);
                     setAnalysis(null);
+                    setInputCollapsed(false);
                     setError(null);
                     setPortfolioId(null);
                   }
                   setCustodian(c.value);
                 }}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-0.5 rounded-xl border p-3 text-center transition-all min-h-[56px]",
+                  "flex min-h-[46px] items-center justify-center rounded-[10px] border px-4 py-2.5 text-center text-sm font-bold transition-all",
                   custodian === c.value
-                    ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500/20"
-                    : "border-slate-200 bg-slate-50/50 hover:border-blue-300 hover:bg-white"
+                    ? "border-accent bg-accent text-white shadow-sm"
+                    : "border-line-soft bg-white text-ink-2 hover:border-info-line hover:bg-white hover:text-accent"
                 )}
               >
-                <span className={cn("text-[15px] font-semibold", custodian === c.value ? "text-blue-700" : "text-slate-800")}>
-                  {c.label}
-                </span>
-                {c.funds && (
-                  <span className="text-[10px] text-slate-400">{c.funds} fonder</span>
-                )}
+                {c.label}
               </button>
             ))}
           </div>
-          <p className="text-xs text-slate-400">
+          <p className="mt-3 text-xs text-slate-400">
             Äger du inga fonder?{" "}
             <Link href="/bygg-portfolj" className="text-blue-600 hover:underline font-medium">
               Bygg en portfölj
@@ -1536,26 +1543,33 @@ export default function AnalyzeClient() {
             <div className="h-px bg-slate-100" />
 
             {/* Method selector */}
-            <div className="grid grid-cols-3 gap-2">
+            <div className="space-y-3">
+              <div>
+                <p className="font-heading text-base font-bold text-ink">Hur vill du lägga in innehaven?</p>
+                <p className="mt-1 text-sm text-ink-3">Sök själv, ladda upp en CSV eller låt guiden hjälpa dig hitta fonder.</p>
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               {/* Manual */}
               <button
                 type="button"
                 onClick={() => setInputMethod("manual")}
                 className={cn(
-                  "flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition-all",
+                  "group flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-xl border px-2.5 py-2 text-center transition-all",
                   inputMethod === "manual"
-                    ? "border-blue-200 bg-blue-50"
-                    : "border-slate-200 bg-white hover:border-blue-200 hover:bg-slate-50"
+                    ? "border-accent bg-info shadow-sm ring-1 ring-accent/15"
+                    : "border-line-soft bg-white hover:border-info-line hover:bg-section/60"
                 )}
               >
-                <div className="flex items-center gap-1.5">
-                  <Search className={cn("w-3.5 h-3.5", inputMethod === "manual" ? "text-blue-500" : "text-slate-400")} />
-                  <span className={cn("text-xs font-semibold", inputMethod === "manual" ? "text-blue-700" : "text-slate-700")}>
+                <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] border transition-colors", inputMethod === "manual" ? "border-accent bg-accent text-white" : "border-line-soft bg-section text-ink-3 group-hover:text-accent")}>
+                  <Search className="h-4 w-4" />
+                </span>
+                <span>
+                  <span className={cn("block text-sm font-semibold", inputMethod === "manual" ? "text-accent" : "text-ink")}>
                     Sök manuellt
                   </span>
-                </div>
-                <span className="text-[11px] text-slate-400 leading-tight hidden sm:block">
-                  Sök på fondnamn eller ISIN
+                  <span className="mt-1 block text-xs leading-snug text-ink-3">
+                    Sök på fondnamn eller ISIN
+                  </span>
                 </span>
               </button>
 
@@ -1565,26 +1579,26 @@ export default function AnalyzeClient() {
                 onClick={() => { setImportResult(null); setImportWizard({ open: true, step: 1, file: null, name: "" }); }}
                 disabled={importing}
                 className={cn(
-                  "flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition-all",
+                  "group flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-xl border px-2.5 py-2 text-center transition-all disabled:cursor-wait",
                   importing
-                    ? "border-blue-200 bg-blue-50"
-                    : "border-slate-200 bg-white hover:border-blue-200 hover:bg-slate-50"
+                    ? "border-accent bg-info shadow-sm ring-1 ring-accent/15"
+                    : "border-line-soft bg-white hover:border-info-line hover:bg-section/60"
                 )}
               >
-                <div className="flex items-center gap-1.5">
+                <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] border transition-colors", importing ? "border-accent bg-accent text-white" : "border-line-soft bg-section text-ink-3 group-hover:text-accent")}>
                   {importing ? (
-                    <span className="w-3.5 h-3.5 rounded-full border-2 border-blue-400 border-t-transparent animate-spin" />
+                    <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
                   ) : (
-                    <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                    </svg>
+                    <FileUp className="h-4 w-4" />
                   )}
-                  <span className="text-xs font-semibold text-slate-700">
+                </span>
+                <span>
+                  <span className={cn("block text-sm font-semibold", importing ? "text-accent" : "text-ink")}>
                     {importing ? "Importerar…" : "Importera fil"}
                   </span>
-                </div>
-                <span className="text-[11px] text-slate-400 leading-tight hidden sm:block">
-                  Från Nordnet eller Avanza
+                  <span className="mt-1 block text-xs leading-snug text-ink-3">
+                    Ladda upp en CSV-fil
+                  </span>
                 </span>
               </button>
 
@@ -1593,22 +1607,25 @@ export default function AnalyzeClient() {
                 type="button"
                 onClick={() => setInputMethod("ai")}
                 className={cn(
-                  "flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition-all",
+                  "group flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-xl border px-2.5 py-2 text-center transition-all",
                   inputMethod === "ai"
-                    ? "border-blue-200 bg-info"
-                    : "border-slate-200 bg-white hover:border-blue-200 hover:bg-slate-50"
+                    ? "border-accent bg-info shadow-sm ring-1 ring-accent/15"
+                    : "border-line-soft bg-white hover:border-info-line hover:bg-section/60"
                 )}
               >
-                <div className="flex items-center gap-1.5">
-                  <SlidersHorizontal className={cn("w-3.5 h-3.5", inputMethod === "ai" ? "text-blue-500" : "text-slate-400")} />
-                  <span className={cn("text-xs font-semibold", inputMethod === "ai" ? "text-blue-700" : "text-slate-700")}>
+                <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] border transition-colors", inputMethod === "ai" ? "border-accent bg-accent text-white" : "border-line-soft bg-section text-ink-3 group-hover:text-accent")}>
+                  <SlidersHorizontal className="h-4 w-4" />
+                </span>
+                <span>
+                  <span className={cn("block text-sm font-semibold", inputMethod === "ai" ? "text-accent" : "text-ink")}>
                     Guidad sökning
                   </span>
-                </div>
-                <span className="text-[11px] text-slate-400 leading-tight hidden sm:block">
-                  Svara på några snabba frågor
+                  <span className="mt-1 block text-xs leading-snug text-ink-3">
+                    Svara på några snabba frågor
+                  </span>
                 </span>
               </button>
+              </div>
             </div>
 
             {/* AI widget — shown when AI method selected */}
@@ -1631,6 +1648,23 @@ export default function AnalyzeClient() {
 
             {/* Fund rows — in AI mode only shown once at least one fund is selected */}
             {(inputMethod === "manual" || (inputMethod === "ai" && entries.some((e) => e.isin))) && (<>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Innehav</p>
+              <div className="flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5" role="group" aria-label="Ange innehav i vikt eller belopp">
+                {([["weight", "Vikt (%)"], ["amount", "Belopp (kr)"]] as const).map(([mode, label]) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setInputMode(mode)}
+                    className={`px-2.5 py-1 text-xs font-semibold rounded-md whitespace-nowrap transition-colors ${
+                      inputMode === mode ? "bg-white text-ink shadow-sm" : "text-slate-400 hover:text-slate-600"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {importResult && (
               <p className="text-xs text-slate-400">
@@ -1740,6 +1774,8 @@ export default function AnalyzeClient() {
             )}
           </>
         )}
+        </>
+        )}
       </section>
 
       <div ref={resultsRef} />
@@ -1801,7 +1837,7 @@ export default function AnalyzeClient() {
     {/* Import wizard modal */}
     {importWizard.open && (
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4"
+        className="fixed inset-0 z-[70] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4"
         onClick={(e) => { if (e.target === e.currentTarget) setImportWizard(w => ({ ...w, open: false })); }}
       >
         <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
@@ -1953,6 +1989,8 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
   }
 
   const scoreColor = score >= 7.5 ? "#18864B" : score >= 5 ? "#B97818" : "#C23A32";
+  const allocationSlices = (analysis.detailedBreakdown ?? []).map(c => ({ label: c.label, weight: c.weight }));
+  const allocationCenter = allocationSlices[0];
 
   const strengths: string[] = [];
   const warnings: string[] = [];
@@ -2039,7 +2077,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
       </div>
 
       {/* Sammanfattande betygskort */}
-      <section className="no-print bg-white rounded-xl border border-line p-6 sm:p-8" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)" }}>
+      <section className="no-print bg-white rounded-xl border border-line p-4 sm:p-8" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)" }}>
         <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs font-semibold tracking-[0.08em] uppercase text-ink-3 mb-2">Portföljbetyg</p>
@@ -2107,26 +2145,39 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
       </section>
 
       {/* Key metrics + allocation */}
-      <section className="bg-white rounded-xl p-6 sm:p-8" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)", border: "1px solid #D9E0E6" }}>
-        <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-6">Nyckeltal</p>
-        <div className="grid lg:grid-cols-[1fr_340px] gap-8 items-start">
-          <div className="grid grid-cols-2 gap-x-4 sm:gap-x-8 gap-y-6">
+      <section className="overflow-hidden bg-white rounded-xl p-4 sm:p-8" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)", border: "1px solid #D9E0E6" }}>
+        <p className="mb-5 text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 sm:mb-6">Nyckeltal</p>
+        <div className="grid min-w-0 gap-7 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8 lg:items-start">
+          <div className="grid min-w-0 grid-cols-2 gap-x-3 gap-y-6 sm:gap-x-8">
             <Metric label="Snittavgift" value={analysis.avgCost !== null ? `${analysis.avgCost.toFixed(2)}%` : "–"} sub="per år" info="Den genomsnittliga årliga avgiften viktat efter din fördelning." />
             <Metric label="Avkastning 1 år" value={analysis.weightedReturn1yr !== null ? `${analysis.weightedReturn1yr.toFixed(1)}%` : "–"} sub="senaste 12 mån" info="Portföljens viktade avkastning de senaste 12 månaderna." />
             <Metric label="Avkastning 3 år" value={analysis.weightedReturn3yr !== null ? `${analysis.weightedReturn3yr.toFixed(1)}%` : "–"} sub="totalt" info="Portföljens viktade totalavkastning de senaste 3 åren." />
             <Metric label="Sharpe 3 år" value={analysis.weightedSharpe !== null ? analysis.weightedSharpe.toFixed(2) : "–"} sub="riskjusterad" info="Avkastning i förhållande till risk. Högre är bättre." />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-4">Fördelning</p>
-            <DonutChart
-              palette={CHART_PALETTE}
-              slices={(analysis.detailedBreakdown ?? []).map(c => ({ label: c.label, weight: c.weight }))}
-              centerLabel={`${(analysis.detailedBreakdown ?? [])[0]?.weight.toFixed(0)}%`}
-              centerSub={(analysis.detailedBreakdown ?? [])[0]?.label ?? ""}
-              size={145}
-              thickness={22}
-              horizontal
-            />
+            <div className="sm:hidden">
+              <DonutChart
+                palette={CHART_PALETTE}
+                slices={allocationSlices}
+                centerLabel={allocationCenter ? `${allocationCenter.weight.toFixed(0)}%` : ""}
+                centerSub={allocationCenter?.label ?? ""}
+                size={132}
+                thickness={20}
+                disableHover
+              />
+            </div>
+            <div className="hidden sm:block">
+              <DonutChart
+                palette={CHART_PALETTE}
+                slices={allocationSlices}
+                centerLabel={allocationCenter ? `${allocationCenter.weight.toFixed(0)}%` : ""}
+                centerSub={allocationCenter?.label ?? ""}
+                size={145}
+                thickness={22}
+                horizontal
+              />
+            </div>
             <p className="text-[10px] text-slate-400 mt-2 leading-snug">* Baseras på fondkategori, inte underliggande innehav.</p>
           </div>
         </div>
@@ -2208,16 +2259,14 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                   ["Länsförsäkringar Global Aktiv A", "Avanza Global"],
                   ["SEB Sverigefond Stora bolag", "PLUS Allabolag Sverige Index"],
                 ].map(([cur, sug], i) => (
-                  <div key={i} className="py-4 flex flex-col gap-2.5 sm:flex-row sm:items-start sm:gap-2">
+                  <div key={i} className="py-4 flex flex-col gap-2.5 sm:flex-row sm:items-stretch sm:gap-2">
                     <div className="min-w-0 sm:flex-1">
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-accent mb-1">Nuvarande</p>
                       <p className="text-sm font-semibold text-ink leading-snug">{cur}</p>
                     </div>
-                    <div className="shrink-0 sm:pt-4">
+                    <div className="flex shrink-0 items-center justify-center sm:px-1">
                       <div className="w-7 h-7 rounded-[10px] bg-slate-100 flex items-center justify-center">
-                        <svg className="w-3.5 h-3.5 text-slate-400 rotate-90 sm:rotate-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                        </svg>
+                        <ArrowRight className="w-3.5 h-3.5 text-slate-400 rotate-90 sm:rotate-0" />
                       </div>
                     </div>
                     <div className="min-w-0 sm:flex-1 sm:text-right">
@@ -2326,23 +2375,21 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                               </span>
                             </div>
                           )}
-                          <div className="relative flex flex-col gap-2.5 sm:flex-row sm:items-start sm:gap-2">
+                          <div className="relative flex flex-col gap-2.5 sm:flex-row sm:items-stretch sm:gap-2">
                             <div className="min-w-0 pr-8 sm:pr-0 sm:flex-1">
                               <p className="text-[10px] font-semibold uppercase tracking-wider text-accent mb-1">Nuvarande</p>
                               {group.map((item, si) => (
                                 <p key={si} className="text-sm font-semibold text-ink leading-snug break-words">{item.currentFund.name}</p>
                               ))}
                             </div>
-                            <div className="shrink-0 sm:pt-4">
+                            <div className="flex shrink-0 items-center justify-center sm:px-1">
                               <div className="w-7 h-7 rounded-[10px] bg-slate-100 flex items-center justify-center">
-                                <svg className="w-3.5 h-3.5 text-slate-400 rotate-90 sm:rotate-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                                </svg>
+                                <ArrowRight className="w-3.5 h-3.5 text-slate-400 rotate-90 sm:rotate-0" />
                               </div>
                             </div>
                             <div className="min-w-0 sm:flex-1 sm:text-right">
                               <p className="text-[10px] font-semibold uppercase tracking-wider text-accent mb-1">
-                                {isConsolidate ? "Alternativ vägning" : "Alternativ"}
+                                {isConsolidate ? "Alternativt ökad vikt i befintlig fond" : "Alternativ"}
                               </p>
                               <p className="text-sm font-semibold text-ink leading-snug break-words">{suggested.name}</p>
                             </div>
@@ -2354,7 +2401,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                                 <div className="grid grid-cols-[1fr_auto_auto] gap-x-5 gap-y-2 items-baseline">
                                   <span />
                                   <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400 text-right whitespace-nowrap">Nuvarande</span>
-                                  <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400 text-right whitespace-nowrap">{isConsolidate ? "Alternativ vikt" : "Alternativ"}</span>
+                                  <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400 text-right whitespace-nowrap">{isConsolidate ? "Ökad vikt" : "Alternativ"}</span>
 
                                   <span className="text-xs text-slate-500">Avgift</span>
                                   <span className="text-xs font-semibold text-ink tabular-nums text-right">{curCost !== null ? `${curCost.toFixed(2)}%` : "–"}</span>
@@ -2467,6 +2514,7 @@ function InfoPopover({ title, ariaLabel, width = POPOVER_WIDTH, children }: { ti
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
 
   function show() {
     // Touch → bottom sheet, no anchoring needed
@@ -2515,6 +2563,8 @@ function InfoPopover({ title, ariaLabel, width = POPOVER_WIDTH, children }: { ti
     };
   }, [open, isTouch]);
 
+  useMobileBottomOverlay(open && isTouch, sheetRef, "info-popover");
+
   return (
     <>
       <button
@@ -2543,6 +2593,7 @@ function InfoPopover({ title, ariaLabel, width = POPOVER_WIDTH, children }: { ti
           onClick={() => setOpen(false)}
         >
           <div
+            ref={sheetRef}
             role="dialog"
             aria-modal="true"
             aria-label={title ?? "Information"}
@@ -2587,14 +2638,14 @@ function InfoPopover({ title, ariaLabel, width = POPOVER_WIDTH, children }: { ti
 
 function Metric({ label, value, sub, info }: { label: string; value: string; sub: string; info: string }) {
   return (
-    <div>
-      <div className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-1.5 flex items-center gap-1">
-        {label}
+    <div className="min-w-0">
+      <div className="mb-1.5 flex min-w-0 items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400 sm:text-xs">
+        <span className="min-w-0 break-words leading-snug">{label}</span>
         <InfoPopover title={label} ariaLabel={`Vad betyder ${label.toLowerCase()}?`}>
           {info}
         </InfoPopover>
       </div>
-      <p className="text-2xl sm:text-3xl font-bold text-ink leading-none tabular-nums">{value}</p>
+      <p className="text-[28px] sm:text-3xl font-bold text-ink leading-none tabular-nums">{value}</p>
       <p className="text-xs text-slate-400 mt-1.5">{sub}</p>
     </div>
   );
@@ -2740,7 +2791,7 @@ function OptimalPortfolioProjection({ current, portfolioValue }: { current: Curr
         </div>
         <div>
           <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-0.5">Analys</p>
-          <p className="text-lg font-semibold text-ink">Vi hittar inget tydligt starkare alternativ just nu</p>
+          <p className="text-lg font-semibold text-ink">Inga bättre fondalternativ hittades</p>
         </div>
       </div>
 

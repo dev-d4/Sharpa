@@ -4,7 +4,7 @@ import HeroGradient from "@/components/ui/HeroGradient";
 
 export default function Hero() {
   return (
-    <section className="relative w-full overflow-hidden bg-canvas px-5 sm:px-10 lg:px-20 pt-24 sm:pt-36 lg:pt-40 pb-20 sm:pb-28">
+    <section className="relative z-10 w-full overflow-visible bg-canvas px-5 sm:px-10 lg:px-20 pt-16 sm:pt-36 lg:pt-40 pb-14 sm:pb-28">
       {/* Animerad gradient-bakgrund — subtila, roterande klot som tonar ut vid skroll */}
       <HeroGradient />
       <div className="relative z-10 max-w-[720px] mx-auto w-full">
@@ -15,7 +15,7 @@ export default function Hero() {
               <p className="mt-5 text-[15px] text-ink-2 leading-[1.6] max-w-[520px] mx-auto">
                 Avgift, avkastning och risk — jämfört mot liknande fonder med starka nyckeltal. Gratis och oberoende.
               </p>
-              <p className="mt-5 text-sm text-ink-3">
+              <p className="mt-4 sm:mt-5 text-sm text-ink-3">
                 Äger du inga fonder?{" "}
                 <Link
                   href="/bygg-portfolj"

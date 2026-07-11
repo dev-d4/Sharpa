@@ -8,7 +8,7 @@ import Link from "next/link";
 // linje. Under: kort rubrik, en mening, och en textlänk som CTA — ingen knapp.
 
 const BUILD_STEPS = [
-  { step: "01", label: "Frågor", value: "7 st" },
+  { step: "01", label: "Frågor", value: "4 st" },
   { step: "02", label: "Risk", value: "Balanserad" },
   { step: "03", label: "Portfölj", value: "Färdigt exempel" },
 ];
@@ -169,17 +169,17 @@ function PortfolioCalculator() {
 
       {/* Kvitto */}
       <div className="border-t border-line pt-5">
-        <div className="flex justify-between border-b border-dashed border-line py-2">
-          <span className="text-[13px] text-ink-2">Nuvarande portfölj, 10 år ({net.toLocaleString("sv-SE", { minimumFractionDigits: 1, maximumFractionDigits: 2 })} %/år netto)</span>
-          <span className="text-base font-semibold text-ink tabular-nums shrink-0 pl-3">{kr(endValue)}</span>
+        <div className="flex flex-col gap-1 border-b border-dashed border-line py-2 sm:flex-row sm:justify-between sm:gap-3">
+          <span className="text-[13px] text-ink-2 leading-snug">Nuvarande portfölj, 10 år ({net.toLocaleString("sv-SE", { minimumFractionDigits: 1, maximumFractionDigits: 2 })} %/år netto)</span>
+          <span className="text-base font-semibold text-ink tabular-nums sm:shrink-0">{kr(endValue)}</span>
         </div>
-        <div className="flex justify-between py-2">
-          <span className="text-[13px] text-ink-2">Optimerad avgift (0,15 %), 10 år</span>
-          <span className="text-base font-semibold text-accent tabular-nums shrink-0 pl-3">{kr(endValueOpt)}</span>
+        <div className="flex flex-col gap-1 py-2 sm:flex-row sm:justify-between sm:gap-3">
+          <span className="text-[13px] text-ink-2 leading-snug">Optimerad avgift (0,15 %), 10 år</span>
+          <span className="text-base font-semibold text-accent tabular-nums sm:shrink-0">{kr(endValueOpt)}</span>
         </div>
-        <div className="flex items-center justify-between pt-4">
+        <div className="flex flex-col gap-1 pt-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
           <span className="font-heading text-[15px] font-bold text-pos">Skillnad efter 10 år</span>
-          <span className="font-heading text-[22px] font-extrabold text-pos tabular-nums shrink-0 pl-3">
+          <span className="font-heading text-[22px] font-extrabold text-pos tabular-nums sm:shrink-0">
             {(diff >= 0 ? "+" : "") + kr(diff)}
           </span>
         </div>
