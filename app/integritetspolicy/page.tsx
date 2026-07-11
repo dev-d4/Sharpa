@@ -19,7 +19,7 @@ export default function IntegritetspolicyPage() {
           <p>
             Sharpa är personuppgiftsansvarig för behandlingen av dina personuppgifter.
             Har du frågor om hur vi hanterar dina uppgifter är du välkommen att kontakta oss på
-            {" "}<a href="mailto:kontakt@sharpa.se" className="text-blue-600 hover:underline">kontakt@sharpa.se</a>.
+            {" "}<a href="mailto:sharpakontakt@gmail.com" className="text-blue-600 hover:underline">sharpakontakt@gmail.com</a>.
           </p>
         </section>
 
@@ -95,7 +95,7 @@ export default function IntegritetspolicyPage() {
           <h2 className="text-lg font-bold text-slate-900">8. Kontakt</h2>
           <p>
             Har du frågor om din integritet eller vill utöva dina rättigheter, hör av dig via
-            e-post till <a href="mailto:kontakt@sharpa.se" className="text-blue-600 hover:underline">kontakt@sharpa.se</a>.
+            e-post till <a href="mailto:sharpakontakt@gmail.com" className="text-blue-600 hover:underline">sharpakontakt@gmail.com</a>.
           </p>
         </section>
 

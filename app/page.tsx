@@ -40,7 +40,7 @@ export default function LandingPage() {
                   </p>
                 </div>
                 <a
-                  href="mailto:kontakt@sharpa.se?subject=R%C3%A5dgivningsmodulen%20%E2%80%94%20intresseanm%C3%A4lan"
+                  href="mailto:sharpakontakt@gmail.com?subject=R%C3%A5dgivningsmodulen%20%E2%80%94%20intresseanm%C3%A4lan"
                   className="inline-flex items-center gap-2 bg-white hover:bg-blue-50 text-accent-press text-sm font-semibold px-4 py-2 rounded-[10px] transition-colors"
                 >
                   Kontakta oss
@@ -57,7 +57,7 @@ export default function LandingPage() {
                   </p>
                 </div>
                 <a
-                  href="mailto:kontakt@sharpa.se?subject=Portf%C3%B6ljmodulen%20%E2%80%94%20intresseanm%C3%A4lan"
+                  href="mailto:sharpakontakt@gmail.com?subject=Portf%C3%B6ljmodulen%20%E2%80%94%20intresseanm%C3%A4lan"
                   className="inline-flex items-center gap-2 bg-white hover:bg-blue-50 text-accent-press text-sm font-semibold px-4 py-2 rounded-[10px] transition-colors"
                 >
                   Kontakta oss
