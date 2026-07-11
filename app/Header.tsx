@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { Plus, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
+import { MOBILE_BOTTOM_OVERLAY_EVENT } from "@/lib/mobile-bottom-overlay";
 
 function AvatarDropdown({ user }: { user: User }) {
   const [open, setOpen] = useState(false);
@@ -64,9 +65,12 @@ function AvatarDropdown({ user }: { user: User }) {
 
 export default function Header() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
+  const [mobileBottomOffset, setMobileBottomOffset] = useState(0);
   const pathname = usePathname();
+  const router = useRouter();
+  const shouldResumeTool = pathname === "/analyze" || pathname === "/bygg-portfolj";
   const loginHref = pathname && pathname !== "/" && pathname !== "/login"
-    ? `/login?next=${encodeURIComponent(pathname)}`
+    ? `/login?next=${encodeURIComponent(pathname)}${shouldResumeTool ? "&skip_onboarding=1" : ""}`
     : "/login";
 
   useEffect(() => {
@@ -76,6 +80,22 @@ export default function Header() {
       setUser(session?.user ?? null);
     });
     return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const overlays = new Map<string, number>();
+
+    function handleBottomOverlay(e: Event) {
+      const detail = (e as CustomEvent<{ id?: string; height?: number }>).detail;
+      if (!detail?.id) return;
+      const height = Math.max(0, detail.height ?? 0);
+      if (height > 0) overlays.set(detail.id, height);
+      else overlays.delete(detail.id);
+      setMobileBottomOffset(Math.max(0, ...overlays.values()));
+    }
+
+    window.addEventListener(MOBILE_BOTTOM_OVERLAY_EVENT, handleBottomOverlay);
+    return () => window.removeEventListener(MOBILE_BOTTOM_OVERLAY_EVENT, handleBottomOverlay);
   }, []);
 
   function navClass(href: string) {
@@ -100,6 +120,15 @@ export default function Header() {
 
   function notifyBeforeLogin() {
     window.dispatchEvent(new Event("fondanalys:before-login"));
+  }
+
+  function handleLoginClick(e: ReactMouseEvent<HTMLAnchorElement>) {
+    notifyBeforeLogin();
+    if (!pathname || pathname === "/" || pathname === "/login") return;
+    e.preventDefault();
+    const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    const next = encodeURIComponent(currentPath);
+    router.push(`/login?next=${next}${shouldResumeTool ? "&skip_onboarding=1" : ""}`);
   }
 
   return (
@@ -128,7 +157,7 @@ export default function Header() {
               ) : (
                 <Link
                   href={loginHref}
-                  onClick={notifyBeforeLogin}
+                  onClick={handleLoginClick}
                   className="bg-info hover:bg-blue-100 text-accent text-sm font-semibold px-4 py-2 rounded-[10px] transition-colors"
                 >
                   Logga in
@@ -143,7 +172,7 @@ export default function Header() {
               user ? (
                 <AvatarDropdown user={user} />
               ) : (
-                <Link href={loginHref} onClick={notifyBeforeLogin} className="text-sm font-semibold text-ink-2">
+                <Link href={loginHref} onClick={handleLoginClick} className="text-sm font-semibold text-ink-2">
                   Logga in
                 </Link>
               )
@@ -156,7 +185,9 @@ export default function Header() {
       <motion.nav
         layoutRoot
         aria-label="Snabbnavigering"
-        className="sm:hidden fixed inset-x-0 bottom-0 z-50 flex justify-center px-3 pb-safe pointer-events-none"
+        animate={{ bottom: mobileBottomOffset }}
+        transition={{ type: "spring", stiffness: 360, damping: 34 }}
+        className="sm:hidden fixed inset-x-0 z-[60] flex justify-center px-3 pb-safe pointer-events-none"
       >
         <div className="mobile-liquid-glass pointer-events-auto flex w-full max-w-xs items-center gap-1 rounded-[16px] p-1">
           <Link href="/analyze" aria-current={mobileAriaCurrent("/analyze")} className={mobileActionClass("/analyze")}>

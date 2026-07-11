@@ -44,7 +44,7 @@ export const metadata: Metadata = {
   icons: {
     icon: "/logo.svg",
     shortcut: "/logo.svg",
-    apple: "/logo.svg",
+    apple: "/apple-icon.png",
   },
   robots: { index: true, follow: true },
 };
@@ -62,8 +62,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main className="flex-1 pb-nav-safe sm:pb-0">{children}</main>
 
         <Footer />
-        {/* Spacer so the footer clears the fixed mobile bottom nav */}
-        <div className="sm:hidden shrink-0" style={{ height: "calc(52px + max(8px, env(safe-area-inset-bottom, 0px)))" }} aria-hidden="true" />
+        {/* Spacer so the footer clears the fixed mobile quick actions */}
+        <div className="sm:hidden shrink-0" style={{ height: "calc(76px + max(8px, env(safe-area-inset-bottom, 0px)))" }} aria-hidden="true" />
 
         <CookieBanner />
       </body>

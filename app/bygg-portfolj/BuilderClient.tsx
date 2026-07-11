@@ -9,6 +9,7 @@ import { RISK_LABELS, RISK_EQUITY, type RiskLevel } from "@/lib/risk";
 import type { User } from "@supabase/supabase-js";
 import DonutChart from "@/components/ui/DonutChart";
 import { CHART_PALETTE } from "@/lib/chart-palette";
+import { useMobileBottomOverlay } from "@/lib/mobile-bottom-overlay";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -270,10 +271,10 @@ function OptionCard({ label, desc, onClick }: {
     <button
       type="button"
       onClick={onClick}
-      className="w-full px-4 py-4 rounded-[10px] border text-left transition-colors border-line bg-white hover:border-accent"
+      className="w-full rounded-[10px] border border-line bg-white px-3.5 py-3 text-left transition-colors hover:border-accent sm:px-4 sm:py-4"
     >
-      <p className="text-[15px] font-semibold text-slate-800">{label}</p>
-      <p className="text-sm text-slate-500 mt-1 leading-snug">{desc}</p>
+      <p className="text-[13px] font-semibold leading-snug text-slate-800 sm:text-[15px]">{label}</p>
+      <p className="mt-0.5 text-xs leading-snug text-slate-500 sm:mt-1 sm:text-sm">{desc}</p>
     </button>
   );
 }
@@ -308,6 +309,7 @@ export default function BuilderClient() {
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError]   = useState<string | null>(null);
   const saveNameRef = useRef<HTMLInputElement>(null);
+  const mobileSelectionCtaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
 
@@ -467,6 +469,7 @@ export default function BuilderClient() {
   const stepIdx    = STEPS.indexOf(step);
   const totalSteps = STEPS.length;
   const isResults  = step === "results";
+  useMobileBottomOverlay(step === "selections", mobileSelectionCtaRef, "builder-selection-cta");
 
   // Single-select steps advance immediately on click
   function pick<K extends keyof Omit<Answers, "selections" | "priorities" | "equityOverride">>(field: K, value: Answers[K]) {
@@ -648,19 +651,19 @@ export default function BuilderClient() {
   const showPreview = !isResults && stepIdx >= 1;
 
   return (
-    <div className={`${isResults ? "max-w-4xl" : step === "selections" ? "max-w-3xl" : showPreview ? "max-w-3xl" : "max-w-lg"} mx-auto px-4 py-10 sm:py-16 transition-all duration-200`}>
+    <div className={`${isResults ? "max-w-4xl" : step === "selections" ? "max-w-3xl" : showPreview ? "max-w-3xl" : "max-w-lg"} mx-auto px-4 py-5 transition-all duration-200 sm:py-16`}>
 
       {/* Page header */}
-      <div className="text-center mb-8">
-        <h1 className="font-heading text-2xl sm:text-3xl font-bold text-slate-900">Bygg din portfölj</h1>
-        <p className="text-slate-500 mt-2 text-sm">
+      <div className="mb-5 text-center sm:mb-8">
+        <h1 className="font-heading text-xl font-bold text-slate-900 sm:text-3xl">Bygg din portfölj</h1>
+        <p className="mt-1 text-xs text-slate-500 sm:mt-2 sm:text-sm">
           Svara på {totalSteps} frågor — vi visar ett komplett portföljexempel
         </p>
       </div>
 
       {/* Progress bar */}
       {!isResults && (
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6">
           <div className="flex justify-between text-xs text-slate-400 mb-1.5">
             <span>Fråga {stepIdx + 1} av {totalSteps}</span>
             <span>{Math.round(((stepIdx + 1) / totalSteps) * 100)}%</span>
@@ -692,13 +695,13 @@ export default function BuilderClient() {
           className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"
         >
           {!isResults && (
-            <div className="px-5 pt-5 pb-4 border-b border-slate-100">
-              <p className="text-base font-bold text-slate-900">{meta.title}</p>
-              {meta.subtitle && <p className="text-xs text-slate-400 mt-0.5">{meta.subtitle}</p>}
+            <div className="border-b border-slate-100 px-4 pb-3 pt-4 sm:px-5 sm:pb-4 sm:pt-5">
+              <p className="text-sm font-bold leading-snug text-slate-900 sm:text-base">{meta.title}</p>
+              {meta.subtitle && <p className="mt-0.5 text-[11px] leading-snug text-slate-400 sm:text-xs">{meta.subtitle}</p>}
             </div>
           )}
 
-          <div className="p-5 space-y-2">
+          <div className="space-y-2 p-4 sm:p-5">
 
             {/* Platform */}
             {step === "platform" && PLATFORM_OPTIONS.map((o) => (
@@ -795,14 +798,14 @@ export default function BuilderClient() {
                                     key={o.value}
                                     type="button"
                                     onClick={() => toggleSelection(o.value)}
-                                    className={`w-full px-4 py-3 rounded-[10px] border text-left transition-colors ${
+                                    className={`w-full rounded-[10px] border px-3.5 py-2.5 text-left transition-colors sm:px-4 sm:py-3 ${
                                       selected
                                         ? "border-accent bg-info"
                                         : "border-line bg-white hover:border-accent"
                                     }`}
                                   >
-                                    <p className={`text-sm font-semibold leading-snug ${selected ? "text-blue-700" : "text-slate-800"}`}>{o.label}</p>
-                                    <p className="text-xs text-slate-500 mt-1 leading-snug">{o.desc}</p>
+                                    <p className={`text-[13px] font-semibold leading-snug sm:text-sm ${selected ? "text-blue-700" : "text-slate-800"}`}>{o.label}</p>
+                                    <p className="mt-0.5 text-[11px] leading-snug text-slate-500 sm:mt-1 sm:text-xs">{o.desc}</p>
                                   </button>
                                 );
                               })}
@@ -907,6 +910,13 @@ export default function BuilderClient() {
                     {/* ── Fondlista & slider — alltid synliga ── */}
                     <div className="space-y-3">
 
+                      <div className="rounded-xl border border-info-line bg-info px-4 py-3">
+                        <p className="text-[11px] font-bold uppercase tracking-widest text-accent">Fonderna i portföljexemplet</p>
+                        <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                          Nedan visas de faktiska fonderna som valts för exemplet. Procenten visar föreslagen vikt i portföljen.
+                        </p>
+                      </div>
+
                       {result.droppedSelections?.length > 0 && (
                         <div className="bg-warn-soft border border-amber-200 rounded-xl px-4 py-3 space-y-1">
                           <p className="text-xs font-semibold text-amber-800">Vissa kategorier togs bort</p>
@@ -923,26 +933,42 @@ export default function BuilderClient() {
                           const candidate = slot.candidates?.[idx] ?? slot;
                           const canBack   = idx > 0;
                           const canNext   = idx < (slot.candidates?.length ?? 1) - 1;
+                          const candidateCount = slot.candidates?.length ?? 1;
                           return (
-                            <div key={si} className="border border-slate-100 rounded-xl px-4 py-3 bg-slate-50">
-                              <div className="flex items-center gap-3">
-                                <div className="w-11 h-11 bg-white border border-slate-200 rounded-xl flex items-center justify-center shrink-0">
-                                  <span className="text-sm font-bold text-accent">{slot.weight}%</span>
+                            <div key={si} className="rounded-xl border border-slate-200 bg-white px-3.5 py-3 shadow-sm sm:px-4">
+                              <div className="flex items-start gap-3">
+                                <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl border border-info-line bg-info">
+                                  <span className="text-[10px] font-bold uppercase leading-none text-blue-500">Vikt</span>
+                                  <span className="mt-0.5 text-sm font-bold leading-none text-accent">{slot.weight}%</span>
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-semibold text-slate-900 leading-snug break-words sm:truncate">{candidate.name}</p>
-                                  <p className="text-xs text-slate-500 mt-0.5">{slot.rationale}</p>
+                                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Fond {si + 1}</p>
+                                  <p className="mt-0.5 break-words text-[13px] font-semibold leading-snug text-slate-900 sm:text-sm">{candidate.name}</p>
+                                  <div className="mt-1 flex flex-wrap gap-1.5">
+                                    <span className="rounded-md bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-500">{slot.rationale}</span>
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-1 shrink-0">
+                                <div className="hidden items-center gap-1 shrink-0 sm:flex">
                                   <button type="button" onClick={() => { resetSaveState(); setSlotIndices((prev) => { const n=[...prev]; n[si]=idx-1; return n; }); }} disabled={!canBack} className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-400 flex items-center justify-center disabled:opacity-20 hover:border-slate-300 hover:text-slate-600 transition-colors">
                                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
                                   </button>
-                                  <span className="text-[10px] text-slate-300 w-6 text-center">{idx+1}/{slot.candidates?.length ?? 1}</span>
+                                  <span className="text-[10px] text-slate-300 w-6 text-center">{idx+1}/{candidateCount}</span>
                                   <button type="button" onClick={() => { resetSaveState(); setSlotIndices((prev) => { const n=[...prev]; n[si]=idx+1; return n; }); }} disabled={!canNext} className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-400 flex items-center justify-center disabled:opacity-20 hover:border-slate-300 hover:text-slate-600 transition-colors">
                                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
                                   </button>
                                 </div>
                               </div>
+                              {candidateCount > 1 && (
+                                <div className="mt-2 flex items-center justify-end gap-1 border-t border-slate-100 pt-2 sm:hidden">
+                                  <button type="button" onClick={() => { resetSaveState(); setSlotIndices((prev) => { const n=[...prev]; n[si]=idx-1; return n; }); }} disabled={!canBack} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-colors hover:border-slate-300 hover:text-slate-600 disabled:opacity-20">
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                                  </button>
+                                  <span className="w-12 text-center text-[10px] text-slate-400">Val {idx+1}/{candidateCount}</span>
+                                  <button type="button" onClick={() => { resetSaveState(); setSlotIndices((prev) => { const n=[...prev]; n[si]=idx+1; return n; }); }} disabled={!canNext} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-colors hover:border-slate-300 hover:text-slate-600 disabled:opacity-20">
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           );
                         })}
@@ -1066,7 +1092,7 @@ export default function BuilderClient() {
                                       })();
                                       return (
                                         <div key={i}>
-                                          <button type="button" onClick={() => setExpandedFunds((prev) => { const n = new Set(prev); open ? n.delete(i) : n.add(i); return n; })} className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-50 transition-colors">
+                                          <button type="button" onClick={() => setExpandedFunds((prev) => { const n = new Set(prev); if (open) n.delete(i); else n.add(i); return n; })} className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-50 transition-colors">
                                             <div className="flex items-center gap-2 min-w-0">
                                               <span className="text-xs font-semibold text-accent shrink-0">{f.weight}%</span>
                                               <span className="text-xs font-semibold text-slate-800 truncate">{f.name}</span>
@@ -1304,7 +1330,7 @@ export default function BuilderClient() {
       {/* ── Inline auth modal ─────────────────────────────────────────────────── */}
       {authModal && (
         <div
-          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-[70] p-4"
           onClick={(e) => { if (e.target === e.currentTarget) { setAuthModal(false); setAuthSent(false); setAuthEmail(""); setAuthError(null); } }}
         >
           <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 space-y-4">
@@ -1365,8 +1391,8 @@ export default function BuilderClient() {
       {/* Sticky bottom CTA för selections-steget på mobil */}
       {step === "selections" && (
         <div
-          className="sm:hidden fixed left-0 right-0 px-4 pb-3 pt-2 bg-white/95 backdrop-blur-sm border-t border-slate-100 z-40"
-          style={{ bottom: "calc(52px + max(8px, env(safe-area-inset-bottom, 0px)))" }}
+          ref={mobileSelectionCtaRef}
+          className="sm:hidden fixed bottom-0 left-0 right-0 px-4 pb-3 pt-2 bg-white/95 backdrop-blur-sm border-t border-slate-100 z-40"
         >
           <button
             type="button"

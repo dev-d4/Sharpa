@@ -1,6 +1,12 @@
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+
+type CookieToSet = {
+  name: string;
+  value: string;
+  options: CookieOptions;
+};
 
 function getSafeInternalPath(path: string | null) {
   if (!path || !path.startsWith("/") || path.startsWith("//")) return "/portfolios";
@@ -24,6 +30,9 @@ export async function GET(request: Request) {
 
   if (code) {
     const cookieStore = await cookies();
+    const authCookies: CookieToSet[] = [];
+    const authHeaders: Record<string, string> = {};
+
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -32,10 +41,12 @@ export async function GET(request: Request) {
           getAll() {
             return cookieStore.getAll();
           },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
+          setAll(cookiesToSet, headers) {
+            authCookies.push(...cookiesToSet);
+            Object.assign(authHeaders, headers);
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
           },
         },
       }
@@ -53,7 +64,14 @@ export async function GET(request: Request) {
           ? next
           : `/valkomst?next=${encodeURIComponent(next)}`
         : next;
-      return NextResponse.redirect(`${origin}${destination}`);
+      const response = NextResponse.redirect(`${origin}${destination}`);
+      authCookies.forEach(({ name, value, options }) => {
+        response.cookies.set(name, value, options);
+      });
+      Object.entries(authHeaders).forEach(([key, value]) => {
+        response.headers.set(key, value);
+      });
+      return response;
     }
   }
 

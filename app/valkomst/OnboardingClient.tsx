@@ -73,6 +73,7 @@ const CHOICES: Choice[] = [
 ];
 
 const cardEase = [0.22, 1, 0.36, 1] as const;
+const TOOL_PATHS = new Set(["/analyze", "/bygg-portfolj"]);
 
 function getSafeInternalPath(path: string | null) {
   if (!path || !path.startsWith("/") || path.startsWith("//")) return null;
@@ -97,12 +98,25 @@ export default function OnboardingClient() {
   const searchParams = useSearchParams();
   const nextParam = searchParams.get("next");
   const returnTo = getSafeInternalPath(nextParam) ?? "/portfolios";
+  const returnToPath = (() => {
+    try {
+      return new URL(returnTo, "http://local").pathname;
+    } catch {
+      return returnTo;
+    }
+  })();
 
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getSession().then(({ data }) => {
       if (!data.session?.user) {
         router.replace("/login");
+        return;
+      }
+      if (TOOL_PATHS.has(returnToPath)) {
+        supabase.auth.updateUser({ data: { onboarding_completed: true } }).finally(() => {
+          router.replace(returnTo);
+        });
         return;
       }
       const name =
@@ -112,11 +126,17 @@ export default function OnboardingClient() {
       setUserName(name);
       setReady(true);
     });
-  }, [router]);
+  }, [returnTo, returnToPath, router]);
 
   async function complete(destination: string) {
     setLoadingDestination(destination);
     const supabase = createClient();
+    if (TOOL_PATHS.has(returnToPath)) {
+      await supabase.auth.updateUser({ data: { onboarding_completed: true } });
+      router.replace(returnTo);
+      return;
+    }
+
     await supabase.auth.updateUser({ data: { onboarding_completed: true } });
     router.push(destination);
   }
