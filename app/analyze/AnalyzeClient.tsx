@@ -1366,7 +1366,7 @@ export default function AnalyzeClient() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[calc(100svh-80px)] items-center justify-center px-4 py-16">
+      <div className="fixed inset-x-0 top-14 bottom-0 z-40 flex items-center justify-center bg-white px-4 sm:top-16">
         <div className="mx-auto w-full max-w-xs space-y-6 text-center">
           <div className="w-10 h-10 rounded-full border-2 border-blue-500 border-t-transparent animate-spin mx-auto" />
           <p className="flex min-h-6 items-center justify-center text-center text-base font-medium text-slate-700">
