@@ -99,19 +99,25 @@ body {
   padding-bottom: max(4px, calc(env(safe-area-inset-bottom) - 6px));
 }
 
-/* Liquid Glass bottom nav — a single translucent layer anchored flush to the
-   bottom edge, letting content blur through. Keep the white opacity low so the
-   backdrop-filter reads as glass. No drop shadow: it sits on the screen edge,
-   so a shadow would only muddy Safari's URL bar peeking beneath it. */
+/* Liquid Glass bottom nav — iOS 26-style "clear" glass. The fill is kept very
+   low so the page genuinely shows through; depth comes from the backdrop
+   distortion (blur + saturate + slight brighten) and a specular rim drawn with
+   inset shadows: bright where light hits (top-left), a hair of dark where the
+   glass edge would refract (bottom). No outer drop shadow: it sits on the
+   screen edge, so a shadow would only muddy Safari's URL bar peeking beneath. */
 .mobile-liquid-glass {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  background: rgba(255, 255, 255, 0.55);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(20px) saturate(1.8);
-  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.32);
+  backdrop-filter: blur(24px) saturate(1.9) brightness(1.05);
+  -webkit-backdrop-filter: blur(24px) saturate(1.9) brightness(1.05);
+  box-shadow:
+    inset 1.5px 2.5px 0 -1.5px rgba(255, 255, 255, 0.9),
+    inset -1.5px -1.5px 0 -1.5px rgba(255, 255, 255, 0.7),
+    inset 0 0 14px rgba(255, 255, 255, 0.28),
+    inset 0 -1px 3px rgba(30, 41, 59, 0.07);
 }
 
 /* Specular sheen — a soft light that catches the top-left edge, plus a faint
@@ -123,8 +129,8 @@ body {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(120% 80% at 15% -10%, rgba(255, 255, 255, 0.55), transparent 50%),
-    radial-gradient(90% 70% at 90% 120%, rgba(11, 110, 153, 0.08), transparent 55%);
+    radial-gradient(120% 80% at 15% -10%, rgba(255, 255, 255, 0.5), transparent 50%),
+    radial-gradient(90% 70% at 90% 120%, rgba(11, 110, 153, 0.07), transparent 55%);
 }
 
 /* Inactive items sit directly on the glass with no fill of their own — piling
@@ -133,10 +139,11 @@ body {
   position: relative;
   background: transparent;
   border: 1px solid transparent;
+  transition: transform 0.18s ease;
 }
 
 .mobile-glass-button:active {
-  transform: scale(0.96);
+  transform: scale(0.95);
 }
 
 /* The active "knob": a brighter, lightly tinted glass lens that lifts off the
@@ -148,11 +155,21 @@ body {
   inset: 0;
   z-index: 0;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.1)),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.35),
+      rgba(255, 255, 255, 0.1) 55%,
+      rgba(255, 255, 255, 0.2)
+    ),
     rgba(11, 110, 153, 0.04);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  box-shadow:
+    inset 2px 2.5px 0 -1.5px rgba(255, 255, 255, 0.95),
+    inset -1.5px -2px 0 -1.5px rgba(255, 255, 255, 0.8),
+    inset 0 0 6px rgba(255, 255, 255, 0.2),
+    0 2px 6px rgba(15, 23, 42, 0.1),
+    0 0.5px 1px rgba(15, 23, 42, 0.08);
 }
 
 /* Respect reduced-transparency: fall back to a solid, legible surface. */
@@ -162,9 +179,11 @@ body {
     border-color: rgba(23, 33, 43, 0.12);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
+    box-shadow: none;
   }
   .mobile-glass-pill {
     background: rgba(11, 110, 153, 0.1);
+    box-shadow: none;
   }
 }
 
