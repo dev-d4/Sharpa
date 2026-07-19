@@ -160,8 +160,8 @@ export default function OnboardingClient() {
         <span className="onboarding-blob onboarding-blob-4" />
       </div>
 
-      <div className="relative z-10 flex min-h-dvh flex-col items-center justify-center px-6 py-12 sm:px-10 sm:py-16">
-        <div className="animate-fade-in-up w-full max-w-[860px]">
+      <div className="relative z-10 flex min-h-dvh flex-col items-center px-6 py-12 sm:px-10 sm:py-16">
+        <div className="animate-fade-in-up my-auto w-full max-w-[860px]">
           {/* ── Rubrik ─────────────────────────────────────────────────── */}
           <div className="mx-auto max-w-[600px] text-center">
             <p className="mb-3 text-[13px] font-bold uppercase tracking-[0.12em] text-accent">
@@ -178,7 +178,7 @@ export default function OnboardingClient() {
           </div>
 
           {/* ── Två likvärdiga val ─────────────────────────────────────── */}
-          <div className="mt-10 grid gap-4 sm:mt-12 sm:grid-cols-2 sm:gap-5">
+          <div className="mt-8 grid gap-3 sm:mt-12 sm:grid-cols-2 sm:gap-5">
             {CHOICES.map((choice, index) => {
               const Icon = choice.icon;
 
@@ -192,27 +192,27 @@ export default function OnboardingClient() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, ease: cardEase, delay: 0.08 + index * 0.08 }}
                   whileHover={prefersReducedMotion ? undefined : { y: -4 }}
-                  className="group relative flex flex-col overflow-hidden rounded-2xl border border-[rgba(23,33,43,0.1)] bg-white/85 p-6 text-left shadow-[0_10px_30px_rgba(23,33,43,0.06)] backdrop-blur-sm transition-[box-shadow,border-color] duration-300 hover:border-accent/60 hover:shadow-[0_20px_44px_rgba(11,110,153,0.14)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-wait disabled:opacity-70 sm:p-7"
+                  className="group relative flex flex-col overflow-hidden rounded-2xl border border-[rgba(23,33,43,0.1)] bg-white/85 p-4 text-left shadow-[0_10px_30px_rgba(23,33,43,0.06)] backdrop-blur-sm transition-[box-shadow,border-color] duration-300 hover:border-accent/60 hover:shadow-[0_20px_44px_rgba(11,110,153,0.14)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-wait disabled:opacity-70 sm:p-7"
                 >
                   <span
                     className={[
-                      "relative flex h-14 w-14 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-105",
+                      "relative flex h-11 w-11 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-105 sm:h-14 sm:w-14 sm:rounded-2xl",
                       choice.iconClass,
                     ].join(" ")}
                   >
-                    <Icon className="h-[26px] w-[26px]" />
+                    <Icon className="h-[22px] w-[22px] sm:h-[26px] sm:w-[26px]" />
                   </span>
 
-                  <span className="relative mt-5 block font-heading text-xl font-bold leading-6 text-ink">
+                  <span className="relative mt-4 block font-heading text-lg font-bold leading-6 text-ink sm:mt-5 sm:text-xl">
                     {choice.title}
                   </span>
-                  <span className="relative mt-2 block text-sm leading-6 text-[#5b6672]">
+                  <span className="relative mt-1.5 block text-[13px] leading-5 text-[#5b6672] sm:mt-2 sm:text-sm sm:leading-6">
                     {choice.subtitle}
                   </span>
 
                   <span
                     className={[
-                      "relative mt-6 flex items-center gap-1.5 text-sm font-bold",
+                      "relative mt-4 flex items-center gap-1.5 text-sm font-bold sm:mt-6",
                       choice.ctaClass,
                     ].join(" ")}
                   >

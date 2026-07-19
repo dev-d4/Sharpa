@@ -2,7 +2,7 @@ import { Fund } from "./supabase";
 import { createClient } from "@supabase/supabase-js";
 
 // ── Raw shape returned by Avanza's fund-guide list API ────────────────────────
-interface AvanzaFund {
+export interface AvanzaFund {
   isin: string;
   name: string;
   currencyCode: string;
@@ -33,7 +33,8 @@ const FUND_TYPE_TO_CATEGORY_GROUP: Record<string, string> = {
   MISC_FUND: "Other",
 };
 
-function mapAvanzaToFund(f: AvanzaFund, index: number): Fund {
+// Exporterad för test: nyckeltalen på sajten måste vara exakt källans värden
+export function mapAvanzaToFund(f: AvanzaFund, index: number): Fund {
   return {
     id: parseInt(f.orderbookId) || index,
     name: f.name,

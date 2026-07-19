@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, RotateCcw } from "lucide-react";
+import { Check, ChevronRight, RotateCcw } from "lucide-react";
 import { createClient } from "@/lib/supabase-browser";
 import { RISK_LABELS, RISK_EQUITY, type RiskLevel } from "@/lib/risk";
 import type { User } from "@supabase/supabase-js";
 import DonutChart from "@/components/ui/DonutChart";
+import DataFreshness from "@/components/ui/DataFreshness";
 import { CHART_PALETTE } from "@/lib/chart-palette";
 import { useMobileBottomOverlay } from "@/lib/mobile-bottom-overlay";
 
@@ -264,17 +265,24 @@ const RATIONALE_SHORT: Record<string, string> = {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function OptionCard({ label, desc, onClick }: {
-  label: string; desc: string; onClick: () => void;
+function OptionCard({ label, desc, onClick, selected }: {
+  label: string; desc: string; onClick: () => void; selected?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="w-full rounded-[10px] border border-line bg-white px-3.5 py-3 text-left transition-colors hover:border-accent sm:px-4 sm:py-4"
+      className={`w-full rounded-[10px] border px-3.5 py-3 text-left transition-colors sm:px-4 sm:py-4 ${
+        selected ? "border-accent bg-info" : "border-line bg-white hover:border-accent"
+      }`}
     >
-      <p className="text-[13px] font-semibold leading-snug text-slate-800 sm:text-[15px]">{label}</p>
-      <p className="mt-0.5 text-xs leading-snug text-slate-500 sm:mt-1 sm:text-sm">{desc}</p>
+      <span className="flex items-center justify-between gap-3">
+        <span className="min-w-0">
+          <p className="text-[13px] font-semibold leading-snug text-slate-800 sm:text-[15px]">{label}</p>
+          <p className="mt-0.5 text-xs leading-snug text-slate-500 sm:mt-1 sm:text-sm">{desc}</p>
+        </span>
+        {selected && <Check className="h-4 w-4 shrink-0 text-accent" strokeWidth={2.5} aria-hidden="true" />}
+      </span>
     </button>
   );
 }
@@ -310,6 +318,10 @@ export default function BuilderClient() {
   const [authError, setAuthError]   = useState<string | null>(null);
   const saveNameRef = useRef<HTMLInputElement>(null);
   const mobileSelectionCtaRef = useRef<HTMLDivElement>(null);
+  // Plattformssvar hämtat från fondanalysen (samma flik-session) — frågan ställs
+  // ändå, men svaret är förmarkerat och bekräftas med ett klick.
+  const [platformPrefilled, setPlatformPrefilled] = useState(false);
+  const prefillPlatformRef = useRef<Platform | null>(null);
 
   useEffect(() => {
 
@@ -345,6 +357,30 @@ export default function BuilderClient() {
       }
     } catch { /* ignore */ }
 
+    // Har användaren redan angett var den handlar fonder i analysverktyget?
+    // Förifyll i så fall plattformssteget här.
+    try {
+      if (!savedAnswers?.platform) {
+        let custodian: string | null = sessionStorage.getItem("fondanalys_custodian");
+        if (!custodian) {
+          const analyzeRaw = sessionStorage.getItem("fondanalys_state");
+          if (analyzeRaw) {
+            custodian = (JSON.parse(analyzeRaw) as { custodian?: string | null }).custodian ?? null;
+          }
+        }
+        const mapped: Platform | null =
+          custodian === "avanza" ? "avanza"
+          : custodian === "nordnet" ? "nordnet"
+          : custodian === "övrigt" ? "both"
+          : null;
+        if (mapped) {
+          prefillPlatformRef.current = mapped;
+          setAnswers((prev) => ({ ...prev, platform: mapped }));
+          setPlatformPrefilled(true);
+        }
+      }
+    } catch { /* ignore */ }
+
     const supabase = createClient();
 
     supabase.auth.getUser().then(({ data }) => {
@@ -361,6 +397,8 @@ export default function BuilderClient() {
       setUser(session?.user ?? null);
       if (event === "SIGNED_OUT") {
         setStep("platform");
+        prefillPlatformRef.current = null;
+        setPlatformPrefilled(false);
         setAnswers(EMPTY);
         setPending([]);
         setPriorities({});
@@ -598,7 +636,7 @@ export default function BuilderClient() {
 
   function resetQuiz() {
     setStep(STEPS[0]);
-    setAnswers(EMPTY);
+    setAnswers(prefillPlatformRef.current ? { ...EMPTY, platform: prefillPlatformRef.current } : EMPTY);
     setPending([]);
     setPriorities({});
     setResult(null);
@@ -704,9 +742,24 @@ export default function BuilderClient() {
           <div className="space-y-2 p-4 sm:p-5">
 
             {/* Platform */}
-            {step === "platform" && PLATFORM_OPTIONS.map((o) => (
-              <OptionCard key={o.value} label={o.label} desc={o.desc} onClick={() => pick("platform", o.value)} />
-            ))}
+            {step === "platform" && (
+              <>
+                {platformPrefilled && answers.platform && (
+                  <p className="rounded-[10px] bg-info px-3.5 py-2.5 text-xs leading-snug text-accent-press">
+                    Vi har fyllt i ditt svar från fondanalysen — klicka för att bekräfta, eller välj ett annat.
+                  </p>
+                )}
+                {PLATFORM_OPTIONS.map((o) => (
+                  <OptionCard
+                    key={o.value}
+                    label={o.label}
+                    desc={o.desc}
+                    selected={answers.platform === o.value}
+                    onClick={() => pick("platform", o.value)}
+                  />
+                ))}
+              </>
+            )}
 
             {step === "risk" && RISK_OPTIONS.map((o) => (
               <OptionCard key={o.value} label={o.label} desc={o.desc} onClick={() => pick("riskDirect", o.value)} />
@@ -1404,6 +1457,8 @@ export default function BuilderClient() {
           </button>
         </div>
       )}
+
+      {isResults && result && <DataFreshness className="mt-10 sm:mt-14" />}
     </div>
   );
 }

@@ -391,7 +391,8 @@ function SwapCard({ swap, onAccept, readonly = false }: { swap: SwapSuggestion; 
   const chips: string[] = [];
   if (swap.improvement.sharpe)    chips.push(`Sharpe +${swap.improvement.sharpe.toFixed(2)}`);
   if (swap.improvement.cost)      chips.push(`Avgift −${swap.improvement.cost.toFixed(2)}%`);
-  if (swap.improvement.return1yr) chips.push(`Avk. +${swap.improvement.return1yr.toFixed(1)}%`);
+  const returnImp = swap.improvement.return3yr ?? swap.improvement.return1yr; // return1yr = legacy-snapshots
+  if (returnImp) chips.push(`Avk. +${returnImp.toFixed(1)}%`);
 
   return (
     <div className={cn("border rounded-xl p-4 space-y-2 transition-colors", accepted ? "bg-emerald-50/60 border-emerald-200" : "bg-slate-50 border-slate-200")}>

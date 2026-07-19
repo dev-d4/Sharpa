@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 
 // ── Nordnet raw types ─────────────────────────────────────────────────────────
 
-interface NordnetListFund {
+export interface NordnetListFund {
   instrument_info: {
     instrument_id: number;
     name: string;
@@ -192,7 +192,8 @@ function refineCategory(mappedCategory: string | null, fundName: string): string
 
 // ── Map Nordnet list entry → Fund (without Sharpe) ───────────────────────────
 
-function mapNordnetListToFund(f: NordnetListFund, index: number): Fund {
+// Exporterad för test: nyckeltalen på sajten måste vara exakt källans värden
+export function mapNordnetListToFund(f: NordnetListFund, index: number): Fund {
   const fee = f.fund_info?.fund_yearly_fee ?? f.fund_info?.fund_calculated_fee ?? null;
   const r1 = f.historical_returns_info?.yield_1y ?? f.annual_growth_info?.annual_growth_1y ?? null;
   const r3 = f.historical_returns_info?.yield_3y ?? null;

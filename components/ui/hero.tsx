@@ -13,7 +13,7 @@ export default function Hero() {
           belowSearch={
             <>
               <p className="mt-5 text-[15px] text-ink-2 leading-[1.6] max-w-[520px] mx-auto">
-                Avgift, avkastning och risk — jämfört mot liknande fonder med starka nyckeltal. Gratis och oberoende.
+                Avgift, avkastning och risk — jämfört mot liknande fonder. Gratis och oberoende.
               </p>
               <p className="mt-4 sm:mt-5 text-sm text-ink-3">
                 Äger du inga fonder?{" "}

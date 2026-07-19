@@ -31,8 +31,11 @@ function swapReasonText(swap: SwapSuggestion): string {
   // inte alltid dominerar utan de starkaste skälen vävs ihop till en mening.
   if (imp.sharpe !== undefined) {
     reasons.push("starkare riskjusterad avkastning historiskt");
+  } else if (imp.return3yr !== undefined) {
+    reasons.push(`högre historisk avkastning (${fmtPct(swap.suggestedFund.return_3yr, 1)} mot ${fmtPct(swap.currentFund.return_3yr, 1)})`);
   } else if (imp.return1yr !== undefined) {
-    reasons.push(`högre historisk avkastning (${fmtPct(swap.suggestedFund.return_1yr!, 1)} mot ${fmtPct(swap.currentFund.return_1yr!, 1)})`);
+    // Legacy — gamla sparade snapshots skrev return1yr
+    reasons.push(`högre historisk avkastning (${fmtPct(swap.suggestedFund.return_1yr, 1)} mot ${fmtPct(swap.currentFund.return_1yr, 1)})`);
   }
   if (imp.cost !== undefined) {
     reasons.push(`lägre avgift (${fmtPct(fundCost(swap.suggestedFund))} mot ${fmtPct(fundCost(swap.currentFund))})`);
@@ -60,7 +63,7 @@ function buildFundSummary(analysis: PortfolioAnalysis, swap: SwapSuggestion | nu
     const weakness =
       swap.improvement.sharpe !== undefined
         ? "avkastningen i förhållande till risken når inte upp till de bästa i kategorin"
-        : swap.improvement.return1yr !== undefined
+        : swap.improvement.return3yr !== undefined || swap.improvement.return1yr !== undefined
           ? "avkastningen har varit svagare än de bästa i kategorin"
           : "den når inte riktigt upp till de bästa i sin kategori";
 
@@ -70,10 +73,11 @@ function buildFundSummary(analysis: PortfolioAnalysis, swap: SwapSuggestion | nu
     return `Avgiften är hög (${fmtPct(cost)}) och ${weakness}.`;
   }
 
+  // Utan bytesförslag får texten inte utlova alternativ — håll den rent beskrivande
   if (analysis.avgCost !== null) {
     if (analysis.avgCost < 0.5) return `Låg avgift (${fmtPct(analysis.avgCost)}) och bra förutsättningar för långsiktigt sparande.`;
-    if (analysis.avgCost < 1) return `Rimlig avgift (${fmtPct(analysis.avgCost)}), men det kan finnas starkare alternativ.`;
-    return `Avgiften på ${fmtPct(analysis.avgCost)} är hög — det finns billigare alternativ.`;
+    if (analysis.avgCost < 1) return `Rimlig avgift (${fmtPct(analysis.avgCost)}).`;
+    return `Avgiften på ${fmtPct(analysis.avgCost)} är hög.`;
   }
 
   if (analysis.weightedReturn3yr !== null) {
@@ -131,7 +135,7 @@ function FundPanelView({
   live: boolean;
   verdictTone: VerdictTone;
   verdictTitle: string;
-  summary: string;
+  summary?: string;
   comparison: string;
   swap: SwapSuggestion | null;
   onCta: () => void;
@@ -153,7 +157,7 @@ function FundPanelView({
           <span aria-hidden="true" className={`h-2 w-2 rounded-full shrink-0 ${dotColor}`} />
           <h3 className="text-base font-semibold text-ink leading-snug">{verdictTitle}</h3>
         </div>
-        <p className="mt-2 text-sm text-ink-2 leading-relaxed">{summary}</p>
+        {summary && <p className="mt-2 text-sm text-ink-2 leading-relaxed">{summary}</p>}
 
         {swap ? (
           <div className="mt-5 rounded-[12px] border border-line-soft bg-section/70 px-4 py-4">
@@ -312,7 +316,9 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
         live
         verdictTone={verdict.tone}
         verdictTitle={verdict.title}
-        summary={buildFundSummary(analysis, swap)}
+        // Är fonden bäst i sin kategori säger nyckeltalsraden inget som domen
+        // inte redan täcker — och den riskerar att motsäga "inget slår den".
+        summary={verdict.tone === "good" ? undefined : buildFundSummary(analysis, swap)}
         comparison={verdict.comparison}
         swap={swap}
         onCta={goToAnalyzer}

@@ -16,12 +16,16 @@ const BUILD_STEPS = [
 const CARD_SHADOW = { boxShadow: "0 1px 2px rgba(16,24,40,.04)" };
 
 function FeatureCard({
+  kicker,
+  kickerClass,
   title,
   description,
   cta,
   href,
   proof,
 }: {
+  kicker: string;
+  kickerClass: string;
   title: string;
   description: string;
   cta: string;
@@ -31,6 +35,7 @@ function FeatureCard({
   return (
     <article className="group flex h-full flex-col rounded-[14px] border border-line bg-white p-5 sm:p-7 transition-colors hover:border-info-line" style={CARD_SHADOW}>
       <div className="mb-5 flex h-[96px] items-center justify-center border-b border-line-soft pb-5">{proof}</div>
+      <p className={`mb-1.5 text-[11px] font-bold uppercase tracking-[0.08em] ${kickerClass}`}>{kicker}</p>
       <h3 className="font-heading text-[15px] font-bold text-ink">{title}</h3>
       <p className="mt-1.5 flex-1 text-[13px] text-ink-2 leading-[1.6]">{description}</p>
       <Link
@@ -238,15 +243,19 @@ export default function HowItWorks() {
 
         <div className="mt-8 grid gap-8 sm:grid-cols-2 sm:gap-6">
           <FeatureCard
-            title="Förbättra det du redan har."
-            description="Se om du kan få mer för pengarna."
+            kicker="Har du redan fonder?"
+            kickerClass="text-accent"
+            title="Analysera fonderna du redan äger."
+            description="Se avgifter, risk och om det finns bättre alternativ i samma kategori."
             cta="Analysera mina fonder"
             href="/analyze"
             proof={<SwapProof />}
           />
           <FeatureCard
-            title="Din portfölj på 2 minuter."
-            description="Svara på 4 frågor och se ett illustrativt portföljexempel."
+            kicker="Börjar du från noll?"
+            kickerClass="text-[#17864B]"
+            title="Bygg en ny portfölj från grunden."
+            description="Svara på 4 frågor och se ett illustrativt portföljexempel på 2 minuter."
             cta="Bygg din portfölj gratis"
             href="/bygg-portfolj"
             proof={<PortfolioProof />}

@@ -21,6 +21,8 @@ export type SwapSuggestion = {
   improvement: {
     sharpe?: number;
     cost?: number;
+    return3yr?: number;
+    /** @deprecated Skrivs inte längre — finns kvar i gamla sparade analys-snapshots. */
     return1yr?: number;
   };
   consolidate: boolean;
@@ -133,14 +135,17 @@ function weightedAvg(
 // ── Absolute fund scoring ─────────────────────────────────────────────────────
 // Sharpe är huvudsignalen. Avgiften är den enda garanterade skillnaden mellan
 // två fonder och väger därför tungt (×3 ≈ en dyr fond måste ha ~1 Sharpe-enhet
-// bättre per procentenhet extra avgift). Avkastningstermerna är svaga
-// tiebreakers — hög senaste-avkastning ska inte kunna motivera en dyr fond.
+// bättre per procentenhet extra avgift). 3-årsavkastningen är en svag
+// tiebreaker — hög avkastning ska inte kunna motivera en dyr fond.
+//
+// VIKTIGT: scoren får bara använda de nyckeltal som visas i fondbytes-
+// jämförelsen (avgift, avkastning 3 år, Sharpe 3 år) — användaren ska kunna
+// se exakt de siffror som avgjorde rankningen. Testas i analysis-score.test.ts.
 
-function absoluteScore(f: Fund): number {
+export function absoluteScore(f: Fund): number {
   let score = 0;
   score += (f.sharpe_3yr ?? 0) * 3;
   score += (f.return_3yr ?? 0) * 0.03;
-  score += (f.return_1yr ?? 0) * 0.01;
   const cost = f.ongoing_cost_actual ?? f.ongoing_cost_estimated ?? 0;
   score -= cost * 3;
   return score;
@@ -312,9 +317,9 @@ function generateSwaps(
       improvement.cost = cCost - bCost;
     }
 
-    if (best.return_1yr !== null && current.return_1yr !== null && best.return_1yr > current.return_1yr) {
-      parts.push(`högre 1-årsavkastning (${best.return_1yr.toFixed(1)}% vs ${current.return_1yr.toFixed(1)}%)`);
-      improvement.return1yr = best.return_1yr - current.return_1yr;
+    if (best.return_3yr !== null && current.return_3yr !== null && best.return_3yr > current.return_3yr) {
+      parts.push(`högre 3-årsavkastning (${best.return_3yr.toFixed(1)}% vs ${current.return_3yr.toFixed(1)}%)`);
+      improvement.return3yr = best.return_3yr - current.return_3yr;
     }
 
     suggestions.push({

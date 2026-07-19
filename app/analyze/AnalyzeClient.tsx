@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { ArrowRight, FileUp, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react"
 import type { SavedPortfolio } from "@/lib/portfolio"
 import DonutChart from "@/components/ui/DonutChart"
+import DataFreshness from "@/components/ui/DataFreshness"
 import { computePortfolioScore } from "@/lib/portfolio-score"
 import { CHART_PALETTE } from "@/lib/chart-palette"
 import { useMobileBottomOverlay } from "@/lib/mobile-bottom-overlay"
@@ -17,6 +18,16 @@ import { useMobileBottomOverlay } from "@/lib/mobile-bottom-overlay"
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type Entry = { isin: string; name: string; weight: string; amount?: string };
+
+// Builder-sparade portföljer har vikter som nummer i JSONB — Entry kräver strängar
+function toEntries(holdings: { isin: string; name: string; weight: string | number; amount?: string | number }[]): Entry[] {
+  return holdings.map((h) => ({
+    isin: h.isin,
+    name: h.name,
+    weight: h.weight != null ? String(h.weight) : "",
+    amount: h.amount != null ? String(h.amount) : undefined,
+  }));
+}
 type FundSuggestion = { name: string; isin: string };
 
 const CUSTODIANS = [
@@ -930,8 +941,10 @@ export default function AnalyzeClient() {
         .then((p) => {
           if (p) {
             setCustodian(p.custodian);
-            setEntries(p.holdings);
-            setAnalysis(p.analysis);
+            setEntries(toEntries(p.holdings));
+            // Snapshoten kan vara gammal — kör om analysen mot aktuell fonddata
+            setAnalysis(null);
+            autoRunPendingRef.current = true;
             setPortfolioId(p.id);
             setInputMethod("manual");
             sessionStorage.removeItem(SESSION_KEY);
@@ -987,6 +1000,12 @@ export default function AnalyzeClient() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Dela custodian-valet med portföljbyggaren, som förifyller sin plattformsfråga
+  useEffect(() => {
+    if (!custodian) return;
+    try { sessionStorage.setItem("fondanalys_custodian", custodian); } catch { /* ignore */ }
+  }, [custodian]);
+
   useEffect(() => {
     function saveBeforeLogin() {
       if (!hasMeaningfulAnalyzeState(custodian, entries, analysis)) return;
@@ -1020,8 +1039,11 @@ export default function AnalyzeClient() {
 
   function loadPortfolio(p: SavedPortfolio) {
     setCustodian(p.custodian);
-    setEntries(p.holdings);
-    setAnalysis(p.analysis);
+    setEntries(toEntries(p.holdings));
+    // Visa inte den sparade analys-snapshoten — den kan vara månader gammal.
+    // Kör om analysen mot aktuell fonddata i stället.
+    setAnalysis(null);
+    autoRunPendingRef.current = true;
     setPortfolioId(p.id);
     setInputMethod("manual");
     setInputCollapsed(true);
@@ -1832,6 +1854,8 @@ export default function AnalyzeClient() {
       {analysis && user && portfolioId && saveStatus === "saved" && (
         <p className="text-center text-sm text-green-600 font-medium">Portföljen sparades ✓</p>
       )}
+
+      {analysis && <DataFreshness className="no-print pt-2" />}
     </div></div>
 
     {/* Import wizard modal */}
@@ -2345,20 +2369,20 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                       // Jämförelsedata för infopanelen — sammanvägt när flera fonder byts mot samma
                       const sugCost = suggested.ongoing_cost_actual ?? suggested.ongoing_cost_estimated;
                       let curCost: number | null = s.currentFund.ongoing_cost_actual ?? s.currentFund.ongoing_cost_estimated;
-                      let curReturn: number | null = s.currentFund.return_1yr;
+                      let curReturn: number | null = s.currentFund.return_3yr;
                       let curSharpe: number | null = s.currentFund.sharpe_3yr;
                       if (isMultiGroup) {
                         const totalW = group.reduce((sum, item) => sum + item.weight, 0);
                         const items = group.map(item => ({
                           normW: totalW > 0 ? item.weight / totalW : 0,
                           cost: item.currentFund.ongoing_cost_actual ?? item.currentFund.ongoing_cost_estimated,
-                          r1yr: item.currentFund.return_1yr,
+                          r3yr: item.currentFund.return_3yr,
                           sharpe: item.currentFund.sharpe_3yr,
                         }));
                         curCost = totalW > 0 && items.every(x => x.cost !== null)
                           ? items.reduce((sum, x) => sum + x.normW * x.cost!, 0) : null;
-                        curReturn = totalW > 0 && items.every(x => x.r1yr !== null)
-                          ? items.reduce((sum, x) => sum + x.normW * x.r1yr!, 0) : null;
+                        curReturn = totalW > 0 && items.every(x => x.r3yr != null)
+                          ? items.reduce((sum, x) => sum + x.normW * x.r3yr!, 0) : null;
                         curSharpe = totalW > 0 && items.every(x => x.sharpe !== null)
                           ? items.reduce((sum, x) => sum + x.normW * x.sharpe!, 0) : null;
                       }
@@ -2407,9 +2431,9 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                                   <span className="text-xs font-semibold text-ink tabular-nums text-right">{curCost !== null ? `${curCost.toFixed(2)}%` : "–"}</span>
                                   <span className="text-xs font-semibold text-accent tabular-nums text-right">{sugCost !== null ? `${sugCost.toFixed(2)}%` : "–"}</span>
 
-                                  <span className="text-xs text-slate-500 whitespace-nowrap">Avkastning 1 år</span>
-                                  <span className="text-xs font-semibold text-ink tabular-nums text-right">{curReturn !== null ? `${curReturn.toFixed(1)}%` : "–"}</span>
-                                  <span className="text-xs font-semibold text-accent tabular-nums text-right">{suggested.return_1yr !== null ? `${suggested.return_1yr.toFixed(1)}%` : "–"}</span>
+                                  <span className="text-xs text-slate-500 whitespace-nowrap">Avkastning 3 år</span>
+                                  <span className="text-xs font-semibold text-ink tabular-nums text-right">{curReturn != null ? `${curReturn.toFixed(1)}%` : "–"}</span>
+                                  <span className="text-xs font-semibold text-accent tabular-nums text-right">{suggested.return_3yr != null ? `${suggested.return_3yr.toFixed(1)}%` : "–"}</span>
 
                                   <span className="text-xs text-slate-500">Sharpe</span>
                                   <span className="text-xs font-semibold text-ink tabular-nums text-right">{curSharpe !== null ? curSharpe.toFixed(2) : "–"}</span>

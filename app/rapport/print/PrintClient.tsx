@@ -613,7 +613,8 @@ export default function PrintClient() {
                     const chips: string[] = [];
                     if (swap.improvement.sharpe)    chips.push(`Sharpe +${swap.improvement.sharpe.toFixed(2)}`);
                     if (swap.improvement.cost)      chips.push(`Avgift −${swap.improvement.cost.toFixed(2)}%`);
-                    if (swap.improvement.return1yr) chips.push(`Avk. +${swap.improvement.return1yr.toFixed(1)}%`);
+                    const returnImp = swap.improvement.return3yr ?? swap.improvement.return1yr; // return1yr = legacy-snapshots
+                    if (returnImp) chips.push(`Avk. +${returnImp.toFixed(1)}%`);
                     return (
                       <div key={i} className="swap-row">
                         <div className="swap-fund">
