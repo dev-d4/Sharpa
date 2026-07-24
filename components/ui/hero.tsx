@@ -15,22 +15,15 @@ export default function Hero() {
               <p className="mt-5 text-[15px] text-ink-2 leading-[1.6] max-w-[520px] mx-auto">
                 Avgift, avkastning och risk — jämfört mot liknande fonder. Gratis och oberoende.
               </p>
-              <div className="mx-auto mt-6 flex max-w-[520px] items-center gap-3">
-                <div className="h-px flex-1 bg-line" />
-                <span className="text-xs text-ink-4">eller</span>
-                <div className="h-px flex-1 bg-line" />
-              </div>
-              <div className="mt-4">
+              <p className="mt-4 text-[15px] text-ink-3 sm:mt-5 sm:text-base">
+                Har du inga fonder att analysera?{" "}
                 <Link
                   href="/bygg-portfolj"
-                  className="inline-flex flex-col items-center rounded-xl border border-info-line bg-white/70 px-6 py-3.5 transition-colors hover:bg-white"
+                  className="font-semibold text-accent transition-colors hover:text-accent-hover"
                 >
-                  <span className="text-sm font-semibold text-accent">
-                    Jag vill bygga en ny portfölj <span aria-hidden="true">→</span>
-                  </span>
-                  <span className="mt-0.5 text-xs text-ink-3">Svara på 4 frågor och se ett portföljexempel</span>
+                  Skapa ett portföljexempel <span aria-hidden="true">→</span>
                 </Link>
-              </div>
+              </p>
             </>
           }
         >

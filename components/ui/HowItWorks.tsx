@@ -115,7 +115,7 @@ const FAQS = [
   { q: "Är detta finansiell rådgivning?", a: "Nej. Sharpa är ett automatiserat analysverktyg som jämför fonder utifrån historiska nyckeltal. Vi har inget tillstånd att bedriva investeringsrådgivning och analyserna tar inte hänsyn till din personliga situation — alla investeringsbeslut fattar du själv." },
   { q: "Är Sharpa verkligen gratis?", a: "Ja, helt gratis. Ingen avgift, inget kreditkort och inget konto krävs för grundfunktionerna." },
   { q: "Hur skapar ni portföljexemplen?", a: "Automatiskt. Vi beräknar en risknivå baserat på dina svar och visar ett illustrativt exempel med fonder som rankas högt inom varje kategori — utifrån riskjusterad avkastning, historisk avkastning och avgift." },
-  { q: "Behöver jag logga in?", a: "Nej. Du kan bygga och analysera portföljer utan konto. Du behöver ett konto bara om du vill spara dina portföljer." },
+  { q: "Behöver jag logga in?", a: "Nej. Du kan analysera fonder och se portföljexempel utan konto. Du behöver ett konto bara om du vill spara en portfölj." },
 ];
 
 function FAQItem({ q, a }: { q: string; a: string }) {
@@ -173,13 +173,13 @@ export default function HowItWorks() {
             className="group rounded-[14px] border border-line bg-white p-5 transition-all hover:border-info-line hover:shadow-sm sm:p-6"
           >
             <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-ink-4">Jag vill börja från grunden</p>
-                <h3 className="mt-1 font-heading text-base font-bold text-ink">Bygg en ny portfölj</h3>
+                <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-ink-4">Jag har ingen portfölj att analysera</p>
+                <h3 className="mt-1 font-heading text-base font-bold text-ink">Skapa ett portföljexempel</h3>
                 <p className="mt-1.5 text-sm leading-relaxed text-ink-2">
                   Svara på 4 frågor och se ett illustrativt portföljexempel.
                 </p>
                 <span className="mt-4 inline-flex items-center text-sm font-semibold text-accent">
-                  Bygg portfölj <span aria-hidden="true" className="ml-1 transition-transform group-hover:translate-x-0.5">→</span>
+                  Skapa portföljexempel <span aria-hidden="true" className="ml-1 transition-transform group-hover:translate-x-0.5">→</span>
                 </span>
             </div>
           </Link>

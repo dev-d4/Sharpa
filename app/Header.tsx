@@ -150,7 +150,7 @@ export default function Header() {
           {/* Desktop nav */}
           <nav className="hidden sm:flex items-center justify-center gap-8">
             <Link href="/analyze" className={navClass("/analyze")}>Analysera mina fonder</Link>
-            <Link href="/bygg-portfolj" className={navClass("/bygg-portfolj")}>Bygg ny portfölj</Link>
+            <Link href="/bygg-portfolj" className={navClass("/bygg-portfolj")}>Skapa portföljexempel</Link>
           </nav>
 
           {/* Desktop right actions */}
@@ -218,7 +218,7 @@ export default function Header() {
               />
             )}
             <Plus className="relative z-[1] h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
-            <span className="relative z-[1]">Ny portfölj</span>
+            <span className="relative z-[1]">Skapa exempel</span>
           </Link>
         </div>
       </motion.nav>

@@ -32,7 +32,7 @@ export default async function StatsRow() {
       <div className="mx-auto flex max-w-lg sm:max-w-none items-center justify-center gap-1 sm:gap-0">
         <StatCell value={funds} label="fonder analyserade" />
         <Divider />
-        <StatCell value={portfolios} label="portföljer byggda" />
+        <StatCell value={portfolios} label="portföljexempel skapade" />
         <Divider />
         <StatCell value="0 kr" label="i provision" />
       </div>
