@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, ChevronRight, RotateCcw } from "lucide-react";
@@ -332,60 +332,31 @@ export default function BuilderClient() {
   const prefillPlatformRef = useRef<Platform | null>(null);
 
   useEffect(() => {
-
-    // Restore quiz state saved before login redirect — apply immediately for instant UI
-    let savedAnswers: Answers | null = null;
-    let savedRiskScore: number | null = null;
+    // Byggflödet ska inte lagras för utloggade användare. Rensa även data som
+    // kan finnas kvar från den tidigare återställningsfunktionen.
     try {
-      const saved = sessionStorage.getItem("fondanalys_builder_quiz");
-      if (saved) {
-        sessionStorage.removeItem("fondanalys_builder_quiz");
-        const {
-          answers: a,
-          result: r,
-          priorities: p,
-          localEquity: le,
-          step: savedStep,
-          pending: savedPending,
-          slotIndices: savedSlotIndices,
-        } = JSON.parse(saved);
-        if (a) { setAnswers(a); savedAnswers = a; }
-        if (p) setPriorities(p);
-        if (savedPending?.length) setPending(savedPending);
-        else if (a?.selections) setPending(a.selections);
-        if (savedStep && STEPS.includes(savedStep)) setStep(savedStep);
-        if (r) {
-          setResult(r);
-          setLocalEquity(le ?? r.equityPct);
-          setSlotIndices(savedSlotIndices?.length ? savedSlotIndices : r.portfolio.map(() => 0));
-          setStep("results");
-          setShowSaveForm(true);
-          savedRiskScore = r.riskScore ?? null;
-        }
-      }
+      sessionStorage.removeItem("fondanalys_builder_quiz");
     } catch { /* ignore */ }
 
     // Har användaren redan angett var den handlar fonder i analysverktyget?
     // Förifyll i så fall plattformssteget här.
     try {
-      if (!savedAnswers?.platform) {
-        let custodian: string | null = sessionStorage.getItem("fondanalys_custodian");
-        if (!custodian) {
-          const analyzeRaw = sessionStorage.getItem("fondanalys_state");
-          if (analyzeRaw) {
-            custodian = (JSON.parse(analyzeRaw) as { custodian?: string | null }).custodian ?? null;
-          }
+      let custodian: string | null = sessionStorage.getItem("fondanalys_custodian");
+      if (!custodian) {
+        const analyzeRaw = sessionStorage.getItem("fondanalys_state");
+        if (analyzeRaw) {
+          custodian = (JSON.parse(analyzeRaw) as { custodian?: string | null }).custodian ?? null;
         }
-        const mapped: Platform | null =
-          custodian === "avanza" ? "avanza"
-          : custodian === "nordnet" ? "nordnet"
-          : custodian === "övrigt" ? "both"
-          : null;
-        if (mapped) {
-          prefillPlatformRef.current = mapped;
-          setAnswers((prev) => ({ ...prev, platform: mapped }));
-          setPlatformPrefilled(true);
-        }
+      }
+      const mapped: Platform | null =
+        custodian === "avanza" ? "avanza"
+        : custodian === "nordnet" ? "nordnet"
+        : custodian === "övrigt" ? "both"
+        : null;
+      if (mapped) {
+        prefillPlatformRef.current = mapped;
+        setAnswers((prev) => ({ ...prev, platform: mapped }));
+        setPlatformPrefilled(true);
       }
     } catch { /* ignore */ }
 
@@ -393,12 +364,6 @@ export default function BuilderClient() {
 
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user);
-      // If the saved result used a different risk score than what we'd now compute,
-      // regenerate so the portfolio reflects the current formula output.
-      if (data.user && savedAnswers && savedRiskScore !== null) {
-        const recomputedScore = computeRiskScoreClient(savedAnswers);
-        if (recomputedScore !== savedRiskScore) submit(savedAnswers, true);
-      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -448,22 +413,7 @@ export default function BuilderClient() {
     };
   }, []);
 
-  const saveBuilderSession = useCallback(() => {
-    try {
-      sessionStorage.setItem(
-        "fondanalys_builder_quiz",
-        JSON.stringify({ answers, result, priorities, localEquity, step, pending, slotIndices })
-      );
-    } catch { /* ignore */ }
-  }, [answers, result, priorities, localEquity, step, pending, slotIndices]);
-
-  useEffect(() => {
-    window.addEventListener("fondanalys:before-login", saveBuilderSession);
-    return () => window.removeEventListener("fondanalys:before-login", saveBuilderSession);
-  }, [saveBuilderSession]);
-
   function openAuthModal() {
-    saveBuilderSession();
     setAuthModal(true);
   }
 
@@ -1005,7 +955,8 @@ export default function BuilderClient() {
 
                       <h2 className="pt-1 text-sm font-bold text-slate-900">Fonder i exemplet</h2>
                       <p className="-mt-1 text-xs leading-relaxed text-slate-500">
-                        Använd pilarna för att byta från den bäst rankade fonden till nästa alternativ i samma kategori.
+                        <span className="sm:hidden">Byt fond under fondnamnet för att se nästa rankade alternativ i samma kategori.</span>
+                        <span className="hidden sm:inline">Använd pilarna för att byta från den bäst rankade fonden till nästa alternativ i samma kategori.</span>
                       </p>
 
                       {result.droppedSelections?.length > 0 && (
@@ -1020,7 +971,7 @@ export default function BuilderClient() {
                       {/* Sammanhållen fondlista */}
                       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
                         <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-b border-slate-100 bg-slate-50 px-4 py-2.5">
-                          <span className="pl-28 text-[10px] font-bold uppercase tracking-widest text-slate-400">Fond</span>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 sm:pl-28">Fond</span>
                           <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Vikt</span>
                         </div>
                         {result.portfolio.map((slot, si) => {
@@ -1033,7 +984,7 @@ export default function BuilderClient() {
                             <div key={si} className="border-b border-slate-100 px-4 py-3 last:border-b-0">
                               <div className="flex items-center gap-3">
                                 {candidateCount > 1 ? (
-                                  <div className="flex shrink-0 items-center gap-1">
+                                  <div className="hidden shrink-0 items-center gap-1 sm:flex">
                                     <button type="button" aria-label="Föregående fond" onClick={() => { resetSaveState(); setSlotIndices((prev) => { const n=[...prev]; n[si]=idx-1; return n; }); }} disabled={!canBack} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-colors hover:border-slate-300 hover:text-slate-600 disabled:opacity-20">
                                       <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
                                     </button>
@@ -1045,11 +996,24 @@ export default function BuilderClient() {
                                     </button>
                                   </div>
                                 ) : (
-                                  <div className="w-[104px] shrink-0" />
+                                  <div className="hidden w-[104px] shrink-0 sm:block" />
                                 )}
                                 <div className="flex-1 min-w-0">
                                   <p className="break-words text-[13px] font-semibold leading-snug text-slate-900 sm:text-sm">{candidate.name}</p>
                                   <p className="mt-0.5 text-[11px] text-slate-400">{RATIONALE_SHORT[slot.rationale] ?? slot.rationale}</p>
+                                  {candidateCount > 1 && (
+                                    <div className="mt-2 inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 sm:hidden">
+                                      <button type="button" aria-label="Föregående fond" onClick={() => { resetSaveState(); setSlotIndices((prev) => { const n=[...prev]; n[si]=idx-1; return n; }); }} disabled={!canBack} className="flex h-7 w-7 items-center justify-center text-slate-400 transition-colors hover:text-slate-600 disabled:opacity-20">
+                                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                                      </button>
+                                      <span className="min-w-16 border-x border-slate-200 px-2 text-center text-[10px] font-semibold text-slate-500">
+                                        {idx === 0 ? "Bäst rankad" : `${idx + 1}a`}
+                                      </span>
+                                      <button type="button" aria-label="Nästa fond" onClick={() => { resetSaveState(); setSlotIndices((prev) => { const n=[...prev]; n[si]=idx+1; return n; }); }} disabled={!canNext} className="flex h-7 w-7 items-center justify-center text-slate-400 transition-colors hover:text-slate-600 disabled:opacity-20">
+                                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
                                 <span className="w-12 shrink-0 text-right text-sm font-bold text-accent">{slot.weight}%</span>
                               </div>
