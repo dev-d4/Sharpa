@@ -18,51 +18,23 @@ export default function LandingPage() {
 
         {/* För företag */}
         <section className="bg-blue-800 mobile-dark-extend">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-32">
-            <div className="max-w-2xl mb-10 sm:mb-12">
-              <p className="text-xs font-semibold text-blue-300 uppercase tracking-[0.08em] mb-3">För företag och rådgivare</p>
-              <h2 className="font-heading text-2xl sm:text-3xl font-bold text-white leading-tight">
-                Professionella verktyg för rådgivare
-              </h2>
-              <p className="text-blue-200 mt-4 text-base leading-[1.7]">
-                För finansiella rådgivare och kapitalförvaltare som vill leverera datadrivna fondanalyser — oberoende och transparenta.
-              </p>
-            </div>
-
-            <div className="grid sm:grid-cols-2 gap-5 max-w-4xl">
-              {/* Rådgivningsmodul */}
-              <div className="bg-white/[0.06] border border-white/10 rounded-xl p-6 sm:p-7 space-y-4">
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold text-blue-300 uppercase tracking-[0.08em]">Rådgivningsmodul</p>
-                  <h3 className="font-heading text-lg font-semibold text-white">Analysera fonder i en rådgivning</h3>
-                  <p className="text-sm text-blue-200 leading-relaxed">
-                    Ge dina kunder oberoende, datadrivna fondanalyser direkt i rådgivningsflödet. Jämför alternativ, identifiera avgiftsläckage och generera transparenta rapporter.
-                  </p>
-                </div>
-                <a
-                  href="mailto:sharpakontakt@gmail.com?subject=R%C3%A5dgivningsmodulen%20%E2%80%94%20intresseanm%C3%A4lan"
-                  className="inline-flex items-center gap-2 bg-white hover:bg-blue-50 text-accent-press text-sm font-semibold px-4 py-2 rounded-[10px] transition-colors"
-                >
-                  Kontakta oss
-                </a>
+          <div className="max-w-6xl mx-auto px-4 py-12 sm:px-6 sm:py-16">
+            <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+              <div className="max-w-3xl">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-blue-300">För företag och rådgivare</p>
+                <h2 className="font-heading text-2xl font-bold leading-tight text-white sm:text-3xl">
+                  Fond- och portföljanalys för professionell rådgivning
+                </h2>
+                <p className="mt-3 text-sm leading-relaxed text-blue-200 sm:text-base">
+                  Jämför fonder och förvaltade portföljer, identifiera avgiftsläckage och skapa transparenta underlag för kundmötet.
+                </p>
               </div>
-
-              {/* Portföljmodul */}
-              <div className="bg-white/[0.06] border border-white/10 rounded-xl p-6 sm:p-7 space-y-4">
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold text-blue-300 uppercase tracking-[0.08em]">Portföljmodul</p>
-                  <h3 className="font-heading text-lg font-semibold text-white">Analysera era portföljer mot kunder</h3>
-                  <p className="text-sm text-blue-200 leading-relaxed">
-                    Granska och jämför era förvaltade portföljer mot marknadens bästa alternativ. Identifiera avgiftsläckage och förbättringsområden på portföljnivå.
-                  </p>
-                </div>
-                <a
-                  href="mailto:sharpakontakt@gmail.com?subject=Portf%C3%B6ljmodulen%20%E2%80%94%20intresseanm%C3%A4lan"
-                  className="inline-flex items-center gap-2 bg-white hover:bg-blue-50 text-accent-press text-sm font-semibold px-4 py-2 rounded-[10px] transition-colors"
-                >
-                  Kontakta oss
-                </a>
-              </div>
+              <a
+                href="mailto:sharpakontakt@gmail.com?subject=Professionella%20verktyg%20%E2%80%94%20intresseanm%C3%A4lan"
+                className="inline-flex w-fit items-center justify-center rounded-[10px] bg-white px-5 py-2.5 text-sm font-semibold text-accent-press transition-colors hover:bg-blue-50"
+              >
+                Kontakta oss
+              </a>
             </div>
           </div>
         </section>

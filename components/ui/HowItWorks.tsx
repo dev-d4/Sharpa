@@ -3,95 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 
-// ── Feature cards ─────────────────────────────────────────────────────────────
-// Varje kort leds av beviset (fondjämförelse resp. byggflöde), avskilt med en tunn
-// linje. Under: kort rubrik, en mening, och en textlänk som CTA — ingen knapp.
-
-const BUILD_STEPS = [
-  { step: "01", label: "Frågor", value: "4 st" },
-  { step: "02", label: "Risk", value: "Balanserad" },
-  { step: "03", label: "Portfölj", value: "Färdigt exempel" },
-];
-
 const CARD_SHADOW = { boxShadow: "0 1px 2px rgba(16,24,40,.04)" };
-
-function FeatureCard({
-  kicker,
-  kickerClass,
-  title,
-  description,
-  cta,
-  href,
-  proof,
-}: {
-  kicker: string;
-  kickerClass: string;
-  title: string;
-  description: string;
-  cta: string;
-  href: string;
-  proof: React.ReactNode;
-}) {
-  return (
-    <article className="group flex h-full flex-col rounded-[14px] border border-line bg-white p-5 sm:p-7 transition-colors hover:border-info-line" style={CARD_SHADOW}>
-      <div className="mb-5 flex h-[96px] items-center justify-center border-b border-line-soft pb-5">{proof}</div>
-      <p className={`mb-1.5 text-[11px] font-bold uppercase tracking-[0.08em] ${kickerClass}`}>{kicker}</p>
-      <h3 className="font-heading text-[15px] font-bold text-ink">{title}</h3>
-      <p className="mt-1.5 flex-1 text-[13px] text-ink-2 leading-[1.6]">{description}</p>
-      <Link
-        href={href}
-        className="mt-4 inline-flex items-center gap-1 text-[13.5px] font-semibold text-accent transition-colors hover:text-accent-hover"
-      >
-        {cta}
-        <span aria-hidden="true" className="transition-transform group-hover:translate-x-0.5">→</span>
-      </Link>
-    </article>
-  );
-}
-
-// ── Produktbevis — riktigt innehåll leder varje kort ─────────────────────────
-
-function SwapProof() {
-  return (
-    <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-3">
-      <div className="min-w-0">
-        <p className="text-[10px] font-medium uppercase tracking-[0.05em] text-ink-4 mb-1">Nuvarande</p>
-        <p className="font-heading text-sm font-bold text-ink truncate">SEB Sverige Index</p>
-      </div>
-      <svg className="w-4 h-4 text-ink-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-      </svg>
-      <div className="min-w-0">
-        <p className="text-[10px] font-medium uppercase tracking-[0.05em] text-ink-4 mb-1">Alternativ</p>
-        <p className="font-heading text-sm font-bold text-ink truncate">Avanza Zero</p>
-      </div>
-    </div>
-  );
-}
-
-function PortfolioProof() {
-  return (
-    <div className="w-full" aria-label="Från 4 frågor till risknivå och portföljexempel">
-      <div className="grid grid-cols-3 items-start gap-2">
-        {BUILD_STEPS.map((item, index) => (
-          <div key={item.step} className="relative min-w-0 text-center">
-            {index < BUILD_STEPS.length - 1 && (
-              <span
-                aria-hidden="true"
-                className="absolute left-1/2 top-[17px] h-px w-full bg-line-soft"
-              />
-            )}
-            <div className="relative z-10 mx-auto flex h-8 w-8 items-center justify-center rounded-full border border-info-line bg-info text-[11px] font-bold tabular-nums text-accent">
-              {item.step}
-            </div>
-            <p className="mt-2 truncate text-[11px] font-semibold text-ink">{item.label}</p>
-            <p className="mt-0.5 truncate text-[10px] text-ink-3">{item.value}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 // ── Trust section ─────────────────────────────────────────────────────────────
 
@@ -102,7 +14,7 @@ const TRUST_ITEMS = [
   },
   {
     title: "Datadrivna beslut",
-    desc: "1 500+ fonder analyserade med Sharpe-kvot, historisk avkastning och avgiftsstruktur.",
+    desc: "2 100+ fonder jämförda utifrån avgift, historisk avkastning och risk.",
   },
   {
     title: "Enkelt och begripligt",
@@ -191,7 +103,7 @@ function PortfolioCalculator() {
       </div>
 
       <p className="mt-5 text-[11.5px] text-ink-4 leading-[1.5]">
-        Illustration av ränta-på-ränta-effekten. Inte en finansiell prognos.
+        Illustrativ jämförelse med en fondavgift på 0,15 %. Faktiska alternativ och framtida avkastning kan skilja sig. Inte en finansiell prognos.
       </p>
     </div>
   );
@@ -202,7 +114,7 @@ function PortfolioCalculator() {
 const FAQS = [
   { q: "Är detta finansiell rådgivning?", a: "Nej. Sharpa är ett automatiserat analysverktyg som jämför fonder utifrån historiska nyckeltal. Vi har inget tillstånd att bedriva investeringsrådgivning och analyserna tar inte hänsyn till din personliga situation — alla investeringsbeslut fattar du själv." },
   { q: "Är Sharpa verkligen gratis?", a: "Ja, helt gratis. Ingen avgift, inget kreditkort och inget konto krävs för grundfunktionerna." },
-  { q: "Hur skapar ni portföljexemplen?", a: "Automatiskt. Vi beräknar en risknivå baserat på dina svar och visar ett illustrativt exempel med fonder som rankas högt inom varje kategori — utifrån Sharpe-kvot, historisk avkastning och avgift." },
+  { q: "Hur skapar ni portföljexemplen?", a: "Automatiskt. Vi beräknar en risknivå baserat på dina svar och visar ett illustrativt exempel med fonder som rankas högt inom varje kategori — utifrån riskjusterad avkastning, historisk avkastning och avgift." },
   { q: "Behöver jag logga in?", a: "Nej. Du kan bygga och analysera portföljer utan konto. Du behöver ett konto bara om du vill spara dina portföljer." },
 ];
 
@@ -231,35 +143,46 @@ export default function HowItWorks() {
   return (
     <div>
 
-      {/* Vad kan du göra — proof-ledda kort */}
-      <section className="py-16 sm:py-16">
-        <p className="text-xs font-semibold text-accent uppercase tracking-[0.08em] mb-3">Vad kan du göra?</p>
-        <h2 className="font-heading text-2xl sm:text-3xl font-bold text-ink leading-tight">
-          Allt du behöver för smartare fondsparande
-        </h2>
-        <p className="mt-3 text-[15px] text-ink-2 leading-[1.7]">
-          Från att optimera en befintlig portfölj till att bygga din första.
-        </p>
+      <section className="py-12 sm:py-14">
+        <div className="mb-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-accent">Vad vill du göra?</p>
+          <h2 className="mt-2 font-heading text-2xl font-bold leading-tight text-ink sm:text-3xl">
+            Välj den väg som passar dig
+          </h2>
+        </div>
 
-        <div className="mt-8 grid gap-8 sm:grid-cols-2 sm:gap-6">
-          <FeatureCard
-            kicker="Har du redan fonder?"
-            kickerClass="text-accent"
-            title="Analysera fonderna du redan äger."
-            description="Se avgifter, risk och om det finns bättre alternativ i samma kategori."
-            cta="Analysera mina fonder"
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Link
             href="/analyze"
-            proof={<SwapProof />}
-          />
-          <FeatureCard
-            kicker="Börjar du från noll?"
-            kickerClass="text-[#17864B]"
-            title="Bygg en ny portfölj från grunden."
-            description="Svara på 4 frågor och se ett illustrativt portföljexempel på 2 minuter."
-            cta="Bygg din portfölj gratis"
+            className="group rounded-[14px] border border-line bg-white p-5 transition-all hover:border-info-line hover:shadow-sm sm:p-6"
+          >
+            <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-ink-4">Jag har redan fonder</p>
+                <h3 className="mt-1 font-heading text-base font-bold text-ink">Analysera min portfölj</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-ink-2">
+                  Se avgifter, avkastning, risk och möjliga alternativ.
+                </p>
+                <span className="mt-4 inline-flex items-center text-sm font-semibold text-accent">
+                  Börja analysera <span aria-hidden="true" className="ml-1 transition-transform group-hover:translate-x-0.5">→</span>
+                </span>
+            </div>
+          </Link>
+
+          <Link
             href="/bygg-portfolj"
-            proof={<PortfolioProof />}
-          />
+            className="group rounded-[14px] border border-line bg-white p-5 transition-all hover:border-info-line hover:shadow-sm sm:p-6"
+          >
+            <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-ink-4">Jag vill börja från grunden</p>
+                <h3 className="mt-1 font-heading text-base font-bold text-ink">Bygg en ny portfölj</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-ink-2">
+                  Svara på 4 frågor och se ett illustrativt portföljexempel.
+                </p>
+                <span className="mt-4 inline-flex items-center text-sm font-semibold text-accent">
+                  Bygg portfölj <span aria-hidden="true" className="ml-1 transition-transform group-hover:translate-x-0.5">→</span>
+                </span>
+            </div>
+          </Link>
         </div>
       </section>
 

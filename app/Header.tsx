@@ -66,6 +66,7 @@ function AvatarDropdown({ user }: { user: User }) {
 export default function Header() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [mobileBottomOffset, setMobileBottomOffset] = useState(0);
+  const [cookieBannerVisible, setCookieBannerVisible] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const shouldResumeTool = pathname === "/analyze" || pathname === "/bygg-portfolj";
@@ -91,6 +92,9 @@ export default function Header() {
       const height = Math.max(0, detail.height ?? 0);
       if (height > 0) overlays.set(detail.id, height);
       else overlays.delete(detail.id);
+      if (detail.id.startsWith("cookie-banner-")) {
+        setCookieBannerVisible(height > 0);
+      }
       setMobileBottomOffset(Math.max(0, ...overlays.values()));
     }
 
@@ -100,7 +104,7 @@ export default function Header() {
 
   function navClass(href: string) {
     const active = pathname === href || pathname.startsWith(href + "/");
-    return `text-sm font-semibold transition-colors ${active ? "text-accent" : "text-ink-2 hover:text-ink"}`;
+    return `text-[15px] font-semibold transition-colors ${active ? "text-accent" : "text-ink-2 hover:text-ink"}`;
   }
 
   function isActivePath(href: string) {
@@ -134,17 +138,17 @@ export default function Header() {
   return (
     <>
       <header className="bg-white/90 backdrop-blur-sm border-b border-line/70 sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between sm:grid sm:grid-cols-3">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 sm:h-[72px] flex items-center justify-between sm:grid sm:grid-cols-3">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 shrink-0">
-            <Image src="/logo.svg" alt="Sharpa" width={28} height={28} className="sm:w-8 sm:h-8" />
-            <span className="font-heading text-base font-extrabold tracking-tight text-ink">
+            <Image src="/logo.svg" alt="Sharpa" width={28} height={28} className="sm:h-9 sm:w-9" />
+            <span className="font-heading text-base font-extrabold tracking-tight text-ink sm:text-lg">
               Sharpa
             </span>
           </Link>
 
           {/* Desktop nav */}
-          <nav className="hidden sm:flex items-center justify-center gap-6">
+          <nav className="hidden sm:flex items-center justify-center gap-8">
             <Link href="/analyze" className={navClass("/analyze")}>Analysera mina fonder</Link>
             <Link href="/bygg-portfolj" className={navClass("/bygg-portfolj")}>Bygg ny portfölj</Link>
           </nav>
@@ -185,11 +189,15 @@ export default function Header() {
       <motion.nav
         layoutRoot
         aria-label="Snabbnavigering"
-        animate={{ bottom: mobileBottomOffset }}
+        animate={{
+          bottom: cookieBannerVisible ? 0 : mobileBottomOffset,
+          opacity: cookieBannerVisible ? 0 : 1,
+          y: cookieBannerVisible ? 12 : 0,
+        }}
         transition={{ type: "spring", stiffness: 360, damping: 34 }}
         className="sm:hidden fixed inset-x-0 z-[60] flex justify-center px-3 pb-safe pointer-events-none"
       >
-        <div className="mobile-liquid-glass pointer-events-auto flex w-full max-w-xs items-center gap-1 rounded-[16px] p-1">
+        <div className={`mobile-liquid-glass flex w-full max-w-xs items-center gap-1 rounded-[16px] p-1 ${cookieBannerVisible ? "pointer-events-none" : "pointer-events-auto"}`}>
           <Link href="/analyze" aria-current={mobileAriaCurrent("/analyze")} className={mobileActionClass("/analyze")}>
             {isActivePath("/analyze") && (
               <motion.span

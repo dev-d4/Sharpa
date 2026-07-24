@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, ChevronRight, RotateCcw } from "lucide-react";
 import { createClient } from "@/lib/supabase-browser";
-import { RISK_LABELS, RISK_EQUITY, type RiskLevel } from "@/lib/risk";
+import { RISK_LABELS, RISK_EQUITY, RISK_EQUITY_PCT, type RiskLevel } from "@/lib/risk";
 import type { User } from "@supabase/supabase-js";
 import DonutChart from "@/components/ui/DonutChart";
 import DataFreshness from "@/components/ui/DataFreshness";
@@ -46,6 +46,8 @@ type CandidateFund = {
   category:     string;
   ongoing_cost: number | null;
   sharpe_3yr:   number | null;
+  return_1yr:   number | null;
+  return_3yr:   number | null;
 };
 
 type PortfolioFund = {
@@ -56,7 +58,14 @@ type PortfolioFund = {
   rationale:    string;
   ongoing_cost: number | null;
   sharpe_3yr:   number | null;
+  return_1yr:   number | null;
+  return_3yr:   number | null;
   candidates:   CandidateFund[];
+  poolSize:      number;
+  avgPoolSharpe: number | null;
+  avgPoolCost:   number | null;
+  avgPoolReturn1yr: number | null;
+  avgPoolReturn3yr: number | null;
 };
 
 type FundExplanation = {
@@ -183,7 +192,7 @@ const STEP_META: Record<Step, { title: string; subtitle: string }> = {
   reaction:   { title: "Portföljen faller 20% — vad skulle du välja?",       subtitle: "Ditt svar hjälper oss välja aktieandel i exemplet" },
   q3:         { title: "Hur mycket svängningar vill du utgå från?",           subtitle: "Välj den nivå av kursrörelser exemplet ska bygga på" },
   q4:         { title: "Vad är viktigast för dig?",                          subtitle: "Välj det alternativ som bäst speglar din inställning till risk och avkastning" },
-  selections: { title: "Vad vill du investera i?",                          subtitle: "Välj marknader, branscher och stilar — justera sedan viktningen längst ner" },
+  selections: { title: "Vad vill du investera i?",                          subtitle: "Vi har valt kategorier som passar din risknivå. Behåll förslaget eller välj egna kategorier." },
   management: { title: "Aktiv eller passiv förvaltning?",                   subtitle: "Indexfonder har generellt lägre avgifter och slår ofta aktiva fonder" },
   risk:       { title: "Vilken risknivå vill du se ett exempel för?",        subtitle: "Högre risk = större andel aktier och större svängningar" },
   results:    { title: "Ditt illustrativa portföljexempel",                  subtitle: "" },
@@ -216,7 +225,7 @@ function computeRiskScoreClient(a: Answers): number {
 const AUTO_EXPLANATION: Record<number, string> = {
   1: "Din försiktiga profil ger tyngd mot räntor med en liten kärna av globala aktier för viss tillväxtpotential.",
   2: "Din defensiva profil ger en övervikt mot räntor kombinerat med globala och svenska aktier som kärna.",
-  3: "Balanserad portfölj med lika delar aktier och räntor — global aktieexponering som kärna, svenska aktier för hemmamarknad och räntedel som buffert.",
+  3: "Balanserad portfölj med 60% aktier och 40% räntor — global aktieexponering som kärna, svenska aktier för hemmamarknad och räntedel som buffert.",
   4: "Din tillväxtprofil ger en aktiestark portfölj med global spridning, USA och Sverige som tyngdpunkt samt tillväxtmarknader för extra potential.",
   5: "Offensiv portfölj helst i aktier — bred global och amerikansk exponering med teknik och tillväxtmarknader för maximal tillväxtpotential.",
 };
@@ -302,7 +311,6 @@ export default function BuilderClient() {
   const [direction, setDirection]   = useState(1);
   const [localEquity, setLocalEquity] = useState<number>(60);
   const [slotIndices, setSlotIndices]         = useState<number[]>([]);
-  const [expandedFunds, setExpandedFunds]     = useState<Set<number>>(new Set());
   const [showAdvanced, setShowAdvanced]       = useState(false);
   const [autoExplanation, setAutoExplanation] = useState<string | null>(null);
   const [showManualSelections, setShowManualSelections] = useState(false);
@@ -521,7 +529,11 @@ export default function BuilderClient() {
     }
   }
 
-  const TIER_LABELS: Record<number, string> = { 1: "Hög", 2: "Medel", 3: "Lägre" };
+  const TIER_LABELS: Record<number, string> = {
+    1: "Hög vikt",
+    2: "Medelvikt",
+    3: "Låg vikt",
+  };
 
   function toggleSelection(id: SelectionId) {
     if (pending.includes(id)) {
@@ -644,7 +656,6 @@ export default function BuilderClient() {
     setDirection(1);
     setLocalEquity(60);
     setSlotIndices([]);
-    setExpandedFunds(new Set());
     setShowAdvanced(false);
     setAutoExplanation(null);
     setShowManualSelections(false);
@@ -685,7 +696,7 @@ export default function BuilderClient() {
   // Live preview panel data — reflects the answers given so far.
   const confirmedAnswers: Answers = answers;
   const previewRiskScore = computeRiskScoreClient(confirmedAnswers);
-  const previewEquity = previewRiskScore === 1 ? 20 : previewRiskScore === 2 ? 35 : previewRiskScore === 3 ? 55 : previewRiskScore === 4 ? 75 : 100;
+  const previewEquity = RISK_EQUITY_PCT[previewRiskScore as RiskLevel];
   const showPreview = !isResults && stepIdx >= 1;
 
   return (
@@ -788,18 +799,10 @@ export default function BuilderClient() {
             {/* Selections — auto-suggested by default */}
             {step === "selections" && (
               <>
-                {/* Auto-suggestion explanation */}
-                {autoExplanation && !showManualSelections && (
-                  <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-1">
-                    <svg className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    <p className="text-xs text-blue-700 leading-relaxed">{autoExplanation}</p>
-                  </div>
-                )}
-
                 {/* Auto-selected chips — shown when not in manual mode */}
                 {!showManualSelections && (
                   <div className="space-y-2">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Exempelkategorier</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Föreslagna kategorier</p>
                     <div className="flex flex-wrap gap-2">
                       {pending.map((id) => {
                         const opt = SELECTION_OPTIONS.find((o) => o.value === id)!;
@@ -820,8 +823,21 @@ export default function BuilderClient() {
                       onClick={() => setShowManualSelections(true)}
                       className="text-xs text-slate-400 hover:text-slate-600 transition-colors underline underline-offset-2 pt-1"
                     >
-                      Anpassa manuellt
+                      Ändra förslaget
                     </button>
+
+                    {autoExplanation && (
+                      <div className="flex items-start gap-2.5 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
+                        <svg className="mt-0.5 h-4 w-4 shrink-0 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <div>
+                          <p className="text-xs font-semibold text-blue-800">Förslag baserat på din valda risknivå</p>
+                          <p className="mt-1 text-xs leading-relaxed text-blue-700">{autoExplanation}</p>
+                          <p className="mt-1.5 text-xs leading-relaxed text-blue-600">
+                            Fortsätt med förslaget som det är, eller ändra kategorierna själv.
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -833,8 +849,14 @@ export default function BuilderClient() {
                       onClick={() => setShowManualSelections(false)}
                       className="text-xs text-blue-600 hover:text-blue-800 transition-colors mb-1"
                     >
-                      ← Tillbaka till exempelmix
+                      ← Tillbaka till översikten
                     </button>
+
+                    <div className="rounded-[10px] bg-slate-50 px-3.5 py-2.5">
+                      <p className="text-xs leading-relaxed text-slate-600">
+                        Välj de kategorier du vill ha med. De markerade kategorierna ingår redan i förslaget.
+                      </p>
+                    </div>
 
                     <div className="flex flex-col sm:grid sm:grid-cols-2 sm:gap-4 sm:items-start gap-0">
                       <div className="space-y-3">
@@ -878,8 +900,8 @@ export default function BuilderClient() {
                       {pending.length > 0 && (
                         <div className="sm:sticky sm:top-4 space-y-2 mt-4 sm:mt-0 border-t border-slate-100 pt-4 sm:border-0 sm:pt-0">
                           <div className="mb-2">
-                            <p className="text-sm font-semibold text-slate-800">Vikta dina val</p>
-                            <p className="text-xs text-slate-400 mt-0.5">Hög prioritet får störst andel</p>
+                            <p className="text-sm font-semibold text-slate-800">Fördela mellan kategorierna</p>
+                            <p className="text-xs text-slate-400 mt-0.5">Välj om varje kategori ska få hög, medelstor eller låg vikt</p>
                           </div>
                           {pending.map((id) => {
                             const opt  = SELECTION_OPTIONS.find((o) => o.value === id)!;
@@ -889,9 +911,9 @@ export default function BuilderClient() {
                                 <p className="text-xs font-semibold text-slate-700 truncate mb-1.5">{opt.label}</p>
                                 {pending.length > 1 ? (
                                   <div className="flex items-center gap-1.5">
-                                    <button type="button" onClick={() => adjustPriority(id, 1)} disabled={prio >= 3} className="w-8 h-8 rounded-md bg-white border border-slate-200 text-slate-500 text-xs font-bold disabled:opacity-25 flex items-center justify-center hover:border-slate-300 transition-colors">−</button>
+                                    <button type="button" aria-label={`Minska vikten för ${opt.label}`} onClick={() => adjustPriority(id, 1)} disabled={prio >= 3} className="w-8 h-8 rounded-md bg-white border border-slate-200 text-slate-500 text-xs font-bold disabled:opacity-25 flex items-center justify-center hover:border-slate-300 transition-colors">−</button>
                                     <span className="text-xs font-semibold text-slate-600 flex-1 text-center">{TIER_LABELS[prio]}</span>
-                                    <button type="button" onClick={() => adjustPriority(id, -1)} disabled={prio <= 1} className="w-8 h-8 rounded-md bg-white border border-slate-200 text-slate-500 text-xs font-bold disabled:opacity-25 flex items-center justify-center hover:border-slate-300 transition-colors">+</button>
+                                    <button type="button" aria-label={`Öka vikten för ${opt.label}`} onClick={() => adjustPriority(id, -1)} disabled={prio <= 1} className="w-8 h-8 rounded-md bg-white border border-slate-200 text-slate-500 text-xs font-bold disabled:opacity-25 flex items-center justify-center hover:border-slate-300 transition-colors">+</button>
                                   </div>
                                 ) : (
                                   <p className="text-xs text-slate-400">Enda valet — full vikt</p>
@@ -949,26 +971,42 @@ export default function BuilderClient() {
                 {!loading && !error && result && (
                   <div className="space-y-4">
 
-                    {/* ── Icke-rådgivningsnotis — överst där risken är störst ── */}
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                      <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Ett exempel — inte en rekommendation</p>
-                      <p className="mt-1 text-xs leading-relaxed text-slate-600">
-                        Fördelningen är automatiskt genererad utifrån den risknivå du valt och generella
-                        nyckeltal. Den tar inte hänsyn till din personliga ekonomiska situation och utgör
-                        varken investeringsrådgivning eller en personlig rekommendation. Alla investeringsbeslut
-                        fattar du själv och på egen risk.
-                      </p>
+                    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Din valda fördelning</p>
+                          <p className="mt-1 text-lg font-bold text-slate-900">{result.riskLabel}</p>
+                          <p className="mt-1 text-sm text-slate-500">
+                            {result.equityPct}% aktier · {100 - result.equityPct}% räntor
+                          </p>
+                        </div>
+                        <div>
+                          <DonutChart
+                            palette={CHART_PALETTE}
+                            slices={result.portfolio.map((slot) => ({
+                              label: RATIONALE_SHORT[slot.rationale] ?? slot.rationale.split(" ")[0],
+                              weight: slot.weight,
+                            }))}
+                            centerLabel={`${result.equityPct}%`}
+                            centerSub="Aktier"
+                            size={112}
+                            thickness={18}
+                            horizontal
+                          />
+                          <p className="mt-2 max-w-sm text-[10px] leading-snug text-slate-400">
+                            * Fördelningen visas på fondnivå och baseras på fondkategori, inte underliggande innehav.
+                          </p>
+                        </div>
+                      </div>
                     </div>
 
                     {/* ── Fondlista & slider — alltid synliga ── */}
                     <div className="space-y-3">
 
-                      <div className="rounded-xl border border-info-line bg-info px-4 py-3">
-                        <p className="text-[11px] font-bold uppercase tracking-widest text-accent">Fonderna i portföljexemplet</p>
-                        <p className="mt-1 text-xs leading-relaxed text-slate-600">
-                          Nedan visas de faktiska fonderna som valts för exemplet. Procenten visar föreslagen vikt i portföljen.
-                        </p>
-                      </div>
+                      <h2 className="pt-1 text-sm font-bold text-slate-900">Fonder i exemplet</h2>
+                      <p className="-mt-1 text-xs leading-relaxed text-slate-500">
+                        Använd pilarna för att byta från den bäst rankade fonden till nästa alternativ i samma kategori.
+                      </p>
 
                       {result.droppedSelections?.length > 0 && (
                         <div className="bg-warn-soft border border-amber-200 rounded-xl px-4 py-3 space-y-1">
@@ -979,8 +1017,12 @@ export default function BuilderClient() {
                         </div>
                       )}
 
-                      {/* Fund cards */}
-                      <div className="space-y-2">
+                      {/* Sammanhållen fondlista */}
+                      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-b border-slate-100 bg-slate-50 px-4 py-2.5">
+                          <span className="pl-28 text-[10px] font-bold uppercase tracking-widest text-slate-400">Fond</span>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Vikt</span>
+                        </div>
                         {result.portfolio.map((slot, si) => {
                           const idx       = slotIndices[si] ?? 0;
                           const candidate = slot.candidates?.[idx] ?? slot;
@@ -988,44 +1030,98 @@ export default function BuilderClient() {
                           const canNext   = idx < (slot.candidates?.length ?? 1) - 1;
                           const candidateCount = slot.candidates?.length ?? 1;
                           return (
-                            <div key={si} className="rounded-xl border border-slate-200 bg-white px-3.5 py-3 shadow-sm sm:px-4">
-                              <div className="flex items-start gap-3">
-                                <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl border border-info-line bg-info">
-                                  <span className="text-[10px] font-bold uppercase leading-none text-blue-500">Vikt</span>
-                                  <span className="mt-0.5 text-sm font-bold leading-none text-accent">{slot.weight}%</span>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Fond {si + 1}</p>
-                                  <p className="mt-0.5 break-words text-[13px] font-semibold leading-snug text-slate-900 sm:text-sm">{candidate.name}</p>
-                                  <div className="mt-1 flex flex-wrap gap-1.5">
-                                    <span className="rounded-md bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-500">{slot.rationale}</span>
+                            <div key={si} className="border-b border-slate-100 px-4 py-3 last:border-b-0">
+                              <div className="flex items-center gap-3">
+                                {candidateCount > 1 ? (
+                                  <div className="flex shrink-0 items-center gap-1">
+                                    <button type="button" aria-label="Föregående fond" onClick={() => { resetSaveState(); setSlotIndices((prev) => { const n=[...prev]; n[si]=idx-1; return n; }); }} disabled={!canBack} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-colors hover:border-slate-300 hover:text-slate-600 disabled:opacity-20">
+                                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                                    </button>
+                                    <span className="w-8 text-center text-[10px] font-semibold text-slate-500">
+                                      {idx === 0 ? "Bäst" : `${idx + 1}:a`}
+                                    </span>
+                                    <button type="button" aria-label="Nästa fond" onClick={() => { resetSaveState(); setSlotIndices((prev) => { const n=[...prev]; n[si]=idx+1; return n; }); }} disabled={!canNext} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-colors hover:border-slate-300 hover:text-slate-600 disabled:opacity-20">
+                                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
+                                    </button>
                                   </div>
+                                ) : (
+                                  <div className="w-[104px] shrink-0" />
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <p className="break-words text-[13px] font-semibold leading-snug text-slate-900 sm:text-sm">{candidate.name}</p>
+                                  <p className="mt-0.5 text-[11px] text-slate-400">{RATIONALE_SHORT[slot.rationale] ?? slot.rationale}</p>
                                 </div>
-                                <div className="hidden items-center gap-1 shrink-0 sm:flex">
-                                  <button type="button" onClick={() => { resetSaveState(); setSlotIndices((prev) => { const n=[...prev]; n[si]=idx-1; return n; }); }} disabled={!canBack} className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-400 flex items-center justify-center disabled:opacity-20 hover:border-slate-300 hover:text-slate-600 transition-colors">
-                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
-                                  </button>
-                                  <span className="text-[10px] text-slate-300 w-6 text-center">{idx+1}/{candidateCount}</span>
-                                  <button type="button" onClick={() => { resetSaveState(); setSlotIndices((prev) => { const n=[...prev]; n[si]=idx+1; return n; }); }} disabled={!canNext} className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-400 flex items-center justify-center disabled:opacity-20 hover:border-slate-300 hover:text-slate-600 transition-colors">
-                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
-                                  </button>
-                                </div>
+                                <span className="w-12 shrink-0 text-right text-sm font-bold text-accent">{slot.weight}%</span>
                               </div>
-                              {candidateCount > 1 && (
-                                <div className="mt-2 flex items-center justify-end gap-1 border-t border-slate-100 pt-2 sm:hidden">
-                                  <button type="button" onClick={() => { resetSaveState(); setSlotIndices((prev) => { const n=[...prev]; n[si]=idx-1; return n; }); }} disabled={!canBack} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-colors hover:border-slate-300 hover:text-slate-600 disabled:opacity-20">
-                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
-                                  </button>
-                                  <span className="w-12 text-center text-[10px] text-slate-400">Val {idx+1}/{candidateCount}</span>
-                                  <button type="button" onClick={() => { resetSaveState(); setSlotIndices((prev) => { const n=[...prev]; n[si]=idx+1; return n; }); }} disabled={!canNext} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-colors hover:border-slate-300 hover:text-slate-600 disabled:opacity-20">
-                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
-                                  </button>
-                                </div>
-                              )}
                             </div>
                           );
                         })}
                       </div>
+
+                      <details className="group overflow-hidden rounded-xl border border-slate-200 bg-white">
+                        <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50">
+                          Läs mer om portföljexemplet
+                          <svg className="h-4 w-4 text-slate-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                        </summary>
+                        <div className="space-y-4 border-t border-slate-100 px-4 py-4">
+                          {result.summary && (
+                            <div>
+                              <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">Kort sammanfattning</h3>
+                              <p className="mt-1.5 text-xs leading-relaxed text-slate-600">{result.summary}</p>
+                            </div>
+                          )}
+                          <div>
+                            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">Varför valdes fonderna?</h3>
+                            <div className="mt-2 divide-y divide-slate-100">
+                              {result.portfolio.map((slot, si) => {
+                                const idx = slotIndices[si] ?? 0;
+                                const candidate = slot.candidates?.[idx] ?? slot;
+                                const returnValue = candidate.return_3yr ?? candidate.return_1yr;
+                                const avgReturn = candidate.return_3yr != null ? slot.avgPoolReturn3yr : slot.avgPoolReturn1yr;
+                                const returnYears = candidate.return_3yr != null ? 3 : 1;
+                                const returnAboveAvg = returnValue != null && avgReturn != null && returnValue > avgReturn;
+                                const riskAdjustedAboveAvg = candidate.sharpe_3yr != null && slot.avgPoolSharpe != null && candidate.sharpe_3yr > slot.avgPoolSharpe;
+                                const costBelowAvg = candidate.ongoing_cost != null && slot.avgPoolCost != null && candidate.ongoing_cost < slot.avgPoolCost;
+                                const poolStr = slot.poolSize > 1 ? ` av ${slot.poolSize} fonder` : "";
+                                const explanation =
+                                  riskAdjustedAboveAvg && costBelowAvg
+                                    ? `Stark kombination av riskjusterad avkastning och låg avgift${poolStr}.`
+                                    : riskAdjustedAboveAvg
+                                      ? `Stark riskjusterad avkastning${poolStr}.`
+                                      : returnAboveAvg && costBelowAvg
+                                        ? `Stark kombination av historisk avkastning och låg avgift${poolStr}.`
+                                        : returnAboveAvg
+                                          ? `Stark historisk avkastning${poolStr}.`
+                                      : costBelowAvg
+                                          ? `Lägre avgift än kategorisnittet${poolStr}. Riskjusterad och historisk avkastning har också vägts in i rangordningen.`
+                                          : `Högt rankad i sin kategori utifrån riskjusterad avkastning, historisk avkastning och avgift${poolStr}.`;
+                                return (
+                                  <div key={si} className="py-2.5 first:pt-0 last:pb-0">
+                                    <p className="text-xs font-semibold text-slate-800">{candidate.name}</p>
+                                    <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
+                                      {explanation} Fonden ger portföljen {slot.rationale.toLowerCase()}.
+                                    </p>
+                                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-400">
+                                      {returnValue != null && (
+                                        <span>
+                                          Avkastning {returnYears} år {returnValue.toFixed(1)}%
+                                          {avgReturn != null && ` · snitt ${avgReturn.toFixed(1)}%`}
+                                        </span>
+                                      )}
+                                      {candidate.ongoing_cost != null && (
+                                        <span>
+                                          Avgift {candidate.ongoing_cost.toFixed(2)}%/år
+                                          {slot.avgPoolCost != null && ` · snitt ${slot.avgPoolCost.toFixed(2)}%`}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      </details>
 
                       {/* Slider */}
                       <div className="border border-slate-100 rounded-xl p-4 space-y-3">
@@ -1054,149 +1150,9 @@ export default function BuilderClient() {
                       </div>
                     </div>
 
-                    {/* ── Låst sektion: analys + spara (förhandsvisning bakom frost i utloggat läge) ── */}
-                    {!user ? (
-                      <div className="relative">
-                        <div aria-hidden className="pointer-events-none select-none border border-slate-100 rounded-xl overflow-hidden">
-                          <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
-                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Portföljanalys</p>
-                          </div>
-                          <div className="px-4 py-3.5 space-y-2">
-                            <p className="text-xs leading-relaxed text-slate-600">Din portfölj har en god riskspridning mellan regioner och tillgångsslag.</p>
-                            <p className="text-xs leading-relaxed text-slate-600">Den genomsnittliga avgiften ligger under snittet för jämförbara portföljer.</p>
-                            <p className="text-xs leading-relaxed text-slate-600">Räntedelen dämpar svängningar och utgår från den valda risknivån.</p>
-                            <p className="text-xs leading-relaxed text-slate-600">Fonderna är topprankade i sina kategorier utifrån Sharpe-kvot och avgift.</p>
-                            <p className="text-xs leading-relaxed text-slate-600">Spara portföljen för att följa utvecklingen över tid.</p>
-                          </div>
-                        </div>
-
-                        <div className="absolute inset-0 rounded-xl backdrop-blur-[8px] bg-white/50" />
-                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-center px-6 space-y-3">
-                          <p className="text-base font-semibold text-ink leading-snug max-w-md">Logga in för att se portföljanalysen och spara din portfölj</p>
-                          <p className="text-xs text-ink-3">Gratis · Klart på under en minut</p>
-                          <button
-                            onClick={openAuthModal}
-                            className="inline-flex items-center justify-center bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold px-7 py-2.5 rounded-[10px] transition-colors"
-                          >
-                            Logga in
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                        <div className="lg:grid lg:grid-cols-5 lg:gap-8 space-y-4 lg:space-y-0">
-
-                          {((result.reasoning?.length > 0) || (result.fundExplanations?.length > 0)) && (
-                            <div className="lg:col-span-3 space-y-2">
-
-                              {result.reasoning?.length > 0 && (
-                                <div className="border border-slate-100 rounded-xl overflow-hidden">
-                                  <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
-                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Portföljanalys</p>
-                                  </div>
-                                  <div className="px-4 py-3 space-y-2">
-                                    {result.reasoning.map((line, i) => (
-                                      line.startsWith("⚠") ? (
-                                        <p key={i} className="text-xs leading-relaxed text-amber-700 bg-warn-soft rounded-lg px-3 py-2">{line}</p>
-                                      ) : (
-                                        <p key={i} className="text-xs leading-relaxed text-slate-600">{line}</p>
-                                      )
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              {result.fundExplanations?.length > 0 && (
-                                <div className="border border-slate-100 rounded-xl overflow-hidden">
-                                  <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
-                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Varför valdes varje fond?</p>
-                                  </div>
-                                  <div className="divide-y divide-slate-100">
-                                    {result.fundExplanations.map((f, i) => {
-                                      const open = expandedFunds.has(i);
-                                      const poolStr = f.poolSize > 1 ? ` av ${f.poolSize} fonder` : "";
-                                      const sharpeAboveAvg    = f.sharpe != null && f.avgPoolSharpe != null && f.sharpe > f.avgPoolSharpe * 1.25;
-                                      const sharpeSlightlyAbove = f.sharpe != null && f.avgPoolSharpe != null && f.sharpe > f.avgPoolSharpe;
-                                      const costBelowAvg      = f.cost   != null && f.avgPoolCost   != null && f.cost   < f.avgPoolCost   * 0.75;
-                                      const costSlightlyBelow = f.cost   != null && f.avgPoolCost   != null && f.cost   < f.avgPoolCost;
-                                      const explanation = (() => {
-                                        if (sharpeAboveAvg && costBelowAvg) {
-                                          return `Bäst kombination av avkastning och avgift${poolStr} — Sharpe ${f.sharpe!.toFixed(2)} vs snitt ${f.avgPoolSharpe!.toFixed(2)} · avgift ${f.cost!.toFixed(2)}% vs snitt ${f.avgPoolCost!.toFixed(2)}%`;
-                                        }
-                                        if (sharpeAboveAvg) {
-                                          const costNote = f.cost != null ? ` · avgift ${f.cost.toFixed(2)}%/år` : "";
-                                          return `Starkast riskjusterad avkastning${poolStr} — Sharpe ${f.sharpe!.toFixed(2)} vs snitt ${f.avgPoolSharpe!.toFixed(2)}${costNote}`;
-                                        }
-                                        if (costBelowAvg) {
-                                          const sharpeNote = f.sharpe != null ? ` · Sharpe ${f.sharpe.toFixed(2)}` : "";
-                                          return `Lägst avgift${poolStr} — ${f.cost!.toFixed(2)}% vs snitt ${f.avgPoolCost!.toFixed(2)}%${sharpeNote}`;
-                                        }
-                                        if (sharpeSlightlyAbove) {
-                                          const costNote = f.cost != null ? ` · avgift ${f.cost.toFixed(2)}%/år` : "";
-                                          return `God riskjusterad avkastning${poolStr} — Sharpe ${f.sharpe!.toFixed(2)} vs snitt ${f.avgPoolSharpe!.toFixed(2)}${costNote}`;
-                                        }
-                                        if (costSlightlyBelow) {
-                                          const sharpeNote = f.sharpe != null ? ` · Sharpe ${f.sharpe.toFixed(2)}` : "";
-                                          return `Lägre avgift än snittet${poolStr} — ${f.cost!.toFixed(2)}% vs ${f.avgPoolCost!.toFixed(2)}%${sharpeNote}`;
-                                        }
-                                        if (f.sharpe != null && f.cost != null) return `Sharpe ${f.sharpe.toFixed(2)} · avgift ${f.cost.toFixed(2)}%/år`;
-                                        if (f.sharpe != null) return `Sharpe ${f.sharpe.toFixed(2)}`;
-                                        if (f.cost   != null) return `Avgift ${f.cost.toFixed(2)}%/år`;
-                                        return "Rankad i sin kategori";
-                                      })();
-                                      return (
-                                        <div key={i}>
-                                          <button type="button" onClick={() => setExpandedFunds((prev) => { const n = new Set(prev); if (open) n.delete(i); else n.add(i); return n; })} className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-50 transition-colors">
-                                            <div className="flex items-center gap-2 min-w-0">
-                                              <span className="text-xs font-semibold text-accent shrink-0">{f.weight}%</span>
-                                              <span className="text-xs font-semibold text-slate-800 truncate">{f.name}</span>
-                                            </div>
-                                            <svg className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/></svg>
-                                          </button>
-                                          {open && (
-                                            <div className="px-4 pb-3 space-y-1">
-                                              <p className="text-xs text-slate-500">Kategori: <span className="font-medium text-slate-700">{f.rationale}</span></p>
-                                              <p className="text-xs text-slate-400 leading-relaxed">{explanation}</p>
-                                            </div>
-                                          )}
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          <div className={((result.reasoning?.length > 0) || (result.fundExplanations?.length > 0)) ? "lg:col-span-2" : "lg:col-span-5"}>
-                            <div className="lg:sticky lg:top-20 space-y-3">
-
-                              {/* Summary card */}
-                              <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-sm bg-info text-accent border border-info-line px-3 py-1 rounded-lg font-semibold">{result.riskLabel}</span>
-                                </div>
-                                <DonutChart
-                                  palette={CHART_PALETTE}
-                                  slices={result.portfolio.map((slot) => ({
-                                    label: RATIONALE_SHORT[slot.rationale] ?? slot.rationale.split(" ")[0],
-                                    weight: slot.weight,
-                                  }))}
-                                  centerLabel={`${result.equityPct}%`}
-                                  centerSub="Aktier"
-                                  size={120}
-                                  thickness={18}
-                                  horizontal
-                                />
-                                <p className="text-[10px] text-slate-400 leading-snug">* Fördelning baseras på fondkategori, inte underliggande innehav.</p>
-                                {result.summary && (
-                                  <p className="text-xs text-slate-600 leading-relaxed border-t border-slate-100 pt-3">
-                                    {result.summary}
-                                  </p>
-                                )}
-                              </div>
-
-                              {/* Save — primary CTA */}
-                              <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-3">
+                    <div className="mx-auto max-w-md space-y-3">
+                      {/* Save — primary CTA */}
+                      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-3">
                                 {saveStatus === "saved" ? (
                                   <p className="text-sm text-green-700 font-semibold text-center py-1">Portföljen sparad ✓</p>
                                 ) : !user ? (
@@ -1251,23 +1207,24 @@ export default function BuilderClient() {
                                     {saveStatus === "error" && <p className="text-xs text-red-500">Kunde inte spara. Försök igen.</p>}
                                   </div>
                                 )}
-                              </div>
+                      </div>
 
-                              {/* Analyze — secondary */}
-                              <button onClick={sendToAnalyze} className="w-full flex items-center justify-center gap-1.5 text-sm font-medium text-blue-600 border border-blue-200 rounded-xl py-3 hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700 transition-all">
-                                Se nyckeltal — analysera portföljen
-                                <ChevronRight className="w-3.5 h-3.5" />
-                              </button>
+                      <button onClick={sendToAnalyze} className="w-full flex items-center justify-center gap-1.5 text-sm font-medium text-blue-600 border border-blue-200 rounded-xl py-3 hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700 transition-all">
+                        Analysera portföljen
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
 
-                              <p className="text-[10px] text-slate-400 leading-relaxed">
-                                Exemplet är automatiskt genererat utifrån historiska nyckeltal och generella kriterier och utgör inte
-                                finansiell rådgivning eller en personlig rekommendation. Historisk avkastning är ingen garanti för framtida resultat.
-                              </p>
-                            </div>
-                          </div>
+                    </div>
 
-                        </div>
-                    )}
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Ett exempel — inte en rekommendation</p>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                        Fördelningen är automatiskt genererad utifrån den risknivå du valt och generella
+                        nyckeltal. Den tar inte hänsyn till din personliga ekonomiska situation och utgör
+                        varken investeringsrådgivning eller en personlig rekommendation. Alla investeringsbeslut
+                        fattar du själv och på egen risk. Historisk avkastning är ingen garanti för framtida resultat.
+                      </p>
+                    </div>
 
                   </div>
                 )}

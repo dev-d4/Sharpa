@@ -440,21 +440,25 @@ export async function POST(req: NextRequest) {
         ? distributeByPriority(equityPct, keptEquitySels, prios)
         : distributeWeights(equityPct, keptEquitySels.length);
 
-    type CandidateFund = { isin: string; name: string; category: string; ongoing_cost: number | null; sharpe_3yr: number | null };
-    type PortfolioSlot = { isin: string; name: string; weight: number; category: string; rationale: string; ongoing_cost: number | null; sharpe_3yr: number | null; candidates: CandidateFund[]; poolSize: number; avgPoolSharpe: number | null; avgPoolCost: number | null };
+    type CandidateFund = { isin: string; name: string; category: string; ongoing_cost: number | null; sharpe_3yr: number | null; return_1yr: number | null; return_3yr: number | null };
+    type PortfolioSlot = { isin: string; name: string; weight: number; category: string; rationale: string; ongoing_cost: number | null; sharpe_3yr: number | null; return_1yr: number | null; return_3yr: number | null; candidates: CandidateFund[]; poolSize: number; avgPoolSharpe: number | null; avgPoolCost: number | null; avgPoolReturn1yr: number | null; avgPoolReturn3yr: number | null };
     const portfolio: PortfolioSlot[] = [];
     const usedIsins: string[] = [];
 
     const toCandidates = (funds: FundRow[]): CandidateFund[] =>
-      funds.map((f) => ({ isin: f.isin, name: f.name, category: f.category ?? "", ongoing_cost: f.ongoing_cost_actual ?? f.ongoing_cost_estimated ?? null, sharpe_3yr: f.sharpe_3yr }));
+      funds.map((f) => ({ isin: f.isin, name: f.name, category: f.category ?? "", ongoing_cost: f.ongoing_cost_actual ?? f.ongoing_cost_estimated ?? null, sharpe_3yr: f.sharpe_3yr, return_1yr: f.return_1yr, return_3yr: f.return_3yr }));
 
-    function poolStats(pool: FundRow[]): { poolSize: number; avgPoolSharpe: number | null; avgPoolCost: number | null } {
+    function poolStats(pool: FundRow[]): { poolSize: number; avgPoolSharpe: number | null; avgPoolCost: number | null; avgPoolReturn1yr: number | null; avgPoolReturn3yr: number | null } {
       const withSharpe = pool.filter((f) => f.sharpe_3yr != null);
       const withCost   = pool.filter((f) => (f.ongoing_cost_actual ?? f.ongoing_cost_estimated) != null);
+      const withReturn1yr = pool.filter((f) => f.return_1yr != null);
+      const withReturn3yr = pool.filter((f) => f.return_3yr != null);
       return {
         poolSize:      pool.length,
         avgPoolSharpe: withSharpe.length > 0 ? withSharpe.reduce((s, f) => s + f.sharpe_3yr!, 0) / withSharpe.length : null,
         avgPoolCost:   withCost.length   > 0 ? withCost.reduce((s, f) => s + (f.ongoing_cost_actual ?? f.ongoing_cost_estimated)!, 0) / withCost.length : null,
+        avgPoolReturn1yr: withReturn1yr.length > 0 ? withReturn1yr.reduce((s, f) => s + f.return_1yr!, 0) / withReturn1yr.length : null,
+        avgPoolReturn3yr: withReturn3yr.length > 0 ? withReturn3yr.reduce((s, f) => s + f.return_3yr!, 0) / withReturn3yr.length : null,
       };
     }
 
@@ -476,7 +480,7 @@ export async function POST(req: NextRequest) {
       const top  = pickTop(pool, usedIsins);
       if (top.length === 0) { if (portfolio.length > 0) portfolio[0].weight += weight; continue; }
       const best = top[0];
-      portfolio.push({ isin: best.isin, name: best.name, weight, category: best.category ?? "", rationale: SELECTION_RATIONALE[selId], ongoing_cost: best.ongoing_cost_actual ?? best.ongoing_cost_estimated ?? null, sharpe_3yr: best.sharpe_3yr, candidates: toCandidates(top), ...poolStats(pool) });
+      portfolio.push({ isin: best.isin, name: best.name, weight, category: best.category ?? "", rationale: SELECTION_RATIONALE[selId], ongoing_cost: best.ongoing_cost_actual ?? best.ongoing_cost_estimated ?? null, sharpe_3yr: best.sharpe_3yr, return_1yr: best.return_1yr, return_3yr: best.return_3yr, candidates: toCandidates(top), ...poolStats(pool) });
       usedIsins.push(best.isin);
     }
 
@@ -495,14 +499,14 @@ export async function POST(req: NextRequest) {
           const top  = pickTop(activePool, usedIsins);
           if (top.length === 0) { if (portfolio.length > 0) portfolio[0].weight += weight; continue; }
           const best = top[0];
-          portfolio.push({ isin: best.isin, name: best.name, weight, category: best.category ?? "Räntefond", rationale: SELECTION_RATIONALE[selId], ongoing_cost: best.ongoing_cost_actual ?? best.ongoing_cost_estimated ?? null, sharpe_3yr: best.sharpe_3yr, candidates: toCandidates(top), ...poolStats(activePool) });
+          portfolio.push({ isin: best.isin, name: best.name, weight, category: best.category ?? "Räntefond", rationale: SELECTION_RATIONALE[selId], ongoing_cost: best.ongoing_cost_actual ?? best.ongoing_cost_estimated ?? null, sharpe_3yr: best.sharpe_3yr, return_1yr: best.return_1yr, return_3yr: best.return_3yr, candidates: toCandidates(top), ...poolStats(activePool) });
           usedIsins.push(best.isin);
         }
       } else {
         const top = pickTop(fixedFunds, usedIsins);
         if (top.length > 0) {
           const best = top[0];
-          portfolio.push({ isin: best.isin, name: best.name, weight: bondPct, category: best.category ?? "Räntefond", rationale: bondPct <= 20 ? "Stabiliserar portföljen" : "Lägre risk och volatilitet", ongoing_cost: best.ongoing_cost_actual ?? best.ongoing_cost_estimated ?? null, sharpe_3yr: best.sharpe_3yr, candidates: toCandidates(top), ...poolStats(fixedFunds) });
+          portfolio.push({ isin: best.isin, name: best.name, weight: bondPct, category: best.category ?? "Räntefond", rationale: bondPct <= 20 ? "Stabiliserar portföljen" : "Lägre risk och volatilitet", ongoing_cost: best.ongoing_cost_actual ?? best.ongoing_cost_estimated ?? null, sharpe_3yr: best.sharpe_3yr, return_1yr: best.return_1yr, return_3yr: best.return_3yr, candidates: toCandidates(top), ...poolStats(fixedFunds) });
         } else if (portfolio.length > 0) {
           portfolio[0].weight += bondPct;
         }

@@ -16,6 +16,14 @@ export const RISK_EQUITY: Record<RiskLevel, string> = {
   5: "~100% aktier",
 };
 
+export const RISK_EQUITY_PCT: Record<RiskLevel, number> = {
+  1: 20,
+  2: 40,
+  3: 60,
+  4: 80,
+  5: 100,
+};
+
 export function calcRiskScore(q1: number, q2: number, q3: number, q4: number): RiskLevel {
   return Math.round((q1 + q2 + q3 + q4) / 4) as RiskLevel;
 }
