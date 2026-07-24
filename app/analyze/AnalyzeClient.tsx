@@ -1541,7 +1541,7 @@ export default function AnalyzeClient() {
           <p className="mt-3 text-xs text-slate-400">
             Äger du inga fonder?{" "}
             <Link href="/bygg-portfolj" className="text-blue-600 hover:underline font-medium">
-              Bygg en portfölj
+              Skapa ett portföljexempel
             </Link>
           </p>
         </div>
@@ -1568,9 +1568,13 @@ export default function AnalyzeClient() {
             <div className="space-y-3">
               <div>
                 <p className="font-heading text-base font-bold text-ink">Hur vill du lägga in innehaven?</p>
-                <p className="mt-1 text-sm text-ink-3">Sök själv, ladda upp en CSV eller låt guiden hjälpa dig hitta fonder.</p>
+                <p className="mt-1 text-sm text-ink-3">
+                  {custodian === "avanza"
+                    ? "Sök själv eller låt guiden hjälpa dig hitta fonder."
+                    : "Sök själv, ladda upp en CSV eller låt guiden hjälpa dig hitta fonder."}
+                </p>
               </div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <div className={cn("grid grid-cols-1 gap-2", custodian === "avanza" ? "sm:grid-cols-2" : "sm:grid-cols-3")}>
               {/* Manual */}
               <button
                 type="button"
@@ -1595,34 +1599,36 @@ export default function AnalyzeClient() {
                 </span>
               </button>
 
-              {/* Import */}
-              <button
-                type="button"
-                onClick={() => { setImportResult(null); setImportWizard({ open: true, step: 1, file: null, name: "" }); }}
-                disabled={importing}
-                className={cn(
-                  "group flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-xl border px-2.5 py-2 text-center transition-all disabled:cursor-wait",
-                  importing
-                    ? "border-accent bg-info shadow-sm ring-1 ring-accent/15"
-                    : "border-line-soft bg-white hover:border-info-line hover:bg-section/60"
-                )}
-              >
-                <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] border transition-colors", importing ? "border-accent bg-accent text-white" : "border-line-soft bg-section text-ink-3 group-hover:text-accent")}>
-                  {importing ? (
-                    <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                  ) : (
-                    <FileUp className="h-4 w-4" />
+              {/* Import — tillfälligt dolt för Avanza tills deras CSV-format stöds igen */}
+              {custodian !== "avanza" && (
+                <button
+                  type="button"
+                  onClick={() => { setImportResult(null); setImportWizard({ open: true, step: 1, file: null, name: "" }); }}
+                  disabled={importing}
+                  className={cn(
+                    "group flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-xl border px-2.5 py-2 text-center transition-all disabled:cursor-wait",
+                    importing
+                      ? "border-accent bg-info shadow-sm ring-1 ring-accent/15"
+                      : "border-line-soft bg-white hover:border-info-line hover:bg-section/60"
                   )}
-                </span>
-                <span>
-                  <span className={cn("block text-sm font-semibold", importing ? "text-accent" : "text-ink")}>
-                    {importing ? "Importerar…" : "Importera fil"}
+                >
+                  <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] border transition-colors", importing ? "border-accent bg-accent text-white" : "border-line-soft bg-section text-ink-3 group-hover:text-accent")}>
+                    {importing ? (
+                      <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                    ) : (
+                      <FileUp className="h-4 w-4" />
+                    )}
                   </span>
-                  <span className="mt-1 block text-xs leading-snug text-ink-3">
-                    Ladda upp en CSV-fil
+                  <span>
+                    <span className={cn("block text-sm font-semibold", importing ? "text-accent" : "text-ink")}>
+                      {importing ? "Importerar…" : "Importera fil"}
+                    </span>
+                    <span className="mt-1 block text-xs leading-snug text-ink-3">
+                      Ladda upp en CSV-fil
+                    </span>
                   </span>
-                </span>
-              </button>
+                </button>
+              )}
 
               {/* AI */}
               <button
@@ -1926,7 +1932,7 @@ export default function AnalyzeClient() {
                           </svg>
                         </div>
                         <p className="font-medium text-slate-700 text-sm">Dra och släpp eller klicka</p>
-                        <p className="text-xs text-slate-400">CSV-format (från Nordnet eller Avanza)</p>
+                        <p className="text-xs text-slate-400">CSV-format</p>
                       </div>
                     )}
                   </div>
