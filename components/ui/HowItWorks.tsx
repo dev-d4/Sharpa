@@ -214,7 +214,7 @@ export default function HowItWorks() {
           <p className="text-xs font-semibold text-accent uppercase tracking-[0.08em] mb-3">Räkna själv</p>
           <h2 className="font-heading text-2xl sm:text-3xl font-bold text-ink leading-tight">Vad är skillnaden egentligen?</h2>
           <p className="mt-3 text-[13.5px] text-ink-2 leading-[1.6]">
-            Ränta-på-ränta gör att även en liten förbättring i avgift ger stor skillnad på lång sikt.
+            Ränta-på-ränta gör att även en liten förbättring i avgift och avkastning ger stor skillnad på lång sikt.
           </p>
         </div>
         <PortfolioCalculator />
