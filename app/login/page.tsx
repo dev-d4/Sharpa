@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { MAGIC_LINK_ENABLED } from "@/lib/features";
+import { authErrorMessage } from "@/lib/auth-errors";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -46,7 +47,7 @@ function LoginForm() {
       email,
       options: { emailRedirectTo: getCallbackUrl(next) },
     });
-    if (error) setError(error.message);
+    if (error) setError(authErrorMessage(error));
     else setSent(true);
     setLoading(false);
   }

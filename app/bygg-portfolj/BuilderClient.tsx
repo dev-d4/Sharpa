@@ -13,6 +13,7 @@ import { CHART_PALETTE } from "@/lib/chart-palette";
 import { useMobileBottomOverlay } from "@/lib/mobile-bottom-overlay";
 import { BEFORE_LOGIN_EVENT, prepareLoginResume, saveResume, takeResumeData } from "@/lib/resume-session";
 import { MAGIC_LINK_ENABLED } from "@/lib/features";
+import { authErrorMessage } from "@/lib/auth-errors";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -495,7 +496,7 @@ export default function BuilderClient() {
       email: authEmail,
       options: { emailRedirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent("/bygg-portfolj")}&skip_onboarding=1` },
     });
-    if (error) setAuthError(error.message);
+    if (error) setAuthError(authErrorMessage(error));
     else setAuthSent(true);
     setAuthLoading(false);
   }
