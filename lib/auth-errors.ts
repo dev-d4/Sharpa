@@ -13,6 +13,13 @@ export function authErrorMessage(error: AuthErrorLike): string {
   const message = error?.message?.toLowerCase() ?? "";
   const code = error?.code ?? "";
 
+  // Användaren ska aldrig se Supabases engelska teknikprosa, men den behövs för
+  // felsökning — utan den går det inte att skilja en trasig SMTP-konfiguration
+  // från ett avvisat utskick.
+  if (error) {
+    console.error("[auth] inloggningsfel", { code: error.code, status: error.status, message: error.message });
+  }
+
   if (code === "over_email_send_rate_limit" || message.includes("rate limit")) {
     return "Vi har skickat för många mejl på kort tid. Vänta någon minut och försök igen — eller fortsätt med Google.";
   }
