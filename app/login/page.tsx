@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
+import { MAGIC_LINK_ENABLED } from "@/lib/features";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -37,6 +38,7 @@ function LoginForm() {
 
   async function handleMagicLink(e: React.FormEvent) {
     e.preventDefault();
+    if (!MAGIC_LINK_ENABLED) return;
     setError(null);
     setLoading(true);
     const next = searchParams.get("next") ?? "/portfolios";
@@ -64,7 +66,7 @@ function LoginForm() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-          {sent ? (
+          {sent && MAGIC_LINK_ENABLED ? (
             <div className="text-center py-4 space-y-2">
               <div className="text-3xl">✉️</div>
               <p className="font-semibold text-slate-900">Kolla din e-post</p>
@@ -89,31 +91,35 @@ function LoginForm() {
                 Fortsätt med Google
               </button>
 
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-slate-200" />
-                <span className="text-xs text-slate-400">eller</span>
-                <div className="flex-1 h-px bg-slate-200" />
-              </div>
+              {MAGIC_LINK_ENABLED && (
+                <>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-px bg-slate-200" />
+                    <span className="text-xs text-slate-400">eller</span>
+                    <div className="flex-1 h-px bg-slate-200" />
+                  </div>
 
-              {/* Magic link */}
-              <form onSubmit={handleMagicLink} className="space-y-3">
-                <input
-                  type="email"
-                  required
-                  placeholder="din@email.se"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                {error && <p className="text-xs text-red-600">{error}</p>}
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press disabled:bg-blue-300 text-white font-semibold rounded-[10px] py-2.5 text-sm transition-colors"
-                >
-                  {loading ? "Skickar…" : "Skicka inloggningslänk"}
-                </button>
-              </form>
+                  {/* Magic link */}
+                  <form onSubmit={handleMagicLink} className="space-y-3">
+                    <input
+                      type="email"
+                      required
+                      placeholder="din@email.se"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    {error && <p className="text-xs text-red-600">{error}</p>}
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press disabled:bg-blue-300 text-white font-semibold rounded-[10px] py-2.5 text-sm transition-colors"
+                    >
+                      {loading ? "Skickar…" : "Skicka inloggningslänk"}
+                    </button>
+                  </form>
+                </>
+              )}
             </>
           )}
         </div>

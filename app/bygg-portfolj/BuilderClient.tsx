@@ -12,6 +12,7 @@ import DataFreshness from "@/components/ui/DataFreshness";
 import { CHART_PALETTE } from "@/lib/chart-palette";
 import { useMobileBottomOverlay } from "@/lib/mobile-bottom-overlay";
 import { BEFORE_LOGIN_EVENT, prepareLoginResume, saveResume, takeResumeData } from "@/lib/resume-session";
+import { MAGIC_LINK_ENABLED } from "@/lib/features";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -486,6 +487,7 @@ export default function BuilderClient() {
 
   async function handleAuthMagicLink(e: React.FormEvent) {
     e.preventDefault();
+    if (!MAGIC_LINK_ENABLED) return;
     setAuthError(null);
     setAuthLoading(true);
     const supabase = createClient();
@@ -1377,7 +1379,7 @@ export default function BuilderClient() {
               <p className="text-xs text-slate-400">Inget konto? Vi skapar ett åt dig automatiskt.</p>
             </div>
 
-            {authSent ? (
+            {authSent && MAGIC_LINK_ENABLED ? (
               <div className="text-center py-4 space-y-2">
                 <svg className="w-8 h-8 mx-auto text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" /></svg>
                 <p className="font-semibold text-slate-900">Kolla din e-post</p>
@@ -1397,29 +1399,33 @@ export default function BuilderClient() {
                   </svg>
                   Fortsätt med Google
                 </button>
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 h-px bg-slate-200" />
-                  <span className="text-xs text-slate-400">eller</span>
-                  <div className="flex-1 h-px bg-slate-200" />
-                </div>
-                <form onSubmit={handleAuthMagicLink} className="space-y-3">
-                  <input
-                    type="email"
-                    required
-                    placeholder="din@email.se"
-                    value={authEmail}
-                    onChange={(e) => setAuthEmail(e.target.value)}
-                    className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  {authError && <p className="text-xs text-red-600">{authError}</p>}
-                  <button
-                    type="submit"
-                    disabled={authLoading}
-                    className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press disabled:bg-blue-300 text-white font-semibold rounded-[10px] py-2.5 text-sm transition-colors"
-                  >
-                    {authLoading ? "Skickar…" : "Skicka inloggningslänk"}
-                  </button>
-                </form>
+                {MAGIC_LINK_ENABLED && (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 h-px bg-slate-200" />
+                      <span className="text-xs text-slate-400">eller</span>
+                      <div className="flex-1 h-px bg-slate-200" />
+                    </div>
+                    <form onSubmit={handleAuthMagicLink} className="space-y-3">
+                      <input
+                        type="email"
+                        required
+                        placeholder="din@email.se"
+                        value={authEmail}
+                        onChange={(e) => setAuthEmail(e.target.value)}
+                        className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      {authError && <p className="text-xs text-red-600">{authError}</p>}
+                      <button
+                        type="submit"
+                        disabled={authLoading}
+                        className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press disabled:bg-blue-300 text-white font-semibold rounded-[10px] py-2.5 text-sm transition-colors"
+                      >
+                        {authLoading ? "Skickar…" : "Skicka inloggningslänk"}
+                      </button>
+                    </form>
+                  </>
+                )}
               </>
             )}
           </div>
