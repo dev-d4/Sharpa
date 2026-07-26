@@ -26,7 +26,7 @@ export default function KakpolicyPage() {
           <h2 className="text-lg font-bold text-slate-900">Vilka cookies använder vi?</h2>
           <p>
             Sharpa använder <strong>enbart nödvändiga cookies</strong>. Vi använder inga
-            spårningskakor, annonskakor eller analyskakor från tredje part.
+            spårningskakor, annonskakor eller analyskakor.
           </p>
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
             <div>
@@ -42,6 +42,17 @@ export default function KakpolicyPage() {
             Vi använder inga cookies från Google Analytics, Facebook Pixel eller liknande
             spårningsverktyg.
           </p>
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+            <div>
+              <p className="font-semibold text-slate-800">Vercel Web Analytics</p>
+              <p className="text-slate-500 mt-0.5">
+                Vi använder Vercel Web Analytics för anonym, sammanställd statistik om exempelvis
+                sidvisningar, hänvisande webbplats, ungefärlig plats, enhet och webbläsare.
+                Tjänsten använder inga cookies och identifierar inte besökare mellan olika dagar
+                eller webbplatser.
+              </p>
+            </div>
+          </div>
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
             <div>
               <p className="font-semibold text-slate-800">Lokal lagring (localStorage)</p>
@@ -72,8 +83,8 @@ export default function KakpolicyPage() {
         <section className="space-y-3">
           <h2 className="text-lg font-bold text-slate-900">Samtycke</h2>
           <p>
-            Eftersom vi enbart använder tekniskt nödvändiga cookies krävs inget aktivt samtycke
-            enligt GDPR och lagen om elektronisk kommunikation (LEK).
+            Eftersom vi enbart använder tekniskt nödvändiga cookies, och Vercel Web Analytics inte
+            använder cookies, begär vi inte samtycke för analyskakor.
           </p>
         </section>
 

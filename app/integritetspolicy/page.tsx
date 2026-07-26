@@ -31,6 +31,10 @@ export default function IntegritetspolicyPage() {
             <li><strong>Autentiseringsuppgifter via Google</strong> — om du väljer att logga in med Google.</li>
             <li><strong>Portföljdata</strong> — fondnamn, vikter och analys som du sparar i tjänsten.</li>
             <li><strong>Tekniska uppgifter</strong> — sessionskakor som krävs för inloggning.</li>
+            <li>
+              <strong>Anonymiserad besöksstatistik</strong> — exempelvis sidvisningar, hänvisande
+              webbplats, ungefärlig plats, enhet och webbläsare via Vercel Web Analytics.
+            </li>
           </ul>
           <p>
             Vissa inställningar (t.ex. val av depåplattform och ditt cookieval) sparas endast lokalt
@@ -47,6 +51,7 @@ export default function IntegritetspolicyPage() {
           <ul className="list-disc pl-5 space-y-1">
             <li><strong>Tillhandahålla tjänsten</strong> — för att du ska kunna logga in och spara portföljer.</li>
             <li><strong>Autentisering</strong> — sessionskakor krävs tekniskt för att hålla dig inloggad.</li>
+            <li><strong>Förbättra webbplatsen</strong> — anonymiserad och sammanställd besöksstatistik hjälper oss förstå hur tjänsten används.</li>
           </ul>
           <p>Rättslig grund: <em>berättigat intresse</em> och <em>fullgörande av avtal</em> (tjänstens tillhandahållande).</p>
         </section>
@@ -56,7 +61,7 @@ export default function IntegritetspolicyPage() {
           <p>Vi använder följande underbiträden för att driva tjänsten:</p>
           <ul className="list-disc pl-5 space-y-1">
             <li><strong>Supabase</strong> (Supabase Inc.) — databas och autentisering. Data lagras inom EU/EES.</li>
-            <li><strong>Vercel</strong> (Vercel Inc.) — webbhosting och serverless-funktioner.</li>
+            <li><strong>Vercel</strong> (Vercel Inc.) — webbhosting, serverless-funktioner och anonymiserad webbanalys.</li>
             <li><strong>Google OAuth</strong> — om du väljer att logga in med Google.</li>
           </ul>
           <p>Alla underbiträden behandlar uppgifter enligt våra instruktioner och GDPR.</p>
@@ -66,7 +71,8 @@ export default function IntegritetspolicyPage() {
           <h2 className="text-lg font-bold text-slate-900">5. Cookies</h2>
           <p>
             Vi använder enbart sessionskakor som är nödvändiga för att autentisering ska fungera.
-            Vi använder inga spårnings- eller annonskakor. Du kan läsa mer i vår{" "}
+            Vercel Web Analytics använder inga cookies. Vi använder inga spårnings- eller
+            annonskakor. Du kan läsa mer i vår{" "}
             <Link href="/kakpolicy" className="text-blue-600 hover:underline">kakpolicy</Link>.
           </p>
         </section>

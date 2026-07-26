@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { Inter, Manrope, DM_Serif_Display } from "next/font/google";
 import "./globals.css";
 import Header from "./Header";
@@ -68,6 +69,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="sm:hidden shrink-0" style={{ height: "calc(76px + max(8px, env(safe-area-inset-bottom, 0px)))" }} aria-hidden="true" />
 
         <CookieBanner />
+        <Analytics />
       </body>
     </html>
   );
