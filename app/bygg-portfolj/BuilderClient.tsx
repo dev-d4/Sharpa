@@ -11,6 +11,7 @@ import DonutChart from "@/components/ui/DonutChart";
 import DataFreshness from "@/components/ui/DataFreshness";
 import { CHART_PALETTE } from "@/lib/chart-palette";
 import { useMobileBottomOverlay } from "@/lib/mobile-bottom-overlay";
+import { BEFORE_LOGIN_EVENT, prepareLoginResume, saveResume, takeResumeData } from "@/lib/resume-session";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -296,6 +297,20 @@ function OptionCard({ label, desc, onClick, selected }: {
   );
 }
 
+/** Allt som behövs för att sätta tillbaka bygget precis där användaren lämnade det. */
+type BuilderSnapshot = {
+  step: Step;
+  answers: Answers;
+  pending: SelectionId[];
+  priorities: Record<string, number>;
+  result: BuildResult | null;
+  localEquity: number;
+  slotIndices: number[];
+  showAdvanced: boolean;
+  autoExplanation: string | null;
+  showManualSelections: boolean;
+};
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function BuilderClient() {
@@ -330,6 +345,8 @@ export default function BuilderClient() {
   // ändå, men svaret är förmarkerat och bekräftas med ett klick.
   const [platformPrefilled, setPlatformPrefilled] = useState(false);
   const prefillPlatformRef = useRef<Platform | null>(null);
+  // Sant när bygget återställts efter en inloggning — då ska inget skriva över svaren.
+  const resumedRef = useRef(false);
 
   useEffect(() => {
     // Byggflödet ska inte lagras för utloggade användare. Rensa även data som
@@ -338,36 +355,60 @@ export default function BuilderClient() {
       sessionStorage.removeItem("fondanalys_builder_quiz");
     } catch { /* ignore */ }
 
+    // Undantag: bygget som pågick när användaren klickade "Logga in" hämtas
+    // tillbaka, en gång, så att inloggningen inte kastar bort arbetet.
+    const resumed = takeResumeData<BuilderSnapshot>("/bygg-portfolj");
+    if (resumed) {
+      resumedRef.current = true;
+      setStep(resumed.step);
+      setAnswers(resumed.answers);
+      setPending(resumed.pending);
+      setPriorities(resumed.priorities);
+      setResult(resumed.result);
+      setLocalEquity(resumed.localEquity);
+      setSlotIndices(resumed.slotIndices);
+      setShowAdvanced(resumed.showAdvanced);
+      setAutoExplanation(resumed.autoExplanation);
+      setShowManualSelections(resumed.showManualSelections);
+      if (resumed.answers.platform) prefillPlatformRef.current = resumed.answers.platform;
+    }
+
     // Har användaren redan angett var den handlar fonder i analysverktyget?
-    // Förifyll i så fall plattformssteget här.
-    try {
-      let custodian: string | null = sessionStorage.getItem("fondanalys_custodian");
-      if (!custodian) {
-        const analyzeRaw = sessionStorage.getItem("fondanalys_state");
-        if (analyzeRaw) {
-          custodian = (JSON.parse(analyzeRaw) as { custodian?: string | null }).custodian ?? null;
+    // Förifyll i så fall plattformssteget här — men bara för inloggade användare.
+    // Utloggade ska aldrig få sparade svar återanvända mellan verktygen.
+    const applyPlatformPrefill = () => {
+      if (resumedRef.current) return;
+      try {
+        let custodian: string | null = sessionStorage.getItem("fondanalys_custodian");
+        if (!custodian) {
+          const analyzeRaw = sessionStorage.getItem("fondanalys_state");
+          if (analyzeRaw) {
+            custodian = (JSON.parse(analyzeRaw) as { custodian?: string | null }).custodian ?? null;
+          }
         }
-      }
-      const mapped: Platform | null =
-        custodian === "avanza" ? "avanza"
-        : custodian === "nordnet" ? "nordnet"
-        : custodian === "övrigt" ? "both"
-        : null;
-      if (mapped) {
-        prefillPlatformRef.current = mapped;
-        setAnswers((prev) => ({ ...prev, platform: mapped }));
-        setPlatformPrefilled(true);
-      }
-    } catch { /* ignore */ }
+        const mapped: Platform | null =
+          custodian === "avanza" ? "avanza"
+          : custodian === "nordnet" ? "nordnet"
+          : custodian === "övrigt" ? "both"
+          : null;
+        if (mapped) {
+          prefillPlatformRef.current = mapped;
+          setAnswers((prev) => ({ ...prev, platform: mapped }));
+          setPlatformPrefilled(true);
+        }
+      } catch { /* ignore */ }
+    };
 
     const supabase = createClient();
 
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user);
+      if (data.user) applyPlatformPrefill();
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
+      if (event === "SIGNED_IN" && session?.user) applyPlatformPrefill();
       if (event === "SIGNED_OUT") {
         setStep("platform");
         prefillPlatformRef.current = null;
@@ -413,7 +454,22 @@ export default function BuilderClient() {
     };
   }, []);
 
+  // Spara bygget om användaren loggar in härifrån — annars är kvissen borta när hen kommer tillbaka.
+  useEffect(() => {
+    function saveBeforeLogin() {
+      if (step === STEPS[0] && !result) return;
+      saveResume("/bygg-portfolj", {
+        step, answers, pending, priorities, result, localEquity, slotIndices,
+        showAdvanced, autoExplanation, showManualSelections,
+      } satisfies BuilderSnapshot);
+    }
+
+    window.addEventListener(BEFORE_LOGIN_EVENT, saveBeforeLogin);
+    return () => window.removeEventListener(BEFORE_LOGIN_EVENT, saveBeforeLogin);
+  }, [step, answers, pending, priorities, result, localEquity, slotIndices, showAdvanced, autoExplanation, showManualSelections]);
+
   function openAuthModal() {
+    prepareLoginResume("/bygg-portfolj");
     setAuthModal(true);
   }
 
@@ -475,6 +531,14 @@ export default function BuilderClient() {
     if (field === "platform") {
       submit(next);
     } else {
+      // Går användaren tillbaka och ändrar ett svar som påverkar risknivån måste
+      // förslaget räknas om — annars ligger kategorier och förklaringstext kvar
+      // från den tidigare nivån (useEffect nedan hoppar över när pending är satt).
+      if (computeRiskScoreClient(next) !== computeRiskScoreClient(answers)) {
+        setPending([]);
+        setPriorities({});
+        setAutoExplanation(null);
+      }
       setStep(STEPS[STEPS.indexOf(step) + 1]);
     }
   }

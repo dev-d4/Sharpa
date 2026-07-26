@@ -9,6 +9,7 @@ import { Plus, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
 import { MOBILE_BOTTOM_OVERLAY_EVENT } from "@/lib/mobile-bottom-overlay";
+import { clearResume, prepareLoginResume } from "@/lib/resume-session";
 
 function AvatarDropdown({ user }: { user: User }) {
   const [open, setOpen] = useState(false);
@@ -26,6 +27,7 @@ function AvatarDropdown({ user }: { user: User }) {
   async function signOut() {
     const supabase = createClient();
     await supabase.auth.signOut();
+    clearResume();
     setOpen(false);
     router.push("/");
   }
@@ -122,15 +124,11 @@ export default function Header() {
     return isActivePath(href) ? "page" : undefined;
   }
 
-  function notifyBeforeLogin() {
-    window.dispatchEvent(new Event("fondanalys:before-login"));
-  }
-
   function handleLoginClick(e: ReactMouseEvent<HTMLAnchorElement>) {
-    notifyBeforeLogin();
+    const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    prepareLoginResume(currentPath);
     if (!pathname || pathname === "/" || pathname === "/login") return;
     e.preventDefault();
-    const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
     const next = encodeURIComponent(currentPath);
     router.push(`/login?next=${next}${shouldResumeTool ? "&skip_onboarding=1" : ""}`);
   }

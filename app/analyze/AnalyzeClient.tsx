@@ -14,6 +14,15 @@ import DataFreshness from "@/components/ui/DataFreshness"
 import { computePortfolioScore } from "@/lib/portfolio-score"
 import { CHART_PALETTE } from "@/lib/chart-palette"
 import { useMobileBottomOverlay } from "@/lib/mobile-bottom-overlay"
+import { BEFORE_LOGIN_EVENT, prepareLoginResume, saveResume, takeResumeData } from "@/lib/resume-session"
+import {
+  ACCEPT_ATTRIBUTE,
+  ImportError,
+  MAX_HOLDINGS,
+  parseHoldingsFile,
+  toWeights,
+  type ParsedHolding,
+} from "@/lib/portfolio-import"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -864,11 +873,13 @@ function CustodianDropdown({ onSelect }: { onSelect: (value: string) => void }) 
 
 const SESSION_KEY = "fondanalys_state";
 
-function loadSession() {
+type AnalyzeSnapshot = { custodian: string | null; entries: Entry[]; analysis: PortfolioAnalysis | null };
+
+function loadSession(): AnalyzeSnapshot | null {
   try {
     const raw = sessionStorage.getItem(SESSION_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as { custodian: string | null; entries: Entry[]; analysis: PortfolioAnalysis | null };
+    return JSON.parse(raw) as AnalyzeSnapshot;
   } catch { return null; }
 }
 
@@ -901,14 +912,19 @@ export default function AnalyzeClient() {
   // Mobile full-screen fund search sheet
   const [searchSheetOpen, setSearchSheetOpen] = useState(false);
 
-  // CSV import state
+  // Filimport (CSV / Excel)
   const [importing, setImporting] = useState(false);
-  const [importResult, setImportResult] = useState<{ matched: number; unmatched: number } | null>(null);
+  const [importResult, setImportResult] = useState<
+    { matched: number; unmatched: string[]; skipped: number; truncated: number } | null
+  >(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  // Namn på fonder importen inte kunde matcha — visas som popup efter importen
+  const [unmatchedNotice, setUnmatchedNotice] = useState<string[] | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Import wizard state
-  type ImportWizardState = { open: boolean; step: 1 | 2; file: File | null; name: string };
-  const [importWizard, setImportWizard] = useState<ImportWizardState>({ open: false, step: 1, file: null, name: "" });
+  type ImportWizardState = { open: boolean; file: File | null };
+  const [importWizard, setImportWizard] = useState<ImportWizardState>({ open: false, file: null });
 
   // Portfolio saving state
   const [portfolioId, setPortfolioId] = useState<string | null>(null);
@@ -969,7 +985,9 @@ export default function AnalyzeClient() {
       return;
     }
 
-    const saved = loadSession();
+    // Efter inloggning: sessionStorage finns bara kvar om vi är i samma flik.
+    // En magisk länk öppnas ofta i en ny flik — då ligger arbetet i resume-posten.
+    const saved = loadSession() ?? takeResumeData<AnalyzeSnapshot>("/analyze");
     if (saved) {
       if (saved.custodian) setCustodian(saved.custodian);
       if (saved.entries?.length) { setEntries(saved.entries); setInputMethod("manual"); }
@@ -1009,13 +1027,15 @@ export default function AnalyzeClient() {
   useEffect(() => {
     function saveBeforeLogin() {
       if (!hasMeaningfulAnalyzeState(custodian, entries, analysis)) return;
+      const snapshot: AnalyzeSnapshot = { custodian, entries, analysis };
       try {
-        sessionStorage.setItem(SESSION_KEY, JSON.stringify({ custodian, entries, analysis }));
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(snapshot));
       } catch { /* ignore */ }
+      saveResume("/analyze", snapshot);
     }
 
-    window.addEventListener("fondanalys:before-login", saveBeforeLogin);
-    return () => window.removeEventListener("fondanalys:before-login", saveBeforeLogin);
+    window.addEventListener(BEFORE_LOGIN_EVENT, saveBeforeLogin);
+    return () => window.removeEventListener(BEFORE_LOGIN_EVENT, saveBeforeLogin);
   }, [custodian, entries, analysis]);
 
   useEffect(() => {
@@ -1125,81 +1145,66 @@ export default function AnalyzeClient() {
     return newEntries;
   }
 
-  // ── CSV import ────────────────────────────────────────────────────────────
+  // ── Filimport (CSV / Excel) ───────────────────────────────────────────────
+
+  /** Slår upp ett innehav i fondregistret — ISIN först, fondnamn som fallback. */
+  async function resolveHolding(h: ParsedHolding): Promise<{ isin: string; name: string } | null> {
+    async function search(q: string): Promise<{ isin: string; name: string }[]> {
+      const res = await fetch(`/api/funds/search?q=${encodeURIComponent(q)}&custodian=${custodian}`);
+      if (!res.ok) return [];
+      return res.json();
+    }
+
+    try {
+      if (h.isin) {
+        const byIsin = await search(h.isin);
+        const exact = byIsin.find((m) => m.isin.toUpperCase() === h.isin);
+        if (exact) return exact;
+      }
+      const byName = await search(h.name.slice(0, 40));
+      const exactName = byName.find((m) => m.name.toLowerCase() === h.name.toLowerCase());
+      return exactName ?? byName[0] ?? null;
+    } catch {
+      return null;
+    }
+  }
 
   async function handleFileImport(file: File): Promise<Entry[] | null> {
     setImporting(true);
     setImportResult(null);
+    setImportError(null);
     try {
-      // Smart encoding detection: check BOM bytes
-      const buffer = await file.arrayBuffer();
-      const bytes = new Uint8Array(buffer);
-      let text: string;
-      if (bytes[0] === 0xFF && bytes[1] === 0xFE) {
-        text = new TextDecoder("utf-16le").decode(buffer);
-      } else if (bytes[0] === 0xFE && bytes[1] === 0xFF) {
-        text = new TextDecoder("utf-16be").decode(buffer);
-      } else {
-        text = new TextDecoder("utf-8").decode(buffer);
-      }
-      // Strip BOM character if present
-      text = text.replace(/^\uFEFF/, "");
+      const parsed = await parseHoldingsFile(file);
+      const weights = toWeights(parsed.holdings);
 
-      // Detect separator (tab = Nordnet, semicolon = Avanza)
-      const firstLine = text.split(/\r?\n/)[0] ?? "";
-      const sep = firstLine.includes("\t") ? "\t" : ";";
-      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-      if (lines.length < 2) { setImporting(false); return null; }
-
-      const header = lines[0].split(sep).map(h => h.trim().toLowerCase().replace(/['"]/g, ""));
-      const nameIdx = header.findIndex(h => h === "namn" || h === "name");
-      // "Värde SEK" for Nordnet; "värde (sek)" or "andel (%)" for Avanza
-      const valueIdx = header.findIndex(h =>
-        (h.includes("värde") && h.includes("sek") && !h.includes("inköp") && !h.includes("belån")) ||
-        h === "andel (%)" || h === "andel"
-      );
-      if (nameIdx === -1 || valueIdx === -1) { setImporting(false); return null; }
-
-      const rows = lines.slice(1).flatMap(line => {
-        const cells = line.split(sep).map(c => c.trim().replace(/^"|"$/g, ""));
-        const name = cells[nameIdx] ?? "";
-        const raw = (cells[valueIdx] ?? "").replace(/\s/g, "").replace(",", ".");
-        const value = parseFloat(raw.replace(/[^0-9.]/g, ""));
-        return name && value > 0 ? [{ name, value }] : [];
-      });
-      if (rows.length === 0) { setImporting(false); return null; }
-
-      const total = rows.reduce((s, r) => s + r.value, 0);
-      // Round weights to 1 decimal, fix rounding error on first row
-      const weights = rows.map(r => Math.round((r.value / total) * 1000) / 10);
-      const diff = parseFloat((100 - weights.reduce((s, w) => s + w, 0)).toFixed(1));
-      if (diff !== 0) weights[0] = parseFloat((weights[0] + diff).toFixed(1));
-
-      // Search each fund name in parallel to resolve ISIN
-      const results = await Promise.all(
-        rows.map(async (r, i) => {
-          const q = encodeURIComponent(r.name.slice(0, 40));
-          try {
-            const res = await fetch(`/api/funds/search?q=${q}&custodian=${custodian}`);
-            const matches: { isin: string; name: string }[] = await res.json();
-            // Pick best match: prefer exact name match, otherwise first result
-            const exact = matches.find(m => m.name.toLowerCase() === r.name.toLowerCase());
-            const best = exact ?? matches[0] ?? null;
-            return best
-              ? { isin: best.isin, name: best.name, weight: String(weights[i]) }
-              : { isin: "", name: r.name, weight: String(weights[i]) };
-          } catch {
-            return { isin: "", name: r.name, weight: String(weights[i]) };
-          }
+      const results: Entry[] = await Promise.all(
+        parsed.holdings.map(async (h, i) => {
+          const match = await resolveHolding(h);
+          return match
+            ? { isin: match.isin, name: match.name, weight: String(weights[i]) }
+            : { isin: "", name: h.name, weight: String(weights[i]) };
         })
       );
 
-      const matched = results.filter(r => r.isin).length;
+      const unmatched = results.filter((r) => !r.isin).map((r) => r.name);
       setEntries(results);
       setInputMode("weight");
-      setImportResult({ matched, unmatched: results.length - matched });
+      setImportResult({
+        matched: results.length - unmatched.length,
+        unmatched,
+        skipped: parsed.skipped.length,
+        truncated: parsed.truncated,
+      });
+      if (unmatched.length > 0) setUnmatchedNotice(unmatched);
       return results;
-    } catch {
+    } catch (err) {
+      setImportError(
+        err instanceof ImportError
+          ? err.code === "no-columns"
+            ? `${err.message} Filen måste innehålla en kolumn med fondens namn och en med marknadsvärde.${err.headers?.length ? ` Hittade: ${err.headers.join(", ")}.` : ""}`
+            : err.message
+          : "Kunde inte läsa filen. Kontrollera att det är en CSV- eller Excel-export från din depå."
+      );
       return null;
     } finally {
       setImporting(false);
@@ -1352,14 +1357,14 @@ export default function AnalyzeClient() {
   }
 
   async function handleWizardComplete() {
-    if (!importWizard.file || !importWizard.name.trim()) return;
-    const name = importWizard.name.trim();
-    setImportWizard({ open: false, step: 1, file: null, name: "" });
-    setSavingName(name);
-    setShowSaveForm(true);
-    setInputMethod("manual");
+    if (!importWizard.file) return;
     const parsed = await handleFileImport(importWizard.file);
-    if (parsed && parsed.some(e => e.isin)) {
+    // Vid parsningsfel: håll guiden öppen så att felet syns
+    if (!parsed) return;
+
+    setImportWizard({ open: false, file: null });
+    setInputMethod("manual");
+    if (parsed.some(e => e.isin)) {
       await analyze(parsed);
     }
   }
@@ -1369,9 +1374,7 @@ export default function AnalyzeClient() {
   const portfolioValue = inputMode === "amount" && totalAmount > 0 ? totalAmount : null;
 
   function handleLoginFromBlur() {
-    try {
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ custodian, entries, analysis }));
-    } catch { /* ignore */ }
+    prepareLoginResume("/analyze");
     router.push("/login?next=/analyze&skip_onboarding=1");
   }
 
@@ -1550,7 +1553,7 @@ export default function AnalyzeClient() {
         <input
           ref={fileInputRef}
           type="file"
-          accept=".csv"
+          accept={ACCEPT_ATTRIBUTE}
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];
@@ -1569,12 +1572,10 @@ export default function AnalyzeClient() {
               <div>
                 <p className="font-heading text-base font-bold text-ink">Hur vill du lägga in innehaven?</p>
                 <p className="mt-1 text-sm text-ink-3">
-                  {custodian === "avanza"
-                    ? "Sök själv eller låt guiden hjälpa dig hitta fonder."
-                    : "Sök själv, ladda upp en CSV eller låt guiden hjälpa dig hitta fonder."}
+                  Sök själv, ladda upp en fil eller låt guiden hjälpa dig hitta fonder.
                 </p>
               </div>
-              <div className={cn("grid grid-cols-1 gap-2", custodian === "avanza" ? "sm:grid-cols-2" : "sm:grid-cols-3")}>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               {/* Manual */}
               <button
                 type="button"
@@ -1594,41 +1595,39 @@ export default function AnalyzeClient() {
                     Sök manuellt
                   </span>
                   <span className="mt-1 block text-xs leading-snug text-ink-3">
-                    Sök på fondnamn eller ISIN
+                    Sök på fondnamn
                   </span>
                 </span>
               </button>
 
-              {/* Import — tillfälligt dolt för Avanza tills deras CSV-format stöds igen */}
-              {custodian !== "avanza" && (
-                <button
-                  type="button"
-                  onClick={() => { setImportResult(null); setImportWizard({ open: true, step: 1, file: null, name: "" }); }}
-                  disabled={importing}
-                  className={cn(
-                    "group flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-xl border px-2.5 py-2 text-center transition-all disabled:cursor-wait",
-                    importing
-                      ? "border-accent bg-info shadow-sm ring-1 ring-accent/15"
-                      : "border-line-soft bg-white hover:border-info-line hover:bg-section/60"
+              {/* Import — CSV eller Excel från Avanza, Nordnet eller annan depå */}
+              <button
+                type="button"
+                onClick={() => { setImportResult(null); setImportError(null); setImportWizard({ open: true, file: null }); }}
+                disabled={importing}
+                className={cn(
+                  "group flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-xl border px-2.5 py-2 text-center transition-all disabled:cursor-wait",
+                  importing
+                    ? "border-accent bg-info shadow-sm ring-1 ring-accent/15"
+                    : "border-line-soft bg-white hover:border-info-line hover:bg-section/60"
+                )}
+              >
+                <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] border transition-colors", importing ? "border-accent bg-accent text-white" : "border-line-soft bg-section text-ink-3 group-hover:text-accent")}>
+                  {importing ? (
+                    <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                  ) : (
+                    <FileUp className="h-4 w-4" />
                   )}
-                >
-                  <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] border transition-colors", importing ? "border-accent bg-accent text-white" : "border-line-soft bg-section text-ink-3 group-hover:text-accent")}>
-                    {importing ? (
-                      <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                    ) : (
-                      <FileUp className="h-4 w-4" />
-                    )}
+                </span>
+                <span>
+                  <span className={cn("block text-sm font-semibold", importing ? "text-accent" : "text-ink")}>
+                    {importing ? "Importerar…" : "Importera fil"}
                   </span>
-                  <span>
-                    <span className={cn("block text-sm font-semibold", importing ? "text-accent" : "text-ink")}>
-                      {importing ? "Importerar…" : "Importera fil"}
-                    </span>
-                    <span className="mt-1 block text-xs leading-snug text-ink-3">
-                      Ladda upp en CSV-fil
-                    </span>
+                  <span className="mt-1 block text-xs leading-snug text-ink-3">
+                    CSV eller Excel
                   </span>
-                </button>
-              )}
+                </span>
+              </button>
 
               {/* AI */}
               <button
@@ -1694,11 +1693,25 @@ export default function AnalyzeClient() {
               </div>
             </div>
 
-            {importResult && (
-              <p className="text-xs text-slate-400">
-                {importResult.matched} av {importResult.matched + importResult.unmatched} fonder matchade
-                {importResult.unmatched > 0 && " — sök manuellt för de resterande"}
+            {importError && (
+              <p className="rounded-[10px] border border-neg/25 bg-neg-soft px-3 py-2 text-xs text-neg">
+                {importError}
               </p>
+            )}
+
+            {importResult && (
+              <div className="space-y-0.5 text-xs text-slate-400">
+                <p>
+                  {importResult.matched} av {importResult.matched + importResult.unmatched.length} innehav matchade
+                  {importResult.unmatched.length > 0 && " — sök manuellt för de resterande"}
+                </p>
+                {importResult.skipped > 0 && (
+                  <p>{importResult.skipped} rader hoppades över — aktier, ETF:er och certifikat ingår inte i fondanalysen.</p>
+                )}
+                {importResult.truncated > 0 && (
+                  <p>{importResult.truncated} av de minsta innehaven utelämnades — max {MAX_HOLDINGS} per analys.</p>
+                )}
+              </div>
             )}
 
             <div className="space-y-3">
@@ -1873,120 +1886,127 @@ export default function AnalyzeClient() {
         <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
           {/* Header */}
           <div className="px-6 pt-6 pb-4 border-b border-slate-100">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between">
               <h2 className="text-base font-bold text-slate-900">Importera portfölj</h2>
               <button
-                onClick={() => setImportWizard(w => ({ ...w, open: false }))}
+                onClick={() => setImportWizard({ open: false, file: null })}
                 className="text-slate-400 hover:text-slate-600 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="flex gap-1.5">
-              <div className="h-1 flex-1 rounded-full bg-blue-500" />
-              <div className={`h-1 flex-1 rounded-full transition-colors duration-300 ${importWizard.step === 2 ? "bg-blue-500" : "bg-slate-200"}`} />
-            </div>
           </div>
 
-          <div className="p-6">
-            {/* Step 1: File */}
-            {importWizard.step === 1 && (
-              <div className="space-y-5">
-                <div>
-                  <p className="font-semibold text-slate-900">Välj fil</p>
-                  <p className="text-sm text-slate-500 mt-1">
-                    Exportera dina innehav som CSV från din depå och ladda upp filen.
-                  </p>
-                </div>
-                <label className="block cursor-pointer">
-                  <input
-                    type="file"
-                    accept=".csv"
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) setImportWizard(w => ({ ...w, file: f }));
-                    }}
-                  />
-                  <div className={cn(
-                    "border-2 border-dashed rounded-xl p-8 text-center transition-all",
-                    importWizard.file
-                      ? "border-blue-300 bg-blue-50"
-                      : "border-slate-200 hover:border-blue-300 hover:bg-slate-50"
-                  )}>
-                    {importWizard.file ? (
-                      <div className="space-y-2">
-                        <div className="w-10 h-10 rounded-[10px] bg-blue-100 flex items-center justify-center mx-auto">
-                          <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                        <p className="font-medium text-slate-900 text-sm">{importWizard.file.name}</p>
-                        <p className="text-xs text-slate-400">Klicka för att byta fil</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <div className="w-10 h-10 rounded-[10px] bg-slate-100 flex items-center justify-center mx-auto">
-                          <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                          </svg>
-                        </div>
-                        <p className="font-medium text-slate-700 text-sm">Dra och släpp eller klicka</p>
-                        <p className="text-xs text-slate-400">CSV-format</p>
-                      </div>
-                    )}
+          <div className="p-6 space-y-5">
+            <div>
+              <p className="font-semibold text-slate-900">Välj fil</p>
+              <p className="text-sm text-slate-500 mt-1">
+                Exportera dina innehav från din depå — CSV eller Excel — och ladda upp filen.
+              </p>
+            </div>
+            <label className="block cursor-pointer">
+              <input
+                type="file"
+                accept={ACCEPT_ATTRIBUTE}
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) setImportWizard(w => ({ ...w, file: f }));
+                }}
+              />
+              <div className={cn(
+                "border-2 border-dashed rounded-xl p-8 text-center transition-all",
+                importWizard.file
+                  ? "border-blue-300 bg-blue-50"
+                  : "border-slate-200 hover:border-blue-300 hover:bg-slate-50"
+              )}>
+                {importWizard.file ? (
+                  <div className="space-y-2">
+                    <div className="w-10 h-10 rounded-[10px] bg-blue-100 flex items-center justify-center mx-auto">
+                      <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <p className="font-medium text-slate-900 text-sm">{importWizard.file.name}</p>
+                    <p className="text-xs text-slate-400">Klicka för att byta fil</p>
                   </div>
-                </label>
-                <button
-                  disabled={!importWizard.file}
-                  onClick={() => setImportWizard(w => ({ ...w, step: 2 }))}
-                  className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press disabled:bg-blue-300 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-[10px] transition-colors text-sm"
-                >
-                  Nästa
-                </button>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="w-10 h-10 rounded-[10px] bg-slate-100 flex items-center justify-center mx-auto">
+                      <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                      </svg>
+                    </div>
+                    <p className="font-medium text-slate-700 text-sm">Dra och släpp eller klicka</p>
+                    <p className="text-xs text-slate-400">CSV eller Excel (.xlsx)</p>
+                  </div>
+                )}
               </div>
+            </label>
+
+            {importError && (
+              <p className="rounded-[10px] border border-neg/25 bg-neg-soft px-3 py-2 text-xs text-neg">
+                {importError}
+              </p>
             )}
 
-            {/* Step 2: Name */}
-            {importWizard.step === 2 && (
-              <div className="space-y-5">
-                <div>
-                  <p className="font-semibold text-slate-900">Döp din portfölj</p>
-                  <p className="text-sm text-slate-500 mt-1">
-                    Ge portföljen ett namn så du enkelt hittar den igen.
-                  </p>
-                </div>
-                <input
-                  autoFocus
-                  type="text"
-                  placeholder="t.ex. ISK Nordnet, Pension, Barnspar…"
-                  value={importWizard.name}
-                  onChange={(e) => setImportWizard(w => ({ ...w, name: e.target.value }))}
-                  onKeyDown={(e) => { if (e.key === "Enter" && importWizard.name.trim()) handleWizardComplete(); }}
-                  className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setImportWizard(w => ({ ...w, step: 1 }))}
-                    className="px-4 py-3 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 transition-colors"
-                  >
-                    Tillbaka
-                  </button>
-                  <button
-                    disabled={!importWizard.name.trim() || importing}
-                    onClick={handleWizardComplete}
-                    className="flex-1 bg-accent hover:bg-accent-hover active:bg-accent-press disabled:bg-blue-300 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-[10px] transition-colors text-sm flex items-center justify-center gap-2"
-                  >
-                    {importing ? (
-                      <>
-                        <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                        Importerar…
-                      </>
-                    ) : "Analysera portfölj"}
-                  </button>
-                </div>
-              </div>
-            )}
+            <p className="text-xs text-slate-400">
+              Filen behöver en rubrikrad med <span className="font-medium text-slate-500">Namn</span> och{" "}
+              <span className="font-medium text-slate-500">Marknadsvärde</span>. Finns även{" "}
+              <span className="font-medium text-slate-500">ISIN</span> och{" "}
+              <span className="font-medium text-slate-500">Typ</span> blir matchningen exakt och aktier,
+              ETF:er och certifikat sorteras bort automatiskt.
+            </p>
+
+            <button
+              disabled={!importWizard.file || importing}
+              onClick={handleWizardComplete}
+              className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press disabled:bg-blue-300 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-[10px] transition-colors text-sm flex items-center justify-center gap-2"
+            >
+              {importing ? (
+                <>
+                  <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                  Importerar…
+                </>
+              ) : "Analysera portfölj"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Popup: fonder som importen inte kunde matcha */}
+    {unmatchedNotice && (
+      <div
+        className="fixed inset-0 z-[75] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4"
+        onClick={(e) => { if (e.target === e.currentTarget) setUnmatchedNotice(null); }}
+      >
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+          <div className="flex items-start justify-between gap-3 px-6 pt-6 pb-4 border-b border-slate-100">
+            <h2 className="text-base font-bold text-slate-900">
+              {unmatchedNotice.length === 1 ? "En fond kunde inte läsas in" : `${unmatchedNotice.length} fonder kunde inte läsas in`}
+            </h2>
+            <button
+              onClick={() => setUnmatchedNotice(null)}
+              className="text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="p-6 space-y-4">
+            <p className="text-sm text-slate-500">
+              Vi hittade dem inte i fondlistan för {custodian === "nordnet" ? "Nordnet" : custodian === "avanza" ? "Avanza" : "din depå"}.
+              Sök upp dem manuellt i listan — vikterna ligger redan på plats.
+            </p>
+            <ul className="max-h-48 space-y-1 overflow-y-auto rounded-[10px] border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+              {unmatchedNotice.map((n, i) => <li key={`${n}-${i}`}>{n}</li>)}
+            </ul>
+            <button
+              onClick={() => setUnmatchedNotice(null)}
+              className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press text-white font-semibold py-3 rounded-[10px] transition-colors text-sm"
+            >
+              Okej
+            </button>
           </div>
         </div>
       </div>

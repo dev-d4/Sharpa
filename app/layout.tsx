@@ -3,6 +3,7 @@ import { Inter, Manrope, DM_Serif_Display } from "next/font/google";
 import "./globals.css";
 import Header from "./Header";
 import Footer from "./Footer";
+import ResumeAfterLogin from "./ResumeAfterLogin";
 import { Prefetch } from "@/components/ui/prefetch";
 import CookieBanner from "@/components/ui/CookieBanner";
 import { ScrollToTop } from "@/components/ui/ScrollToTop";
@@ -56,6 +57,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="sv">
       <body className={bodyClass}>
         <ScrollToTop />
+        <ResumeAfterLogin />
         <Header />
 
         <Prefetch hrefs={["/analyze", "/bygg-portfolj"]} />
