@@ -33,15 +33,25 @@ Outlook behandlar avsändare utan DMARC hårdare.
 
 | Fält | Värde |
 | --- | --- |
-| Host | `smtp.resend.com` |
-| Port | `465` |
+| Host | `smtp.resend.com` (samma för alla regioner) |
+| Port | `587` |
 | Username | `resend` |
 | Password | Resend-nyckeln från steg 1 |
 | Sender email | `no-reply@sharpa.se` |
 | Sender name | `Sharpa` |
 
-Avsändaradressen måste ligga på den domän du verifierade — annars avvisar
-Resend utskicket.
+**Avsändaradressen måste ligga på den verifierade domänen.** Det är den enda
+fällan i hela uppsättningen som ser ut som något annat: sätter man en vanlig
+Gmail-adress som avsändare autentiserar Supabase mot Resend utan problem — API-
+nyckeln registreras till och med som använd — men Resend avvisar sedan
+meddelandet eftersom du inte äger gmail.com. Symptomen blir `unexpected_failure`
+med `Error sending magic link email` i klienten, och ingenting alls i Resends
+Emails-logg.
+
+Adressen behöver däremot inte vara en riktig brevlåda. Resend signerar med DKIM
+för domänen och det räcker för utskicket — men svar på mejlet studsar. Ska svar
+gå fram, peka vidare `no-reply@sharpa.se` hos den som hanterar e-post för
+domänen, eller använd en adress som redan läses.
 
 ## 3. Supabase: höj sändningsgränsen
 
@@ -99,6 +109,21 @@ Variabeln bakas in vid bygget, så en ny deploy krävs.
    [lib/resume-session.ts](../lib/resume-session.ts) skyddar.
 5. Begär fem länkar i rad. Ingen ska ge `email rate limit exceeded`.
 
-Kommer inget mejl: kolla **Logs → Auth** i Supabase och **Emails** i Resend.
-Syns utskicket i Resend men inte i inkorgen är det nästan alltid domän- eller
-spamfiltrering, inte koden.
+## Felsökning
+
+`authErrorMessage` ([lib/auth-errors.ts](../lib/auth-errors.ts)) loggar
+Supabases originalfel till webbläsarkonsolen medan användaren får en begriplig
+text. Börja alltid där — raden `[auth] inloggningsfel` innehåller `code`,
+`status` och Supabases egen formulering.
+
+Var utskicket tog vägen avgörs sedan av **Emails**-loggen i Resend:
+
+| Symptom | Var felet sitter |
+| --- | --- |
+| Inget i Resends Emails-logg, `Error sending magic link email` i konsolen | Resend avvisade meddelandet — nästan alltid en avsändaradress utanför den verifierade domänen (se steg 2) |
+| Utskicket syns i Resend men inte i inkorgen | Leverans eller spamfilter, inte koden. Kolla DKIM/SPF och skräpposten |
+| `email rate limit exceeded` | Sändningsgränsen i Supabase, steg 3 — inte Resend |
+| Inloggningen fungerar men landar på startsidan | Redirect-URL:erna i steg 5 saknar `**` |
+
+Att API-nyckeln står som använd i Resend säger bara att autentiseringen gick
+igenom. Det utesluter inte att meddelandet avvisades i nästa steg.
