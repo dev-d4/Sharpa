@@ -20,7 +20,14 @@ export function authErrorMessage(error: AuthErrorLike): string {
     console.error("[auth] inloggningsfel", { code: error.code, status: error.status, message: error.message });
   }
 
-  if (code === "over_email_send_rate_limit" || message.includes("rate limit")) {
+  if (code === "over_email_send_rate_limit" || message.includes("rate limit") || message.includes("only request this after")) {
+    // Spärren mellan två mejl till samma adress kommer med exakt väntetid
+    // ("you can only request this after 47 seconds"). Att säga sekunderna är
+    // skillnaden mellan att användaren väntar ut den och att hen ger upp.
+    const seconds = Number(message.match(/after (\d+) seconds?/)?.[1]);
+    if (Number.isFinite(seconds) && seconds > 0) {
+      return `Vi skickade nyss en länk till den adressen. Vänta ${seconds} sekunder innan du begär en ny — eller fortsätt med Google.`;
+    }
     return "Vi har skickat för många mejl på kort tid. Vänta någon minut och försök igen — eller fortsätt med Google.";
   }
 

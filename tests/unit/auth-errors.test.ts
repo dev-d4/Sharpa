@@ -12,6 +12,15 @@ describe("authErrorMessage", () => {
     expect(authErrorMessage({ code: "over_email_send_rate_limit" })).toContain("för många mejl");
   });
 
+  it("säger exakt hur länge man ska vänta när Supabase anger det", () => {
+    const message = authErrorMessage({
+      code: "over_email_send_rate_limit",
+      status: 429,
+      message: "For security purposes, you can only request this after 47 seconds.",
+    });
+    expect(message).toContain("47 sekunder");
+  });
+
   it("pekar ut felstavad adress", () => {
     expect(authErrorMessage({ message: "Unable to validate email address: invalid format" }))
       .toContain("stavningen");
