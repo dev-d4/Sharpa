@@ -59,16 +59,23 @@ domänen, eller använd en adress som redan läses.
 SMTP kopplas in, som skydd. Höj *Rate limit for sending emails* till en nivå
 som matchar trafiken — 100/timme är en rimlig start och går att justera senare.
 
-## 4. Supabase: mejlmallen
+## 4. Supabase: mejlmallarna
 
-**Authentication → Emails → Templates → Magic Link**.
+**Två** mallar måste fyllas i, under **Authentication → Emails → Templates**.
+Supabase väljer mellan dem utifrån om adressen redan finns som användare, och
+eftersom `/login` skapar konto automatiskt möter varje förstagångsanvändare den
+andra. Missar man den får nya användare Supabases engelska standardtext
+("Confirm your signup") medan återvändande får den fina — avsändaren byter
+skepnad mitt i flödet.
 
-- **Subject:** `Din inloggningslänk till Sharpa`
-- **Message body:** klistra in innehållet i
-  [supabase/templates/magic-link.html](../supabase/templates/magic-link.html).
+| Mall | När den används | Subject | Innehåll |
+| --- | --- | --- | --- |
+| **Magic Link** | Adressen finns redan | `Din inloggningslänk till Sharpa` | [magic-link.html](../supabase/templates/magic-link.html) |
+| **Confirm signup** | Ny adress | `Välkommen till Sharpa` | [confirm-signup.html](../supabase/templates/confirm-signup.html) |
 
-Mallen ligger i repot för att vara versionshanterad, men Supabase läser den
-inte därifrån — ändrar du filen måste den kopieras in på nytt.
+Mallarna ligger i repot för att vara versionshanterade, men Supabase läser dem
+inte därifrån — ändrar du en fil måste den kopieras in på nytt. Ändrar du
+utseendet i den ena, gör samma sak i den andra.
 
 ## 5. Supabase: kontrollera redirect-URL:erna
 
@@ -124,6 +131,7 @@ Var utskicket tog vägen avgörs sedan av **Emails**-loggen i Resend:
 | Utskicket syns i Resend men inte i inkorgen | Leverans eller spamfilter, inte koden. Kolla DKIM/SPF och skräpposten |
 | `email rate limit exceeded` | Sändningsgränsen i Supabase, steg 3 — inte Resend |
 | Inloggningen fungerar men landar på startsidan | Redirect-URL:erna i steg 5 saknar `**` |
+| Mejlet är plötsligt Supabases engelska standardtext | Adressen är ny — det är *Confirm signup*-mallen, steg 4 |
 
 Att API-nyckeln står som använd i Resend säger bara att autentiseringen gick
 igenom. Det utesluter inte att meddelandet avvisades i nästa steg.
