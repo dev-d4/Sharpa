@@ -1,14 +1,16 @@
-# Inloggning med magisk länk — driftsättning
+# Inloggning med magisk länk — drift
 
-Magiska länkar är avstängda i produktion tills projektet har egen SMTP. Orsaken
-är att Supabases inbyggda e-posttjänst bara är avsedd för utveckling: den
-skickar **2 mejl i timmen för hela projektet**, delat mellan alla användare.
-När kvoten är slut får användaren `email rate limit exceeded` i stället för ett
-inloggningsmejl.
+Magiska länkar är i drift sedan 2026-07-26 och skickas via Resend med
+`no-reply@sharpa.se` som verifierad avsändare.
 
-Koden är klar och ligger bakom flaggan `MAGIC_LINK_ENABLED`
-([lib/features.ts](../lib/features.ts)). Stegen nedan är det som återstår, och
-allt utom sista steget görs utanför repot.
+Bakgrund: Supabases inbyggda e-posttjänst är bara avsedd för utveckling. Den
+skickar **2 mejl i timmen för hela projektet**, delat mellan alla användare, och
+gav `email rate limit exceeded` i stället för ett inloggningsmejl. Därför är
+egen SMTP ett krav, inte en förbättring.
+
+Dokumentet beskriver hur uppsättningen ser ut, så att den går att återskapa
+eller felsöka. Konfigurationen bor i Resend och Supabase — inget av den läses
+från repot.
 
 ## 1. Resend: verifiera avsändardomänen
 
@@ -75,19 +77,16 @@ startsidan i stället för där hen var.
 Matchar inte URL:en faller Supabase tillbaka på Site URL, och `?next=` tappas
 bort på vägen.
 
-## 6. Tänd flaggan
+## 6. Flaggan
 
-Sätt miljövariabeln och deploya om:
+E-postinloggningen är påslagen som standard i
+[lib/features.ts](../lib/features.ts). Ingen miljövariabel behövs för att den
+ska fungera.
 
-```
-NEXT_PUBLIC_MAGIC_LINK_ENABLED=true
-```
-
-- **Lokalt:** i `.env.local` (raden finns redan, sätt den till `true`).
-- **Produktion:** Vercel → Settings → Environment Variables → Production.
-  Variabeln bakas in vid bygget, så en ny deploy krävs.
-
-Ingen kodändring behövs.
+Behöver du stänga av den snabbt — utskicken börjar studsa, avsändardomänen
+hamnar på en blockeringslista — sätt `NEXT_PUBLIC_MAGIC_LINK_ENABLED=false` i
+Vercel och deploya om. Google finns kvar som inloggningssätt under tiden.
+Variabeln bakas in vid bygget, så en ny deploy krävs.
 
 ## 7. Testa
 

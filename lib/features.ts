@@ -4,11 +4,13 @@ export const ENTERPRISE_FEATURES_ENABLED = false;
 /**
  * Inloggning med magisk länk.
  *
- * Avstängd tills projektet har egen SMTP. Supabases inbyggda e-posttjänst är
- * bara avsedd för utveckling och delar ut ett fåtal mejl per timme för hela
- * projektet — användare möttes av "email rate limit exceeded" i stället för
- * ett inloggningsmejl. Koden för magiska länkar finns kvar och tas i bruk
- * genom att sätta NEXT_PUBLIC_MAGIC_LINK_ENABLED=true när SMTP är på plats
- * (Supabase → Auth → Emails → SMTP Settings, och höj gränsen under Rate Limits).
+ * Påslagen sedan utskicken går via egen SMTP (Resend, verifierad avsändare
+ * no-reply@sharpa.se). Dessförinnan användes Supabases inbyggda e-posttjänst,
+ * som bara delar ut ett par mejl i timmen för hela projektet och gav
+ * användarna "email rate limit exceeded" i stället för ett inloggningsmejl.
+ *
+ * Sätt NEXT_PUBLIC_MAGIC_LINK_ENABLED=false för att snabbt stänga av
+ * e-postinloggningen igen — t.ex. om utskicken börjar studsa — utan att
+ * behöva ändra i koden. Se docs/inloggning-magisk-lank.md.
  */
-export const MAGIC_LINK_ENABLED = process.env.NEXT_PUBLIC_MAGIC_LINK_ENABLED === "true";
+export const MAGIC_LINK_ENABLED = process.env.NEXT_PUBLIC_MAGIC_LINK_ENABLED !== "false";
