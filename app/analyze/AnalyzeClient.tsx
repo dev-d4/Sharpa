@@ -15,6 +15,8 @@ import { CHART_PALETTE } from "@/lib/chart-palette"
 import { AllocationRow, CardTitle, Divider, KeyValueRow, Label, MetricGrid, ShareBar, Stat, StatusDot } from "@/components/ui/primitives"
 import { Disclosure } from "@/components/ui/Disclosure"
 import DataFreshness from "@/components/ui/DataFreshness"
+import { FileDropzone } from "@/components/ui/FileDropzone"
+import { ResponsiveDrawer } from "@/components/ui/ResponsiveDrawer"
 import { computePortfolioScore } from "@/lib/portfolio-score"
 import { useMobileBottomOverlay } from "@/lib/mobile-bottom-overlay"
 import { BEFORE_LOGIN_EVENT, prepareLoginResume, saveResume, takeResumeData } from "@/lib/resume-session"
@@ -41,12 +43,6 @@ function toEntries(holdings: { isin: string; name: string; weight: string | numb
   }));
 }
 type FundSuggestion = { name: string; isin: string };
-
-const CUSTODIANS = [
-  { value: "avanza", label: "Avanza" },
-  { value: "nordnet", label: "Nordnet" },
-  { value: "övrigt", label: "Övrigt" },
-];
 
 // ── Fund quiz ─────────────────────────────────────────────────────────────────
 
@@ -533,10 +529,17 @@ function FundSearchInput({
 
   if (isin) {
     return (
-      <div className="flex items-center gap-2 border border-slate-300 rounded-lg px-3 py-2.5 text-sm bg-white min-w-0">
-        <span className="flex-1 truncate font-medium text-slate-900">{name}</span>
-        <span className="hidden sm:inline text-xs text-slate-400 shrink-0">{isin}</span>
-        <button type="button" onClick={onClear} aria-label="Rensa vald fond" className="-m-1 p-1 text-slate-400 hover:text-red-500 shrink-0 transition-colors">✕</button>
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line bg-section font-mono text-[11px] text-ink-3">
+          {name.slice(0, 1).toUpperCase()}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-medium text-ink">{name}</span>
+          <span className="mt-0.5 block truncate font-mono text-[10px] text-ink-3">{isin}</span>
+        </span>
+        <button type="button" onClick={onClear} aria-label="Ta bort vald fond" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-neg-soft hover:text-neg">
+          <X className="h-4 w-4" />
+        </button>
       </div>
     );
   }
@@ -645,17 +648,7 @@ function FundSearchSheet({
 
   useEffect(() => {
     inputRef.current?.focus();
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = prevOverflow;
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [onClose]);
+  }, []);
 
   function handleChange(q: string) {
     setQuery(q);
@@ -700,30 +693,28 @@ function FundSearchSheet({
   const count = selectedIsins.length;
 
   return (
-    <div
-      className="fixed inset-0 z-[70] flex flex-col bg-white sm:items-center sm:justify-center sm:bg-slate-900/40 sm:p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Lägg till fonder"
+    <ResponsiveDrawer
+      open
+      onClose={onClose}
+      title="Lägg till fonder"
+      description="Sök och välj flera fonder utan att lämna portföljen."
+      initialFocusRef={inputRef}
+      className="sm:max-w-2xl"
+      footer={
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full rounded-md bg-accent py-3 font-semibold text-white transition-colors hover:bg-accent-hover active:bg-accent-press"
+        >
+          {count > 0 ? `Klar · ${count} ${count === 1 ? "fond vald" : "fonder valda"}` : "Klar"}
+        </button>
+      }
     >
-      <div className="flex h-full w-full flex-col overflow-hidden bg-white sm:h-[85vh] sm:max-w-md sm:rounded-lg sm:shadow-xl">
-        {/* Header */}
-        <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Stäng"
-            className="-m-2 p-2 text-slate-400 transition-colors hover:text-slate-600"
-          >
-            <X className="h-5 w-5" />
-          </button>
-          <span className="font-semibold text-slate-900">Lägg till fonder</span>
-        </div>
-
+      <div className="flex min-h-[62dvh] flex-col">
         {/* Search */}
-        <div className="px-4 pb-2 pt-3">
+        <div className="border-b border-line bg-white px-5 py-4 sm:px-6">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-3" />
             <input
               ref={inputRef}
               type="text"
@@ -734,14 +725,14 @@ function FundSearchSheet({
               autoComplete="off"
               autoCorrect="off"
               spellCheck={false}
-              className="w-full rounded-md border border-slate-300 bg-white py-3 pl-10 pr-9 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-md border border-line-strong bg-section/35 py-3.5 pl-11 pr-10 text-base text-ink placeholder:text-ink-3 focus:border-accent focus:bg-white focus:outline-none"
             />
             {query && (
               <button
                 type="button"
                 onClick={() => handleChange("")}
                 aria-label="Rensa sökning"
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-ink-3 hover:bg-section hover:text-ink"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -750,19 +741,27 @@ function FundSearchSheet({
         </div>
 
         {/* Results */}
-        <div className="flex-1 overflow-y-auto overscroll-contain px-2 pb-2">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-3 py-3 sm:px-4">
           {showRecent && recent.length > 0 && (
-            <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            <p className="label-meta px-3 pb-2 pt-1">
               Senast använda
             </p>
           )}
           {showRecent && recent.length === 0 && (
-            <p className="px-3 py-12 text-center text-sm text-slate-400">
+            <div className="mx-auto flex max-w-sm flex-col items-center px-6 py-16 text-center">
+              <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-full border border-line bg-section text-ink-3">
+                <Search className="h-4 w-4" />
+              </span>
+              <p className="text-sm leading-relaxed text-ink-3">
               Sök på fondnamn eller ISIN för att lägga till fonder i din portfölj.
-            </p>
+              </p>
+            </div>
           )}
           {!showRecent && loading && list.length === 0 && (
-            <p className="px-3 py-8 text-center text-sm text-slate-400">Söker…</p>
+            <div className="flex items-center justify-center gap-2 px-3 py-12 text-sm text-ink-3">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-line-strong border-t-accent" />
+              Söker…
+            </div>
           )}
           {!showRecent && !loading && noResults && (
             <p className="px-3 py-8 text-center text-sm text-slate-500">
@@ -778,22 +777,25 @@ function FundSearchSheet({
                     type="button"
                     onClick={() => toggle(f)}
                     className={cn(
-                      "flex w-full items-center gap-3 rounded-md px-3 py-3 text-left transition-colors",
-                      isSelected ? "bg-blue-50" : "hover:bg-slate-50 active:bg-slate-100"
+                      "flex w-full items-center gap-3 rounded-md border px-3.5 py-3 text-left transition-colors",
+                      i > 0 && "mt-2",
+                      isSelected
+                        ? "border-accent/25 bg-blue-50"
+                        : "border-transparent hover:border-line hover:bg-section/60 active:bg-section"
                     )}
                   >
                     <span
                       className={cn(
                         "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-sm leading-none",
-                        isSelected ? "border-blue-500 bg-blue-500 text-white" : "border-slate-300 text-slate-400"
+                        isSelected ? "border-accent bg-accent text-white" : "border-line-strong bg-white text-ink-3"
                       )}
                       aria-hidden="true"
                     >
-                      {isSelected ? "✓" : "+"}
+                      {isSelected ? null : "+"}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate font-medium text-slate-900">{f.name}</span>
-                      <span className="block text-xs text-slate-400">{f.isin}</span>
+                      <span className="block truncate text-sm font-medium text-ink">{f.name}</span>
+                      <span className="mt-0.5 block font-mono text-[11px] text-ink-3">{f.isin}</span>
                     </span>
                   </button>
                 </li>
@@ -802,73 +804,8 @@ function FundSearchSheet({
           </ul>
         </div>
 
-        {/* Footer */}
-        <div className="border-t border-slate-100 px-4 py-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full rounded-md bg-accent py-3 font-semibold text-white transition-colors hover:bg-accent-hover active:bg-accent-press"
-          >
-            {count > 0 ? `Klar · ${count} ${count === 1 ? "fond vald" : "fonder valda"}` : "Klar"}
-          </button>
-        </div>
       </div>
-    </div>
-  );
-}
-
-// ── Custodian dropdown ────────────────────────────────────────────────────────
-
-function CustodianDropdown({ onSelect }: { onSelect: (value: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<string | null>(null);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  const current = CUSTODIANS.find((c) => c.value === selected);
-
-  return (
-    <div ref={ref} className="relative w-full sm:w-72">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-md border-2 bg-white text-sm font-medium transition-all
-          ${open ? "border-blue-500 ring-2 ring-blue-100" : "border-slate-200 hover:border-slate-300"}`}
-      >
-        <span className={current ? "text-slate-900" : "text-slate-400"}>
-          {current ? current.label : "Välj depåinstitut…"}
-        </span>
-        <svg
-          className={`w-4 h-4 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`}
-          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-
-      {open && (
-        <div className="absolute z-10 top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-md shadow-lg overflow-hidden">
-          {CUSTODIANS.map((c) => (
-            <button
-              key={c.value}
-              type="button"
-              onClick={() => { setSelected(c.value); setOpen(false); onSelect(c.value); }}
-              className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors hover:bg-blue-50 hover:text-blue-700
-                ${selected === c.value ? "bg-blue-50 text-blue-700" : "text-slate-700"}`}
-            >
-              {c.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+    </ResponsiveDrawer>
   );
 }
 
@@ -1221,7 +1158,6 @@ export default function AnalyzeClient() {
   }
 
   function addRow() { setEntries((p) => [...p, { isin: "", name: "", weight: "", amount: "" }]); }
-  function removeRow(i: number) { setEntries((p) => p.filter((_, idx) => idx !== i)); }
   function selectFund(i: number, isin: string, name: string) {
     setEntries((p) => p.map((e, idx) => idx === i ? { ...e, isin, name } : e));
     recordRecentFund({ isin, name });
@@ -1592,7 +1528,7 @@ export default function AnalyzeClient() {
                 type="button"
                 onClick={() => setInputMethod("manual")}
                 className={cn(
-                  "group flex min-h-[84px] flex-col items-center justify-center gap-2 px-3 py-4 text-center transition-colors duration-150",
+                  "group flex min-h-[64px] items-center justify-center gap-3 px-4 py-3 text-left transition-colors duration-150",
                   inputMethod === "manual" ? "bg-section" : "bg-white hover:bg-section/60"
                 )}
               >
@@ -1615,7 +1551,7 @@ export default function AnalyzeClient() {
                 onClick={() => { setImportResult(null); setImportError(null); setImportWizard({ open: true, file: null }); }}
                 disabled={importing}
                 className={cn(
-                  "group flex min-h-[84px] flex-col items-center justify-center gap-2 px-3 py-4 text-center transition-colors duration-150 disabled:cursor-wait",
+                  "group flex min-h-[64px] items-center justify-center gap-3 px-4 py-3 text-left transition-colors duration-150 disabled:cursor-wait",
                   importing ? "bg-section" : "bg-white hover:bg-section/60"
                 )}
               >
@@ -1641,7 +1577,7 @@ export default function AnalyzeClient() {
                 type="button"
                 onClick={() => setInputMethod("ai")}
                 className={cn(
-                  "group flex min-h-[84px] flex-col items-center justify-center gap-2 px-3 py-4 text-center transition-colors duration-150",
+                  "group flex min-h-[64px] items-center justify-center gap-3 px-4 py-3 text-left transition-colors duration-150",
                   inputMethod === "ai" ? "bg-section" : "bg-white hover:bg-section/60"
                 )}
               >
@@ -1719,25 +1655,14 @@ export default function AnalyzeClient() {
               </div>
             )}
 
-            <div className="space-y-3">
-              <div className="hidden sm:grid grid-cols-[1fr_100px_44px] gap-2 text-xs font-semibold text-slate-500 px-1">
-                <span>Fond</span>
-                <span>{inputMode === "weight" ? "Vikt (%)" : "Belopp (kr)"}</span>
-                <span />
-              </div>
-              {entries.map((entry, i) => (
-                <div key={i} className={cn("space-y-2.5 sm:space-y-0 sm:grid sm:grid-cols-[1fr_100px_44px] sm:gap-2 bg-slate-50 sm:bg-transparent rounded-md sm:rounded-none p-4 sm:p-0 border border-slate-100 sm:border-0", !entry.isin && "hidden sm:grid")}>
-                  {/* Mobil: rubrikrad med ta bort-knapp — desktop har egen knappkolumn */}
-                  <div className="flex items-center justify-between sm:hidden">
-                    <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Fond {i + 1}</p>
-                    <button
-                      onClick={() => removeRow(i)} disabled={entries.length === 1} aria-label={`Ta bort fond ${i + 1}`}
-                      className="-m-2 p-2 text-slate-400 hover:text-red-500 disabled:opacity-30 transition-colors"
-                    >✕</button>
-                  </div>
+            <div className="space-y-2">
+              {entries.map((entry, i) => {
+                if (!entry.isin && !entry.name) return null;
+                return (
+                <div key={i} className="rounded-md border border-line bg-white p-3 sm:grid sm:grid-cols-[minmax(0,1fr)_150px] sm:items-center sm:gap-4">
                   <FundSearchInput isin={entry.isin} name={entry.name} custodian={custodian} excludeIsins={entries.filter((_, idx) => idx !== i).map((e) => e.isin).filter(Boolean)} onSelect={(isin, name) => selectFund(i, isin, name)} onClear={() => clearFund(i)} />
-                  <div className="flex items-center gap-3 sm:contents">
-                    <label htmlFor={`entry-value-${i}`} className="sm:hidden w-24 shrink-0 text-[13px] font-medium text-slate-500">
+                  <div className="mt-3 flex items-center gap-3 border-t border-line pt-3 sm:mt-0 sm:border-0 sm:pt-0">
+                    <label htmlFor={`entry-value-${i}`} className="w-24 shrink-0 text-xs text-ink-3 sm:w-auto">
                       {inputMode === "weight" ? "Vikt (%)" : "Belopp (kr)"}
                     </label>
                     {inputMode === "weight" ? (
@@ -1746,7 +1671,7 @@ export default function AnalyzeClient() {
                         type="number" inputMode="decimal" placeholder="%" min={0} max={100}
                         value={entry.weight} onChange={(e) => updateWeight(i, e.target.value)}
                         onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRow(); } }}
-                        className="flex-1 min-w-0 sm:w-auto sm:flex-none border border-slate-300 rounded-lg px-3 py-3 text-base bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="min-w-0 flex-1 rounded-md border border-line-strong bg-section/30 px-3 py-2 text-right text-base text-ink focus:border-accent focus:bg-white focus:outline-none"
                       />
                     ) : (
                       <input
@@ -1754,35 +1679,41 @@ export default function AnalyzeClient() {
                         type="number" inputMode="numeric" placeholder="kr" min={0}
                         value={entry.amount ?? ""} onChange={(e) => updateAmount(i, e.target.value)}
                         onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addRow(); } }}
-                        className="flex-1 min-w-0 sm:flex-none border border-slate-300 rounded-lg px-3 py-3 text-base bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="min-w-0 flex-1 rounded-md border border-line-strong bg-section/30 px-3 py-2 text-right text-base text-ink focus:border-accent focus:bg-white focus:outline-none"
                       />
                     )}
-                    <button
-                      onClick={() => removeRow(i)} disabled={entries.length === 1} aria-label={`Ta bort fond ${i + 1}`}
-                      className="hidden sm:flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-200 disabled:opacity-30 transition-colors shrink-0"
-                    >✕</button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
-            {/* Mobile: fund selection happens in a full-screen search sheet */}
+            {/* Gemensam fondväljare: bottom drawer på mobil, dialog på desktop. */}
             {inputMethod !== "ai" && (
               <button
                 type="button"
                 onClick={() => setSearchSheetOpen(true)}
-                className="sm:hidden flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-slate-300 bg-white py-3.5 text-sm font-semibold text-blue-600 active:bg-slate-50 transition-colors"
+                className="group flex w-full items-center justify-between rounded-md border border-dashed border-line-strong bg-section/35 px-4 py-4 text-left transition-colors hover:border-ink-3 hover:bg-section"
               >
-                <Search className="w-4 h-4" />
-                {entries.some((e) => e.isin) ? "Lägg till fler fonder" : "Lägg till fonder"}
+                <span className="flex items-center gap-3">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full border border-line bg-white text-ink-3 transition-colors group-hover:text-ink">
+                    <Search className="h-4 w-4" />
+                  </span>
+                  <span>
+                    <span className="block text-sm font-medium text-ink">
+                      {entries.some((e) => e.isin) ? "Lägg till eller ändra fonder" : "Välj fonder"}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-ink-3">Sök på fondnamn eller ISIN</span>
+                  </span>
+                </span>
+                <ArrowRight className="h-4 w-4 text-ink-3 transition-transform group-hover:translate-x-0.5 group-hover:text-ink" />
               </button>
             )}
 
             <div className="flex items-center justify-between pt-1">
-              {inputMethod !== "ai" && (
-                <button onClick={addRow} className="hidden sm:inline text-sm text-blue-600 hover:underline py-2">+ Lägg till fond</button>
-              )}
-              {inputMethod === "ai" && <span />}
+              <span className="text-xs text-ink-3">
+                {entries.filter((entry) => entry.isin).length || "Inga"} {entries.filter((entry) => entry.isin).length === 1 ? "fond" : "fonder"}
+              </span>
               {inputMode === "amount" ? (
                 <span className="text-sm text-slate-500">
                   Totalt: <span className="font-semibold text-slate-900">
@@ -1883,102 +1814,51 @@ export default function AnalyzeClient() {
     </div></div>
 
     {/* Import wizard modal */}
-    {importWizard.open && (
-      <div
-        className="fixed inset-0 z-[70] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4"
-        onClick={(e) => { if (e.target === e.currentTarget) setImportWizard(w => ({ ...w, open: false })); }}
-      >
-        <div className="bg-white rounded-md shadow-xl w-full max-w-md overflow-hidden">
-          {/* Header */}
-          <div className="px-6 pt-6 pb-4 border-b border-slate-100">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold text-slate-900">Importera portfölj</h2>
-              <button
-                onClick={() => setImportWizard({ open: false, file: null })}
-                className="text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-
-          <div className="p-6 space-y-5">
-            <div>
-              <p className="font-semibold text-slate-900">Välj fil</p>
-              <p className="text-sm text-slate-500 mt-1">
-                Exportera dina innehav från din depå — CSV eller Excel — och ladda upp filen.
-              </p>
-            </div>
-            <label className="block cursor-pointer">
-              <input
-                type="file"
-                accept={ACCEPT_ATTRIBUTE}
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) setImportWizard(w => ({ ...w, file: f }));
-                }}
-              />
-              <div className={cn(
-                "border-2 border-dashed rounded-md p-8 text-center transition-all",
-                importWizard.file
-                  ? "border-blue-300 bg-blue-50"
-                  : "border-slate-200 hover:border-blue-300 hover:bg-slate-50"
-              )}>
-                {importWizard.file ? (
-                  <div className="space-y-2">
-                    <div className="w-10 h-10 rounded-md bg-blue-100 flex items-center justify-center mx-auto">
-                      <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <p className="font-medium text-slate-900 text-sm">{importWizard.file.name}</p>
-                    <p className="text-xs text-slate-400">Klicka för att byta fil</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="w-10 h-10 rounded-md bg-slate-100 flex items-center justify-center mx-auto">
-                      <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                      </svg>
-                    </div>
-                    <p className="font-medium text-slate-700 text-sm">Dra och släpp eller klicka</p>
-                    <p className="text-xs text-slate-400">CSV eller Excel (.xlsx)</p>
-                  </div>
-                )}
-              </div>
-            </label>
-
+    <ResponsiveDrawer
+      open={importWizard.open}
+      onClose={() => setImportWizard({ open: false, file: null })}
+      title="Importera portfölj"
+      description="Ladda upp en export från din depå. Vi matchar fonderna och räknar ut deras vikter automatiskt."
+      footer={
+        <button
+          disabled={!importWizard.file || importing}
+          onClick={handleWizardComplete}
+          className="flex w-full items-center justify-center gap-2 rounded-md bg-accent py-3 font-semibold text-white transition-colors hover:bg-accent-hover active:bg-accent-press disabled:cursor-not-allowed disabled:bg-blue-300"
+        >
+          {importing ? (
+            <>
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              Importerar…
+            </>
+          ) : "Importera och analysera"}
+        </button>
+      }
+    >
+          <div className="space-y-5 p-5 sm:p-6">
+            <FileDropzone
+              accept={ACCEPT_ATTRIBUTE}
+              file={importWizard.file}
+              disabled={importing}
+              onFile={(file) => {
+                setImportError(null);
+                setImportWizard((current) => ({ ...current, file }));
+              }}
+            />
             {importError && (
               <p className="rounded-md border border-neg/25 bg-neg-soft px-3 py-2 text-xs text-neg">
                 {importError}
               </p>
             )}
 
-            <p className="text-xs text-slate-400">
-              Filen behöver en rubrikrad med <span className="font-medium text-slate-500">Namn</span> och{" "}
-              <span className="font-medium text-slate-500">Marknadsvärde</span>. Finns även{" "}
-              <span className="font-medium text-slate-500">ISIN</span> och{" "}
-              <span className="font-medium text-slate-500">Typ</span> blir matchningen exakt och aktier,
+            <p className="text-xs leading-relaxed text-ink-3">
+              Filen behöver en rubrikrad med <span className="font-medium text-ink-2">Namn</span> och{" "}
+              <span className="font-medium text-ink-2">Marknadsvärde</span>. Finns även{" "}
+              <span className="font-medium text-ink-2">ISIN</span> och{" "}
+              <span className="font-medium text-ink-2">Typ</span> blir matchningen exakt och aktier,
               ETF:er och certifikat sorteras bort automatiskt.
             </p>
-
-            <button
-              disabled={!importWizard.file || importing}
-              onClick={handleWizardComplete}
-              className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press disabled:bg-blue-300 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-md transition-colors text-sm flex items-center justify-center gap-2"
-            >
-              {importing ? (
-                <>
-                  <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                  Importerar…
-                </>
-              ) : "Analysera portfölj"}
-            </button>
           </div>
-        </div>
-      </div>
-    )}
+    </ResponsiveDrawer>
 
     {/* Popup: fonder som importen inte kunde matcha */}
     {unmatchedNotice && (
@@ -2077,7 +1957,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
   }
 
   return (
-    <div className="space-y-5 animate-fade">
+    <div className="space-y-8 animate-fade sm:space-y-10">
 
       {/* Print-only header + score card */}
       <div className="print-only hidden">
