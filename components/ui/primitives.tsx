@@ -34,7 +34,9 @@ export function CardTitle({
   className?: string;
 }) {
   return (
-    <div className={cn("mb-3 sm:mb-4", className)}>
+    // Ett litet indrag så rubriken inte ligger exakt i kortets ytterkant —
+    // avsiktligt bara några pixlar, inte i linje med kortets innerpadding.
+    <div className={cn("mb-3 pl-1.5 sm:mb-4 sm:pl-2", className)}>
       <h2 className="font-display text-[22px] italic leading-tight text-ink sm:text-[26px]">
         {title}
       </h2>
