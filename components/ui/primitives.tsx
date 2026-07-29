@@ -106,6 +106,73 @@ export function MetricGrid({ className, children }: { className?: string; childr
 }
 
 /**
+ * En rad i en allokeringslista: namn + valfri sekundärtext, andelen till höger
+ * och en tunn stapel under. Nollposter tonas ned men tas inte bort — de säger
+ * något (innehavet finns, men utan vikt).
+ */
+export function AllocationRow({
+  name,
+  meta,
+  weight,
+}: {
+  name: string;
+  meta?: string;
+  weight: number;
+}) {
+  const empty = weight <= 0;
+  return (
+    <div className="py-3">
+      <div className="flex items-baseline justify-between gap-4">
+        <div className="min-w-0">
+          <span className={cn("text-sm font-medium", empty ? "text-ink-3" : "text-ink")}>{name}</span>
+          {meta && <span className="ml-2 font-mono text-xs text-ink-3">{meta}</span>}
+        </div>
+        <span className={cn("figure shrink-0 text-sm", empty ? "text-ink-3" : "text-ink")}>
+          {weight.toFixed(1).replace(".", ",")} %
+        </span>
+      </div>
+      <div className="mt-2 h-1 w-full rounded-sm bg-fill-muted">
+        <div
+          className={cn("h-full rounded-sm", empty ? "bg-line-strong" : "bg-accent")}
+          style={{ width: `${Math.max(empty ? 2 : 0, Math.min(100, weight))}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Etikett till vänster, värde till höger. Värdet sätts i mono med tabulära
+ * siffror så belopp linjerar i en kolumn.
+ */
+export function KeyValueRow({
+  label,
+  note,
+  value,
+  tone = "neutral",
+  emphasis = false,
+  className,
+}: {
+  label: string;
+  note?: string;
+  value: string;
+  tone?: "pos" | "neg" | "neutral";
+  emphasis?: boolean;
+  className?: string;
+}) {
+  const color = tone === "pos" ? "text-pos" : tone === "neg" ? "text-neg" : "text-ink";
+  return (
+    <div className={cn("flex items-baseline justify-between gap-4 py-3", className)}>
+      <div className="min-w-0">
+        <p className={cn("leading-snug text-ink", emphasis ? "text-[17px] font-medium" : "text-sm")}>{label}</p>
+        {note && <p className="mt-0.5 text-xs leading-snug text-ink-3">{note}</p>}
+      </div>
+      <p className={cn("figure shrink-0", color, emphasis ? "text-2xl" : "text-base")}>{value}</p>
+    </div>
+  );
+}
+
+/**
  * Horisontell andelsstapel i en accent — ersätter donutdiagram där hela
  * portföljen ligger i en eller ett fåtal kategorier. Andelen står i klartext
  * bredvid etiketten, så stapeln aldrig är enda informationsbäraren.

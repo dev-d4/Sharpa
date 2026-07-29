@@ -198,7 +198,8 @@ function LoadingPanel({ name }: { name: string }) {
 
 const PLACEHOLDER_EXAMPLES = [
   "Länsförsäkringar Global Index",
-  "Avanza Zero",
+  "Carnegie Sverigefond A",
+  "Avanza Global",
   "Swedbank Robur Ny Teknik",
   "AMF Räntefond Lång",
 ];

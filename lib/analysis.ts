@@ -333,7 +333,34 @@ function generateSwaps(
     });
   }
 
-  return { suggestions, bestInCategory };
+  return { suggestions: equalizeGroupWeights(suggestions), bestInCategory };
+}
+
+/**
+ * När flera nuvarande fonder pekar mot samma alternativfond bildar de en
+ * bytesgrupp. Inom gruppen fördelas gruppens totala vikt lika mellan de
+ * nuvarande fonderna (1/n var), så att gruppens nuvarande position och det
+ * alternativa scenariot inte blir snedviktade av hur innehaven råkar ligga.
+ *
+ * Gruppens totalvikt är oförändrad — bara fördelningen inom den ändras, och
+ * därmed inte portföljens totala allokering.
+ */
+export function equalizeGroupWeights(suggestions: SwapSuggestion[]): SwapSuggestion[] {
+  const groups = new Map<string, SwapSuggestion[]>();
+  for (const s of suggestions) {
+    const key = s.suggestedFund.isin;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(s);
+  }
+
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    const totalWeight = group.reduce((sum, s) => sum + s.weight, 0);
+    const equalWeight = totalWeight / group.length;
+    for (const s of group) s.weight = equalWeight;
+  }
+
+  return suggestions;
 }
 
 // ── Suggested portfolio metrics ───────────────────────────────────────────────
@@ -424,14 +451,8 @@ function buildSummary(
   if (return3yr !== null)
     lines.push(`Total avkastning på tre år är ${pct(return3yr, 1)}.`);
 
-  if (sharpe !== null) {
-    if (sharpe > 1)
-      lines.push(`Sharpe-kvoten är ${dec(sharpe, 2)} — avkastning i förhållande till risk, där värden över 1 brukar räknas som starka.`);
-    else if (sharpe > 0)
-      lines.push(`Sharpe-kvoten är ${dec(sharpe, 2)} — avkastning i förhållande till risk, där värden mellan 0 och 1 är positiva men lägre.`);
-    else
-      lines.push(`Sharpe-kvoten är ${dec(sharpe, 2)} — en negativ kvot innebär att avkastningen inte kompenserade för risken under perioden.`);
-  }
+  if (sharpe !== null)
+    lines.push(`Den riskjusterade avkastningen (Sharpe-kvoten) är ${dec(sharpe, 2)}.`);
 
   if (Math.abs(totalWeight - 100) > 0.01)
     lines.push(`OBS: Vikterna summerar till ${pct(totalWeight, 1)}, inte 100 %.`);

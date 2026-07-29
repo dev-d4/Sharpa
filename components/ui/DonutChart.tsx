@@ -161,7 +161,7 @@ export default function DonutChart({
                 className="text-[13px] font-semibold shrink-0 tabular-nums ml-auto pl-3"
                 style={{ color: legendValueColor ?? "#1e293b" }}
               >
-                {s.weight.toFixed(1)}%
+                {s.weight.toFixed(1).replace(".", ",")} %
               </span>
             </div>
           ))}
@@ -180,7 +180,7 @@ export default function DonutChart({
           }}
         >
           <span style={{ fontWeight: 400 }}>{tooltip.label}</span>
-          <span style={{ marginLeft: 8, fontWeight: 600 }}>{tooltip.weight.toFixed(1)}%</span>
+          <span style={{ marginLeft: 8, fontWeight: 600 }}>{tooltip.weight.toFixed(1).replace(".", ",")} %</span>
         </div>,
         document.body
       )}
