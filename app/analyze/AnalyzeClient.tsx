@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 import { ArrowRight, FileUp, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react"
 import type { SavedPortfolio } from "@/lib/portfolio"
 import { Button } from "@/components/ui/button"
+import DonutChart from "@/components/ui/DonutChart"
+import { CHART_PALETTE } from "@/lib/chart-palette"
 import { CardTitle, Divider, Label, MetricGrid, ShareBar, Stat, StatusDot } from "@/components/ui/primitives"
 import DataFreshness from "@/components/ui/DataFreshness"
 import { computePortfolioScore } from "@/lib/portfolio-score"
@@ -2035,7 +2037,11 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
     }
   }
 
-  const allocationSlices = (analysis.detailedBreakdown ?? []).map(c => ({ label: c.label, weight: c.weight }));
+  // Nollposter skulle rita osynliga segment och skräpa ned legenden
+  const allocationSlices = (analysis.detailedBreakdown ?? [])
+    .filter(c => c.weight > 0)
+    .map(c => ({ label: c.label, weight: c.weight }));
+  const allocationCenter = allocationSlices[0];
 
   const strengths: string[] = [];
   const warnings: string[] = [];
@@ -2256,7 +2262,17 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
         <div className="grid grid-cols-1 lg:grid-cols-3">
           <div className="px-5 py-6 sm:px-8 sm:py-8">
             <Label className="mb-4">Fördelning</Label>
-            <ShareBar items={allocationSlices} />
+            {/* Donut i stället för staplar — med många kategorier blev
+                stapellistan tung, och ringen visar helheten på en gång. */}
+            <DonutChart
+              palette={CHART_PALETTE}
+              legendValueColor="#1A1D21"
+              slices={allocationSlices}
+              centerLabel={allocationCenter ? `${allocationCenter.weight.toFixed(0)} %` : ""}
+              centerSub={allocationCenter?.label ?? ""}
+              size={132}
+              thickness={20}
+            />
             <p className="mt-4 text-xs text-ink-3">* Baseras på fondkategori, inte underliggande innehav.</p>
           </div>
 
