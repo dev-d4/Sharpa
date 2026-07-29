@@ -65,13 +65,13 @@ export default function PortfoliosClient() {
         <div className="flex items-center gap-2 shrink-0">
           <Link
             href="/analyze"
-            className="text-sm font-medium text-slate-600 hover:text-slate-900 border border-slate-200 hover:border-slate-300 px-3 py-2.5 rounded-xl transition-colors hidden sm:block"
+            className="text-sm font-medium text-slate-600 hover:text-slate-900 border border-slate-200 hover:border-slate-300 px-3 py-2.5 rounded-md transition-colors hidden sm:block"
           >
             Analysera befintlig
           </Link>
           <Link
             href="/bygg-portfolj"
-            className="bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold px-3 py-2.5 sm:px-4 rounded-[10px] transition-colors"
+            className="bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold px-3 py-2.5 sm:px-4 rounded-md transition-colors"
           >
             + Ny portfölj
           </Link>
@@ -79,14 +79,14 @@ export default function PortfoliosClient() {
       </div>
 
       {portfolios.length === 0 ? (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-6 py-20 text-center space-y-5">
+        <div className="bg-white rounded-md border border-slate-200 shadow-sm px-6 py-20 text-center space-y-5">
           <p className="text-slate-900 font-semibold text-lg">Du har inga sparade portföljer än</p>
           <p className="text-slate-400 text-sm max-w-sm mx-auto">Bygg din första portfölj på 2 minuter — vi ställer 4 frågor och sätter ihop en komplett portfölj åt dig. Eller lägg in din befintliga portfölj, analysera den och spara den här.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/bygg-portfolj" className="inline-block bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold px-6 py-3 rounded-[10px] transition-colors">
-              Bygg din första portfölj →
+            <Link href="/bygg-portfolj" className="inline-block bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold px-6 py-3 rounded-md transition-colors">
+              Bygg din första portfölj
             </Link>
-            <Link href="/analyze" className="inline-block border border-slate-200 hover:border-slate-300 text-slate-600 text-sm font-medium px-6 py-3 rounded-xl transition-colors">
+            <Link href="/analyze" className="inline-block border border-slate-200 hover:border-slate-300 text-slate-600 text-sm font-medium px-6 py-3 rounded-md transition-colors">
               Analysera befintlig portfölj
             </Link>
           </div>
@@ -102,7 +102,7 @@ export default function PortfoliosClient() {
             const scoreColors = SCORE_COLOR_CLASSES[scoreResult.color];
 
             return (
-              <div key={p.id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div key={p.id} className="bg-white rounded-md border border-slate-200 shadow-sm overflow-hidden">
                 {/* Header */}
                 <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-100">
                   <div className="flex items-start justify-between gap-3">
@@ -182,7 +182,7 @@ export default function PortfoliosClient() {
                       <div className="mt-3 space-y-4">
                           {/* Summary */}
                           {p.analysis.summaryText && (
-                            <p className="text-sm text-slate-600 leading-relaxed bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
+                            <p className="text-sm text-slate-600 leading-relaxed bg-blue-50 border border-blue-100 rounded-md px-4 py-3">
                               {p.analysis.summaryText}
                             </p>
                           )}
@@ -209,7 +209,7 @@ export default function PortfoliosClient() {
                             { label: "Avk 3 år", value: p.analysis.weightedReturn3yr !== null ? `${p.analysis.weightedReturn3yr.toFixed(1)}%` : "–" },
                             { label: "Sharpe 3 år", value: p.analysis.weightedSharpe !== null ? p.analysis.weightedSharpe.toFixed(2) : "–" },
                           ].map((m) => (
-                            <div key={m.label} className="bg-slate-50 rounded-xl p-3">
+                            <div key={m.label} className="bg-slate-50 rounded-md p-3">
                               <p className="text-xs text-slate-500 mb-0.5">{m.label}</p>
                               <p className="font-bold text-slate-900">{m.value}</p>
                             </div>
@@ -248,7 +248,7 @@ export default function PortfoliosClient() {
                               const isConsolidate = group[0].consolidate;
                               if (group.length >= 2) {
                                 return (
-                                  <div key={gi} className={`rounded-xl p-4 space-y-3 border ${isConsolidate ? "border-info-line bg-info/40" : "border-warn/25 bg-warn-soft/40"}`}>
+                                  <div key={gi} className={`rounded-md p-4 space-y-3 border ${isConsolidate ? "border-info-line bg-info/40" : "border-warn/25 bg-warn-soft/40"}`}>
                                     <span className={`text-xs font-bold px-2.5 py-1 rounded-md border uppercase tracking-wide inline-block ${isConsolidate ? "text-accent bg-info border-info-line" : "text-warn bg-warn-soft border-warn/25"}`}>
                                       {isConsolidate ? `Konsolidera ${group.length} fonder hit` : `Topval — bättre än ${group.length} fonder`}
                                     </span>
@@ -276,7 +276,7 @@ export default function PortfoliosClient() {
                               }
                               const s = group[0];
                               return (
-                                <div key={gi} className="border border-slate-200 rounded-xl p-4 space-y-2 bg-slate-50">
+                                <div key={gi} className="border border-slate-200 rounded-md p-4 space-y-2 bg-slate-50">
                                   {s.consolidate ? (
                                     <>
                                       <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
@@ -284,7 +284,7 @@ export default function PortfoliosClient() {
                                           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Nuvarande fond</p>
                                           <p className="font-semibold text-sm text-slate-900 break-words">{s.currentFund.name}</p>
                                         </div>
-                                        <span className="text-slate-400 text-lg sm:mt-3">↓</span>
+                                        <span className="text-slate-400 text-xs font-medium sm:mt-3">till</span>
                                         <div className="flex-1 min-w-0">
                                           <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Öka i befintlig fond</p>
                                           <p className="font-semibold text-sm text-slate-900 break-words">{s.suggestedFund.name}</p>
@@ -303,7 +303,7 @@ export default function PortfoliosClient() {
                                           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Nuvarande fond</p>
                                           <p className="font-semibold text-sm text-slate-900 break-words">{s.currentFund.name}</p>
                                         </div>
-                                        <span className="text-slate-400 text-lg sm:mt-3">↓</span>
+                                        <span className="text-slate-400 text-xs font-medium sm:mt-3">till</span>
                                         <div className="flex-1 min-w-0">
                                           <p className="text-xs font-semibold text-green-600 uppercase tracking-wide">Alternativ fond</p>
                                           <p className="font-semibold text-sm text-slate-900 break-words">{s.suggestedFund.name}</p>

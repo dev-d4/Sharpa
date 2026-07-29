@@ -28,7 +28,7 @@ export default function KakpolicyPage() {
             Sharpa använder <strong>enbart nödvändiga cookies</strong>. Vi använder inga
             spårningskakor, annonskakor eller analyskakor.
           </p>
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+          <div className="bg-slate-50 border border-slate-200 rounded-md p-4 space-y-3">
             <div>
               <p className="font-semibold text-slate-800">Sessionskakor (Supabase Auth)</p>
               <p className="text-slate-500 mt-0.5">
@@ -42,7 +42,7 @@ export default function KakpolicyPage() {
             Vi använder inga cookies från Google Analytics, Facebook Pixel eller liknande
             spårningsverktyg.
           </p>
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+          <div className="bg-slate-50 border border-slate-200 rounded-md p-4 space-y-3">
             <div>
               <p className="font-semibold text-slate-800">Vercel Web Analytics</p>
               <p className="text-slate-500 mt-0.5">
@@ -53,7 +53,7 @@ export default function KakpolicyPage() {
               </p>
             </div>
           </div>
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+          <div className="bg-slate-50 border border-slate-200 rounded-md p-4 space-y-3">
             <div>
               <p className="font-semibold text-slate-800">Lokal lagring (localStorage)</p>
               <p className="text-slate-500 mt-0.5">
@@ -74,9 +74,9 @@ export default function KakpolicyPage() {
             Instruktioner för de vanligaste webbläsarna:
           </p>
           <ul className="list-disc pl-5 space-y-1">
-            <li>Chrome: Inställningar → Sekretess och säkerhet → Cookies</li>
-            <li>Safari: Inställningar → Integritet → Hantera webbplatsdata</li>
-            <li>Firefox: Inställningar → Integritet och säkerhet → Cookies</li>
+            <li>Chrome: Inställningar, Sekretess och säkerhet, Cookies</li>
+            <li>Safari: Inställningar, Integritet, Hantera webbplatsdata</li>
+            <li>Firefox: Inställningar, Integritet och säkerhet, Cookies</li>
           </ul>
         </section>
 
@@ -93,7 +93,7 @@ export default function KakpolicyPage() {
       <div className="mt-10 pt-6 border-t border-slate-200 flex gap-4 text-xs text-slate-400">
         <Link href="/integritetspolicy" className="hover:text-slate-600 transition-colors">Integritetspolicy</Link>
         <Link href="/villkor" className="hover:text-slate-600 transition-colors">Användarvillkor</Link>
-        <Link href="/" className="hover:text-slate-600 transition-colors">← Tillbaka till startsidan</Link>
+        <Link href="/" className="hover:text-slate-600 transition-colors">Tillbaka till startsidan</Link>
       </div>
     </div>
   );

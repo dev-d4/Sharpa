@@ -337,7 +337,7 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
       <div className="relative mt-6 w-full max-w-[720px] sm:mt-10">
           <div
             // Minimal lyft så fältet skiljer sig från heronsens bakgrundslager
-            className="flex items-center gap-3 rounded-xs border border-line-strong bg-white px-4 py-3.5 shadow-[0_1px_2px_rgba(20,20,30,.04)] transition-colors duration-150 focus-within:border-accent sm:px-6 sm:py-[18px]"
+            className="flex items-center gap-3 rounded-xs border border-line-strong bg-white px-4 py-3.5 shadow-[0_1px_2px_rgba(20,20,30,.04)] sm:px-6 sm:py-[18px]"
           >
             <Search className="h-5 w-5 sm:h-[22px] sm:w-[22px] shrink-0 text-ink-3" strokeWidth={1.75} aria-hidden="true" />
             <div className="relative flex-1 min-w-0">
@@ -347,7 +347,8 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
                 onChange={(e) => handleChange(e.target.value)}
                 onBlur={() => setTimeout(() => setOpen(false), 150)}
                 aria-label="Sök fond"
-                className="w-full bg-transparent text-left text-[16px] text-ink focus:outline-none sm:text-[17px]"
+                className="w-full bg-transparent text-left text-[16px] text-ink sm:text-[17px]"
+                style={{ outline: "none" }}
               />
               {!query && (
                 <span
@@ -371,7 +372,7 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
           {open && suggestions.length > 0 && (
             <ul
               data-testid="fund-suggestions"
-              className="absolute left-0 right-0 top-full z-20 mt-2 max-h-[min(52vh,360px)] overflow-y-auto overscroll-contain rounded-md border border-line bg-white text-left"
+              className="absolute left-0 right-0 top-full z-30 mt-2 max-h-[290px] overflow-y-auto overscroll-contain rounded-md border border-line bg-white text-left sm:max-h-[338px]"
               style={{ boxShadow: "0 8px 28px rgba(20,20,30,.12)", WebkitOverflowScrolling: "touch" }}
             >
               {suggestions.map((s, i) => (
@@ -379,7 +380,7 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
                   <button
                     type="button"
                     onMouseDown={() => analyzeFund(s)}
-                    className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left text-sm hover:bg-section transition-colors"
+                    className="flex h-12 w-full items-center justify-between gap-3 px-4 text-left text-sm transition-colors hover:bg-section"
                   >
                     <span className="font-medium text-ink truncate">{s.name}</span>
                     <span className="text-xs text-ink-4 shrink-0">{s.isin}</span>

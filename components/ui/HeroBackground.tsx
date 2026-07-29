@@ -11,7 +11,10 @@
  */
 export default function HeroBackground() {
   return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-x-0 top-0 h-[400px] overflow-hidden sm:h-[460px]"
+    >
       {/* Lager 1 — kolumnlinjer var 160:e px. Dolda på mobil, där de blir för täta. */}
       <div
         className="absolute inset-0 opacity-0 md:opacity-70"

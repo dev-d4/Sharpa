@@ -6,7 +6,7 @@ export default function Hero() {
   return (
     // Platt pappersyta — gradienten och de roterande kloten är borttagna.
     // Sökfältet är sidans dominanta yta, rubriken satt i redaktionell serif.
-    <section className="relative w-full overflow-hidden bg-canvas px-5 py-16 sm:px-10 sm:pt-24 sm:pb-20 lg:px-20">
+    <section className="relative z-20 w-full bg-canvas px-5 py-16 sm:px-10 sm:pt-24 sm:pb-20 lg:px-20">
       <HeroBackground />
       <div className="relative z-10 mx-auto w-full max-w-[760px]">
         <HeroDemo
@@ -28,7 +28,7 @@ export default function Hero() {
           }
         >
           <h1 className="mx-auto max-w-[680px] font-display text-[34px] leading-[1.1] text-ink sm:text-[48px] lg:text-[52px]">
-            Hur bra är dina fonder egentligen?
+            Hur bra är <em className="italic">dina fonder</em> egentligen?
           </h1>
         </HeroDemo>
       </div>

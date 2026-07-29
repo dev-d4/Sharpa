@@ -1811,8 +1811,8 @@ export default function AnalyzeClient() {
           </>
         )}
         </>
-        )}
-      </section>
+      )}
+    </section>
 
       <div ref={resultsRef} />
       {analysis && <AnalysisResult analysis={analysis} portfolioValue={portfolioValue} user={user} onLoginClick={handleLoginFromBlur} />}
@@ -2017,7 +2017,7 @@ function ann3yr(total3yr: number): number {
 }
 
 function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { analysis: PortfolioAnalysis; portfolioValue: number | null; user: User | null | undefined; onLoginClick: () => void }) {
-  const showBlur = user === null;
+  const showBlur = !user;
   const score = computePortfolioScore(analysis).score;
   const [showAllSwaps, setShowAllSwaps] = useState(false);
 
@@ -2026,11 +2026,13 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
 
   let potentialGainKr: number | null = null;
   if (analysis.suggestedMetrics) {
-    const fee = analysis.avgCost !== null && analysis.suggestedMetrics.avgCost !== null
+    const feeDifferenceKr = analysis.avgCost !== null && analysis.suggestedMetrics.avgCost !== null
       ? (analysis.avgCost - analysis.suggestedMetrics.avgCost) / 100 * pv : 0;
-    const ret = analysis.weightedReturn3yr !== null && analysis.suggestedMetrics.weightedReturn3yr !== null
+    const historicalReturnDifferenceKr = analysis.weightedReturn3yr !== null && analysis.suggestedMetrics.weightedReturn3yr !== null
       ? (ann3yr(analysis.suggestedMetrics.weightedReturn3yr) - ann3yr(analysis.weightedReturn3yr)) / 100 * pv : 0;
-    if (fee + ret > 100) potentialGainKr = fee + ret;
+    if (feeDifferenceKr + historicalReturnDifferenceKr > 100) {
+      potentialGainKr = feeDifferenceKr + historicalReturnDifferenceKr;
+    }
   }
 
   const allocationSlices = (analysis.detailedBreakdown ?? []).map(c => ({ label: c.label, weight: c.weight }));
@@ -2083,9 +2085,11 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
             </div>
             {potentialGainKr !== null && (
               <div className="text-right">
-                <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-slate-400 mb-1">Beräknad skillnad</p>
+                <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-slate-400 mb-1">Historisk jämförelse</p>
                 <p className="figure text-2xl text-pos">+{Math.round(potentialGainKr).toLocaleString("sv-SE")} kr</p>
-                <p className="text-xs text-slate-400 mt-0.5">per år{assumed ? " (vid 100 000 kr)" : ""}</p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  per år{assumed ? " (vid 100 000 kr)" : ""}, baserat på de senaste 3 åren
+                </p>
               </div>
             )}
           </div>

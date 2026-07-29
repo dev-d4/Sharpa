@@ -225,7 +225,7 @@ export default function IntegrationClient() {
             <div className="flex flex-wrap gap-3">
               <a
                 href="#demo"
-                className="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-6 py-3.5 rounded-2xl text-sm transition-all shadow-md shadow-blue-500/25 hover:-translate-y-0.5"
+                className="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-6 py-3.5 rounded-lg text-sm transition-all shadow-md shadow-blue-500/25 hover:-translate-y-0.5"
               >
                 Prova demo
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -234,15 +234,15 @@ export default function IntegrationClient() {
               </a>
               <a
                 href="#kod"
-                className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-700 text-white font-semibold px-6 py-3.5 rounded-2xl text-sm transition-all hover:-translate-y-0.5"
+                className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-700 text-white font-semibold px-6 py-3.5 rounded-lg text-sm transition-all hover:-translate-y-0.5"
               >
-                Se kod →
+                Se kod
               </a>
             </div>
           </div>
 
           {/* Right — terminal preview */}
-          <div className="bg-slate-900 rounded-2xl overflow-hidden shadow-2xl">
+          <div className="bg-slate-900 rounded-lg overflow-hidden shadow-2xl">
             <div className="flex items-center gap-1.5 px-4 py-3 border-b border-white/10">
               <div className="w-3 h-3 rounded-full bg-red-400/80" />
               <div className="w-3 h-3 rounded-full bg-amber-400/80" />
@@ -259,7 +259,7 @@ export default function IntegrationClient() {
               <p className="pl-8"><span className="text-slate-400">{"{ "}</span><span className="text-amber-300">isin</span><span className="text-slate-400">:</span> <span className="text-emerald-300">&quot;SE0000813933&quot;</span><span className="text-slate-400">, </span><span className="text-amber-300">weight</span><span className="text-slate-400">:</span> <span className="text-purple-300">30</span> <span className="text-slate-400">{"}"}</span></p>
               <p className="pl-4"><span className="text-slate-400">],</span></p>
               <p><span className="text-slate-400">{"});"}</span></p>
-              <p className="mt-3 text-slate-500">{"// → "}<span className="text-slate-400">https://er-domän.se/rapport?p=eyJjd...</span></p>
+              <p className="mt-3 text-slate-500">{"// "}<span className="text-slate-400">https://er-domän.se/rapport?p=eyJjd...</span></p>
             </div>
           </div>
 
@@ -303,7 +303,7 @@ export default function IntegrationClient() {
         <div className="grid lg:grid-cols-[1fr_420px] gap-8 items-start">
 
           {/* Form */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-7 space-y-6">
+          <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-5 sm:p-7 space-y-6">
 
             {/* Meta */}
             <div className="grid sm:grid-cols-3 gap-4">
@@ -312,7 +312,7 @@ export default function IntegrationClient() {
                 <select
                   value={custodian}
                   onChange={e => setCustodian(e.target.value)}
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-slate-200 rounded-md px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="avanza">Avanza</option>
                   <option value="nordnet">Nordnet</option>
@@ -325,7 +325,7 @@ export default function IntegrationClient() {
                   value={client}
                   onChange={e => setClient(e.target.value)}
                   placeholder="Anna Svensson"
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-slate-200 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div className="space-y-1.5">
@@ -335,7 +335,7 @@ export default function IntegrationClient() {
                   onChange={e => setAmount(e.target.value)}
                   type="number"
                   placeholder="850000"
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-slate-200 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
@@ -348,7 +348,7 @@ export default function IntegrationClient() {
                 onChange={e => setComment(e.target.value)}
                 rows={2}
                 placeholder="Visas som en signerad kommentar i rapporten..."
-                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                className="w-full border border-slate-200 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               />
             </div>
 
@@ -370,14 +370,14 @@ export default function IntegrationClient() {
                       value={f.isin}
                       onChange={e => setIsin(i, e.target.value)}
                       placeholder="SE0000000000"
-                      className="font-mono text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase placeholder-slate-300"
+                      className="font-mono text-sm border border-slate-200 rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase placeholder-slate-300"
                     />
                     <input
                       value={f.weight}
                       onChange={e => setWeight(i, e.target.value)}
                       type="number" min={0} max={100} step={0.1}
                       placeholder="0"
-                      className="text-sm border border-slate-200 rounded-xl px-3 py-2.5 text-right font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="text-sm border border-slate-200 rounded-md px-3 py-2.5 text-right font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <button
                       onClick={() => removeFund(i)}
@@ -401,7 +401,7 @@ export default function IntegrationClient() {
 
           {/* URL output */}
           <div className="space-y-4 lg:sticky lg:top-24">
-            <div className="bg-slate-900 rounded-2xl overflow-hidden">
+            <div className="bg-slate-900 rounded-lg overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
                 <span className="text-xs text-slate-500 font-mono">Genererad URL</span>
                 {url && <CopyButton text={fullUrl} />}
@@ -424,7 +424,7 @@ export default function IntegrationClient() {
                 href={url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3.5 rounded-2xl text-sm transition-all shadow-md shadow-blue-500/25 hover:-translate-y-0.5"
+                className="flex items-center justify-center gap-2 w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3.5 rounded-lg text-sm transition-all shadow-md shadow-blue-500/25 hover:-translate-y-0.5"
               >
                 <ExternalLink className="w-4 h-4" />
                 Öppna rapport
@@ -432,7 +432,7 @@ export default function IntegrationClient() {
             )}
 
             {/* Parameter reference */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3">
+            <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-3">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Parametrar</p>
               {[
                 { p: "custodian",  type: "string",   req: true,  desc: '"avanza" | "nordnet" | "övrigt"' },
@@ -468,7 +468,7 @@ export default function IntegrationClient() {
             </h2>
           </div>
 
-          <div className="bg-slate-900 rounded-2xl overflow-hidden shadow-xl">
+          <div className="bg-slate-900 rounded-lg overflow-hidden shadow-xl">
             {/* Tabs */}
             <div className="flex items-center gap-1 px-4 pt-4 border-b border-white/10">
               {(["ts", "py", "sh"] as const).map(t => (
@@ -519,7 +519,7 @@ export default function IntegrationClient() {
           </div>
           <div className="grid grid-cols-1 gap-2">
             {FEATURES.map(f => (
-              <div key={f} className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-3">
+              <div key={f} className="flex items-center gap-3 bg-slate-50 rounded-md px-4 py-3">
                 <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
                   <Check className="w-3 h-3 text-emerald-600" />
                 </div>
@@ -544,9 +544,9 @@ export default function IntegrationClient() {
           </p>
           <a
             href="mailto:sharpakontakt@gmail.com"
-            className="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-400 text-white font-semibold px-8 py-4 rounded-2xl text-sm transition-all"
+            className="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-400 text-white font-semibold px-8 py-4 rounded-lg text-sm transition-all"
           >
-            Kontakta oss →
+            Kontakta oss
           </a>
         </div>
       </section>

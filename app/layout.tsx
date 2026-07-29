@@ -21,6 +21,7 @@ const plexSans = IBM_Plex_Sans({
 // Redaktionell serif — endast displayrubriker (landning, sidtitlar, rapport).
 const sourceSerif = Source_Serif_4({
   subsets: ["latin"],
+  style: ["normal", "italic"],
   variable: "--font-source-serif",
   display: "swap",
 });

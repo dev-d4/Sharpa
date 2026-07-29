@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Eget paket med egen tsconfig och egna node_modules — lintas separat.
+    "video/**",
   ]),
 ]);
 

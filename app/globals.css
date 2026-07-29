@@ -357,11 +357,6 @@ body.dashboard-mode > footer {
     display: block !important;
   }
 
-  /* Remove blur from swap section for non-logged-in print */
-  .blur-sm {
-    filter: none !important;
-  }
-
   /* SuggestedPortfolio: force table view, hide mobile list */
   .sm\:hidden {
     display: none !important;

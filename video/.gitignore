@@ -1,0 +1,8 @@
+node_modules/
+out/
+public/screencasts/*.mp4
+public/screencasts/*.mov
+public/vo/*.wav
+public/music/*
+!public/music/.gitkeep
+.remotion/

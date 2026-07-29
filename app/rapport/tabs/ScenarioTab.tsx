@@ -66,7 +66,7 @@ function InlineFundSearch({ custodian, excludeIsins, onSelect }: {
 
   return (
     <div ref={ref} className="relative">
-      <div className="flex items-center gap-2 border border-dashed border-slate-300 hover:border-blue-400 rounded-xl bg-slate-50 px-3 py-2.5 transition-colors focus-within:border-blue-500 focus-within:bg-white">
+      <div className="flex items-center gap-2 border border-dashed border-slate-300 hover:border-blue-400 rounded-md bg-slate-50 px-3 py-2.5 transition-colors focus-within:border-blue-500 focus-within:bg-white">
         <Plus className="w-3.5 h-3.5 text-slate-400 shrink-0" />
         <input
           value={query}
@@ -77,7 +77,7 @@ function InlineFundSearch({ custodian, excludeIsins, onSelect }: {
         {loading && <div className="w-3 h-3 rounded-full border border-blue-400 border-t-transparent animate-spin shrink-0" />}
       </div>
       {open && results.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-30 overflow-hidden">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-md shadow-lg z-30 overflow-hidden">
           {results.map(r => (
             <button
               key={r.isin}
@@ -245,7 +245,7 @@ export default function ScenarioTab({
         <div className="space-y-4">
 
           {/* Fund rows */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
             <div className="hidden sm:grid grid-cols-[1fr_100px_40px] gap-3 px-4 py-2.5 border-b border-slate-100 text-xs font-semibold text-slate-400 uppercase tracking-widest">
               <span>Fond</span>
               <span className="text-right">Vikt (%)</span>
@@ -313,7 +313,7 @@ export default function ScenarioTab({
               <button
                 onClick={runAnalysis}
                 disabled={loading || entries.filter(e => parseFloat(e.weight) > 0).length === 0}
-                className="flex items-center gap-2 text-sm font-semibold bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-xl px-5 py-2.5 transition-colors shadow-sm shadow-blue-200"
+                className="flex items-center gap-2 text-sm font-semibold bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-md px-5 py-2.5 transition-colors shadow-sm shadow-blue-200"
               >
                 {loading ? (
                   <>
@@ -328,7 +328,7 @@ export default function ScenarioTab({
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+            <div className="bg-red-50 border border-red-100 rounded-md px-4 py-3">
               <p className="text-sm text-red-700">{error}</p>
             </div>
           )}
@@ -337,21 +337,21 @@ export default function ScenarioTab({
         {/* ── Right: comparison ─────────────────────────────────────────── */}
         <div className="space-y-4">
           {!hasRun && !loading && (
-            <div className="bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-8 text-center">
+            <div className="bg-slate-50 border border-dashed border-slate-200 rounded-lg p-8 text-center">
               <p className="text-sm font-medium text-slate-500">Justera portföljen och kör analysen</p>
               <p className="text-xs text-slate-400 mt-1">Resultatet jämförs mot den ursprungliga portföljens nyckeltal</p>
             </div>
           )}
 
           {loading && (
-            <div className="bg-white border border-slate-200 rounded-2xl p-8 flex items-center justify-center gap-3 shadow-sm">
+            <div className="bg-white border border-slate-200 rounded-lg p-8 flex items-center justify-center gap-3 shadow-sm">
               <div className="w-5 h-5 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
               <span className="text-sm text-slate-500">Beräknar scenario…</span>
             </div>
           )}
 
           {scenarioAnalysis && !loading && (
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
               <div className="px-5 py-4 border-b border-slate-100">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Jämförelse</p>
                 <p className="text-sm font-bold text-slate-900 mt-0.5">Nuvarande vs scenario</p>
@@ -382,7 +382,7 @@ export default function ScenarioTab({
               </div>
 
               {(scenarioAnalysis.notFound?.length ?? 0) > 0 && (
-                <div className="mx-5 mb-4 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5">
+                <div className="mx-5 mb-4 bg-amber-50 border border-amber-100 rounded-md px-3 py-2.5">
                   <p className="text-xs text-amber-800">
                     <span className="font-semibold">Hittades ej: </span>
                     {scenarioAnalysis.notFound.join(", ")}
