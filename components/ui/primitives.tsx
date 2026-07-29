@@ -19,6 +19,30 @@ export function Divider({ className }: { className?: string }) {
   return <div aria-hidden="true" className={cn("h-px w-full bg-line", className)} />;
 }
 
+/**
+ * Kortrubrik — står fritt på pappersytan ovanför sitt kort, inte som ett band
+ * inuti det. Sätts i den redaktionella serifens kursiv, samma stil som
+ * accentorden i landningens rubrik, så rubriknivåerna hänger ihop över sajten.
+ */
+export function CardTitle({
+  title,
+  sub,
+  className,
+}: {
+  title: string;
+  sub?: string;
+  className?: string;
+}) {
+  return (
+    <div className={cn("mb-3 sm:mb-4", className)}>
+      <h2 className="font-display text-[22px] italic leading-tight text-ink sm:text-[26px]">
+        {title}
+      </h2>
+      {sub && <p className="mt-1.5 text-sm leading-snug text-ink-3">{sub}</p>}
+    </div>
+  );
+}
+
 /** Versaletikett i mono — används över nyckeltal, sektioner och metadata. */
 export function Label({ className, children }: { className?: string; children: React.ReactNode }) {
   return <p className={cn("label-meta", className)}>{children}</p>;

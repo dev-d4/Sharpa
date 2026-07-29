@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { ArrowRight, FileUp, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react"
 import type { SavedPortfolio } from "@/lib/portfolio"
 import { Button } from "@/components/ui/button"
-import { Divider, Label, MetricGrid, ShareBar, Stat, StatusDot } from "@/components/ui/primitives"
+import { CardTitle, Divider, Label, MetricGrid, ShareBar, Stat, StatusDot } from "@/components/ui/primitives"
 import DataFreshness from "@/components/ui/DataFreshness"
 import { computePortfolioScore } from "@/lib/portfolio-score"
 import { useMobileBottomOverlay } from "@/lib/mobile-bottom-overlay"
@@ -2120,7 +2120,10 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
       </div>
 
       {/* Sammanfattning — ett kortlager, inre grupper avdelade med hårlinjer */}
-      <section className="no-print overflow-hidden rounded-md border border-line bg-white">
+      <div className="no-print">
+      <CardTitle title="Sammanfattning" />
+      <section className="overflow-hidden rounded-md border border-line bg-white">
+
         {/* Band 1 — betyget. Förklaringen står vänsterställd under siffran i
             stället för ragged-left i högerkant, där den konkurrerade med talet. */}
         <div className="px-5 py-6 sm:px-8 sm:py-8">
@@ -2133,7 +2136,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
             </span>
             <span className="figure text-xl text-ink-3">/10</span>
           </div>
-          <p className="mt-4 max-w-[460px] text-sm leading-relaxed text-ink-3">
+          <p className="mt-4 text-sm leading-relaxed text-ink-3">
             Väger samman avgift, historisk avkastning, riskjusterad avkastning
             och riskspridning.
           </p>
@@ -2141,10 +2144,10 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
 
         <Divider />
 
-        {/* Band 2 — sammanfattningen ensam i en läskolumn, inget annat i vägen. */}
+        {/* Band 2 — kommentaren ensam, inget annat i vägen. */}
         <div className="px-5 py-6 sm:px-8 sm:py-8">
-          <Label className="mb-3">Sammanfattning</Label>
-          <p className="max-w-[620px] text-[15px] leading-[1.75] text-ink-2">
+          <Label className="mb-3">Kommentar</Label>
+          <p className="text-[15px] leading-[1.75] text-ink-2">
             {analysis.summaryText}
           </p>
         </div>
@@ -2194,8 +2197,14 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
               <Label className="mb-3">Möjlig förbättring med föreslagna alternativ</Label>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <p className="figure text-[32px] leading-none text-pos sm:text-[38px]">
-                    +{Math.round(potentialGainKr).toLocaleString("sv-SE")} kr per år
+                  {/* Beloppet sätts i grotesken, inte i monon — monons breda
+                      siffror gjorde raden orimligt lång i den här storleken.
+                      Tabulära siffror behålls så tal linjerar. */}
+                  <p className="text-[30px] font-medium leading-none tracking-tight text-pos tabular-nums sm:text-[34px]">
+                    +{Math.round(potentialGainKr).toLocaleString("sv-SE")} kr
+                    <span className="ml-2.5 align-baseline text-base font-normal tracking-normal text-ink-3">
+                      per år
+                    </span>
                   </p>
                   <p className="mt-2 text-xs text-ink-3">
                     {assumed ? "Beräknat på 100 000 kr. " : ""}
@@ -2217,15 +2226,18 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
 
         <div className="flex justify-end px-5 py-3 sm:px-8">
           <button
-            onClick={() => window.print()}
+            onClick={user ? () => window.print() : onLoginClick}
             className="text-xs text-ink-3 transition-colors duration-150 hover:text-ink"
           >
-            Spara som PDF
+            {user ? "Spara som PDF" : "Logga in för att spara som PDF"}
           </button>
         </div>
       </section>
+      </div>
 
       {/* Nyckeltal + fördelning — linjerat rutnät, inga inre kort */}
+      <div>
+      <CardTitle title="Nyckeltal" />
       <section className="overflow-hidden rounded-md border border-line bg-white">
         <MetricGrid>
           <Metric label="Snittavgift" value={analysis.avgCost !== null ? `${analysis.avgCost.toFixed(2).replace(".", ",")} %` : "–"} sub="per år" info="Den genomsnittliga årliga avgiften viktat efter din fördelning." />
@@ -2236,49 +2248,43 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
 
         <Divider />
 
-        {/* Fördelning — horisontella andelsstaplar i en accent i stället för donut */}
-        <div className="px-5 py-6 sm:px-8 sm:py-8">
-          <Label className="mb-4">Fördelning</Label>
-          <ShareBar items={allocationSlices} className="max-w-[720px]" />
-          <p className="mt-4 text-xs text-ink-3">* Baseras på fondkategori, inte underliggande innehav.</p>
+        {/* Fördelning, Tillgångsslag och Förvaltningsstil på samma rad på desktop. */}
+        <div className="grid grid-cols-1 lg:grid-cols-3">
+          <div className="px-5 py-6 sm:px-8 sm:py-8">
+            <Label className="mb-4">Fördelning</Label>
+            <ShareBar items={allocationSlices} />
+            <p className="mt-4 text-xs text-ink-3">* Baseras på fondkategori, inte underliggande innehav.</p>
+          </div>
+
+          <div className="border-t border-line px-5 py-6 sm:px-8 sm:py-8 lg:border-l lg:border-t-0">
+            <Label className="mb-4">Tillgångsslag</Label>
+            <ShareBar items={(analysis.categoryBreakdown ?? []).filter(c => c.weight > 0)} />
+          </div>
+
+          <div className="border-t border-line px-5 py-6 sm:px-8 sm:py-8 lg:border-l lg:border-t-0">
+            <Label className="mb-4">Förvaltningsstil</Label>
+            <ShareBar
+              items={[
+                { label: "Aktivt förvaltad", weight: analysis.managementBreakdown.active },
+                { label: "Indexfond", weight: analysis.managementBreakdown.passive },
+                { label: "Oklassad", weight: analysis.managementBreakdown.unknown },
+              ].filter(i => i.weight > 0)}
+            />
+          </div>
         </div>
-
-        {/* Tillgångsslag + Förvaltningsstil */}
-        {((analysis.categoryBreakdown?.length ?? 0) > 0 ||
-          (analysis.managementBreakdown.active + analysis.managementBreakdown.passive + analysis.managementBreakdown.unknown) > 0) && (
-          <>
-            <Divider />
-            <div className="grid grid-cols-1 divide-y divide-line sm:grid-cols-2 sm:divide-x sm:divide-y-0">
-              {(analysis.categoryBreakdown?.length ?? 0) > 0 && (
-                <div className="px-5 py-6 sm:px-8 sm:py-8">
-                  <Label className="mb-4">Tillgångsslag</Label>
-                  <ShareBar items={(analysis.categoryBreakdown ?? []).filter(c => c.weight > 0)} />
-                </div>
-              )}
-
-              {(analysis.managementBreakdown.active + analysis.managementBreakdown.passive + analysis.managementBreakdown.unknown) > 0 && (
-                <div className="px-5 py-6 sm:px-8 sm:py-8">
-                  <Label className="mb-4">Förvaltningsstil</Label>
-                  <ShareBar
-                    items={[
-                      { label: "Aktivt förvaltad", weight: analysis.managementBreakdown.active },
-                      { label: "Indexfond", weight: analysis.managementBreakdown.passive },
-                      { label: "Oklassad", weight: analysis.managementBreakdown.unknown },
-                    ].filter(i => i.weight > 0)}
-                  />
-                </div>
-              )}
-            </div>
-          </>
-        )}
       </section>
+      </div>
 
       {/* Swap suggestions + best-in-category */}
       {((analysis.swapSuggestions?.length ?? 0) > 0 ||
         (analysis.bestInCategory?.length ?? 0) > 0) && (
-        <section className="relative bg-white rounded-md p-6 sm:p-8" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)", border: "1px solid #D9E0E6" }}>
-            <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-1">Jämförbara alternativ</p>
-            <p className="text-lg font-semibold text-ink mb-4">Alternativ med starkare nyckeltal</p>
+        <div id="foreslagna-alternativ" className={cn("scroll-mt-24", showBlur && "no-print")}>
+          <CardTitle
+            title="Jämförbara alternativ"
+            sub="Fonder med starkare nyckeltal i samma kategori."
+          />
+          <section className="relative overflow-hidden rounded-md border border-line bg-white">
+          <div className="p-5 sm:p-8">
 
             {showBlur ? (
             <div>
@@ -2468,8 +2474,9 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
 
               </>
             )}
-
+          </div>
           </section>
+        </div>
       )}
 
       {!showBlur && analysis.suggestedMetrics && (
@@ -2488,7 +2495,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
       )}
 
       {showBlur && (analysis.swapSuggestions?.length ?? 0) === 0 && (analysis.bestInCategory?.length ?? 0) === 0 && (
-        <section className="no-print bg-white rounded-md p-6 sm:p-8 text-center space-y-3" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)", border: "1px solid #D9E0E6" }}>
+        <section className="no-print space-y-3 rounded-md border border-line bg-white p-6 text-center sm:p-8">
           <p className="text-base font-semibold text-ink leading-snug max-w-md mx-auto">Logga in för att se jämförbara fondalternativ</p>
           <p className="text-xs text-ink-4">Gratis · Klart på under en minut</p>
           <button
@@ -2501,7 +2508,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
       )}
 
       {analysis.notFound.length > 0 && (
-        <section className="bg-warn-soft border border-amber-100 rounded-md p-4">
+        <section className="rounded-md border border-line bg-warn-soft p-4">
           <p className="text-sm text-amber-800">
             <span className="font-medium">Hittades inte: </span>{analysis.notFound.join(", ")}
           </p>
@@ -2708,9 +2715,13 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
   ];
 
   return (
-    <section className="bg-white rounded-md p-6 sm:p-8" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)", border: "1px solid #D9E0E6" }}>
-      <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-1">Alternativt scenario</p>
-      <p className="text-lg font-semibold text-ink mb-6">Nyckeltal med jämförbara alternativ</p>
+    <div>
+      <CardTitle
+        title="Alternativt scenario"
+        sub="Nyckeltal om innehaven byttes mot de jämförbara alternativen."
+      />
+      <section className="overflow-hidden rounded-md border border-line bg-white">
+      <div className="p-5 sm:p-8">
 
       <div className="mb-6">
         <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-3">Fondinnehav</p>
@@ -2799,7 +2810,9 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
           </p>
         </div>
       )}
+      </div>
     </section>
+    </div>
   );
 }
 
