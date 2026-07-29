@@ -333,7 +333,34 @@ function generateSwaps(
     });
   }
 
-  return { suggestions, bestInCategory };
+  return { suggestions: equalizeGroupWeights(suggestions), bestInCategory };
+}
+
+/**
+ * När flera nuvarande fonder pekar mot samma alternativfond bildar de en
+ * bytesgrupp. Inom gruppen fördelas gruppens totala vikt lika mellan de
+ * nuvarande fonderna (1/n var), så att gruppens nuvarande position och det
+ * alternativa scenariot inte blir snedviktade av hur innehaven råkar ligga.
+ *
+ * Gruppens totalvikt är oförändrad — bara fördelningen inom den ändras, och
+ * därmed inte portföljens totala allokering.
+ */
+export function equalizeGroupWeights(suggestions: SwapSuggestion[]): SwapSuggestion[] {
+  const groups = new Map<string, SwapSuggestion[]>();
+  for (const s of suggestions) {
+    const key = s.suggestedFund.isin;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(s);
+  }
+
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    const totalWeight = group.reduce((sum, s) => sum + s.weight, 0);
+    const equalWeight = totalWeight / group.length;
+    for (const s of group) s.weight = equalWeight;
+  }
+
+  return suggestions;
 }
 
 // ── Suggested portfolio metrics ───────────────────────────────────────────────

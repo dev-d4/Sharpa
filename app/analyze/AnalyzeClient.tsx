@@ -7,12 +7,13 @@ import { createClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { ArrowRight, FileUp, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react"
+import { FileUp, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react"
 import type { SavedPortfolio } from "@/lib/portfolio"
 import { Button } from "@/components/ui/button"
 import DonutChart from "@/components/ui/DonutChart"
 import { CHART_PALETTE } from "@/lib/chart-palette"
-import { CardTitle, Divider, Label, MetricGrid, ShareBar, Stat, StatusDot } from "@/components/ui/primitives"
+import { AllocationRow, CardTitle, Divider, KeyValueRow, Label, MetricGrid, ShareBar, Stat, StatusDot } from "@/components/ui/primitives"
+import { Disclosure } from "@/components/ui/Disclosure"
 import DataFreshness from "@/components/ui/DataFreshness"
 import { computePortfolioScore } from "@/lib/portfolio-score"
 import { useMobileBottomOverlay } from "@/lib/mobile-bottom-overlay"
@@ -2304,30 +2305,20 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
             sub="Fonder med starkare nyckeltal i samma kategori."
           />
           <section className="relative overflow-hidden rounded-md border border-line bg-white">
-          <div className="p-5 sm:p-8">
+            <div className="p-5 sm:p-8">
 
             {showBlur ? (
             <div>
-              <div aria-hidden className="pointer-events-none select-none divide-y divide-slate-200">
+              <div aria-hidden className="pointer-events-none select-none border-t border-ink">
                 {[
                   ["Swedbank Robur Ny Teknik A", "TIN Ny Teknik A"],
                   ["Länsförsäkringar Global Aktiv A", "Avanza Global"],
                   ["SEB Sverigefond Stora bolag", "PLUS Allabolag Sverige Index"],
                 ].map(([cur, sug], i) => (
-                  <div key={i} className="py-4 flex flex-col gap-2.5 sm:flex-row sm:items-stretch sm:gap-2">
-                    <div className="min-w-0 sm:flex-1">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-accent mb-1">Nuvarande</p>
-                      <p className="text-sm font-semibold text-ink leading-snug">{cur}</p>
-                    </div>
-                    <div className="flex shrink-0 items-center justify-center sm:px-1">
-                      <div className="w-7 h-7 rounded-md bg-slate-100 flex items-center justify-center">
-                        <ArrowRight className="w-3.5 h-3.5 text-slate-400 rotate-90 sm:rotate-0" />
-                      </div>
-                    </div>
-                    <div className="min-w-0 sm:flex-1 sm:text-right">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-accent mb-1">Alternativ</p>
-                      <p className="text-sm font-semibold text-ink leading-snug">{sug}</p>
-                    </div>
+                  <div key={i} className="grid grid-cols-[1fr_40px_1fr] items-baseline border-b border-line py-4">
+                    <p className="text-base font-medium text-ink">{cur}</p>
+                    <p className="text-center text-[17px] text-ink-3">→</p>
+                    <p className="text-base font-semibold text-accent">{sug}</p>
                   </div>
                 ))}
               </div>
@@ -2359,18 +2350,15 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
               const hasSwaps = (analysis.swapSuggestions?.length ?? 0) > 0;
               const label = bics.length === 1 ? "Redan bäst i sin kategori" : "Redan bäst i sina kategorier";
               return (
-                <div className={`flex items-start gap-3 ${hasSwaps ? "mb-4 pb-4 border-b border-slate-200" : ""}`}>
-                  <div className="w-8 h-8 rounded-md bg-green-50 flex items-center justify-center shrink-0 mt-0.5">
-                    <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-green-600 mb-1">{label}</p>
+                <div className={cn("border-t border-line pt-4", hasSwaps && "mb-8")}>
+                  <p className="label-meta mb-3">{label}</p>
+                  <ul className="space-y-2">
                     {bics.map((bic, i) => (
-                      <p key={i} className="text-sm font-semibold text-ink leading-snug truncate">{bic.fundName}</p>
+                      <li key={i} className="flex gap-2.5 text-[15px] leading-snug text-ink">
+                        <StatusDot tone="pos" /> {bic.fundName}
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 </div>
               );
             })()}
@@ -2387,103 +2375,141 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
 
               const VISIBLE = 3;
               const total = groupMap.size;
+
               return (
                 <>
-                  <div className="divide-y divide-slate-200">
+                  {/* Ren byteslista — inga nyckeltalskolumner. Jämförelsen av
+                      avgift och Sharpe ligger i Alternativt scenario nedanför. */}
+                  <div className="border-t border-ink">
+                    {/* Kolumnhuvud en gång, bara på desktop */}
+                    <div className="hidden grid-cols-[1fr_40px_1fr] border-b border-line py-3 sm:grid">
+                      <span className="label-meta">Nuvarande</span>
+                      <span />
+                      <span className="label-meta">Föreslås bytas till</span>
+                    </div>
+
                     {groups.map((group, gi) => {
                       const hidden = !showAllSwaps && gi >= VISIBLE;
                       const suggested = group[0].suggestedFund;
                       const isConsolidate = group[0].consolidate;
-                      const s = group[0];
                       const isMultiGroup = group.length >= 2;
 
-                      // Jämförelsedata för infopanelen — sammanvägt när flera fonder byts mot samma
+                      // Jämförelsedata för infopanelen — sammanvägt över gruppens
+                      // nuvarande fonder, som efter lika-vikt-fixen väger lika.
                       const sugCost = suggested.ongoing_cost_actual ?? suggested.ongoing_cost_estimated;
-                      let curCost: number | null = s.currentFund.ongoing_cost_actual ?? s.currentFund.ongoing_cost_estimated;
-                      let curReturn: number | null = s.currentFund.return_3yr;
-                      let curSharpe: number | null = s.currentFund.sharpe_3yr;
-                      if (isMultiGroup) {
-                        const totalW = group.reduce((sum, item) => sum + item.weight, 0);
-                        const items = group.map(item => ({
-                          normW: totalW > 0 ? item.weight / totalW : 0,
-                          cost: item.currentFund.ongoing_cost_actual ?? item.currentFund.ongoing_cost_estimated,
-                          r3yr: item.currentFund.return_3yr,
-                          sharpe: item.currentFund.sharpe_3yr,
-                        }));
-                        curCost = totalW > 0 && items.every(x => x.cost !== null)
-                          ? items.reduce((sum, x) => sum + x.normW * x.cost!, 0) : null;
-                        curReturn = totalW > 0 && items.every(x => x.r3yr != null)
-                          ? items.reduce((sum, x) => sum + x.normW * x.r3yr!, 0) : null;
-                        curSharpe = totalW > 0 && items.every(x => x.sharpe !== null)
-                          ? items.reduce((sum, x) => sum + x.normW * x.sharpe!, 0) : null;
-                      }
+                      const totalW = group.reduce((sum, item) => sum + item.weight, 0);
+                      const items = group.map(item => ({
+                        normW: totalW > 0 ? item.weight / totalW : 0,
+                        cost: item.currentFund.ongoing_cost_actual ?? item.currentFund.ongoing_cost_estimated,
+                        r3yr: item.currentFund.return_3yr,
+                        sharpe: item.currentFund.sharpe_3yr,
+                      }));
+                      const curCost = totalW > 0 && items.every(x => x.cost !== null)
+                        ? items.reduce((sum, x) => sum + x.normW * x.cost!, 0) : null;
+                      const curReturn = totalW > 0 && items.every(x => x.r3yr != null)
+                        ? items.reduce((sum, x) => sum + x.normW * x.r3yr!, 0) : null;
+                      const curSharpe = totalW > 0 && items.every(x => x.sharpe !== null)
+                        ? items.reduce((sum, x) => sum + x.normW * x.sharpe!, 0) : null;
+
+                      const infoPanel = (
+                        <InfoPopover title="Jämförelse" width={340} ariaLabel={`Visa nyckeltal för bytet till ${suggested.name}`}>
+                          {suggested.category && (
+                            <p className="mb-2.5 text-[11px] text-ink-3">{suggested.category}</p>
+                          )}
+                          <div className="grid grid-cols-[1fr_auto_auto] items-baseline gap-x-5 gap-y-2">
+                            <span />
+                            <span className="label-meta text-right">Nuvarande</span>
+                            <span className="label-meta text-right">{isConsolidate ? "Ökad vikt" : "Alternativ"}</span>
+
+                            <span className="text-xs text-ink-2">Avgift</span>
+                            <span className="figure text-xs text-ink-2">{curCost !== null ? `${curCost.toFixed(2).replace(".", ",")} %` : "–"}</span>
+                            <span className="figure text-xs text-accent">{sugCost !== null ? `${sugCost.toFixed(2).replace(".", ",")} %` : "–"}</span>
+
+                            <span className="whitespace-nowrap text-xs text-ink-2">Avkastning 3 år</span>
+                            <span className="figure text-xs text-ink-2">{curReturn != null ? `${curReturn.toFixed(1).replace(".", ",")} %` : "–"}</span>
+                            <span className="figure text-xs text-accent">{suggested.return_3yr != null ? `${suggested.return_3yr.toFixed(1).replace(".", ",")} %` : "–"}</span>
+
+                            <span className="text-xs text-ink-2">Sharpe</span>
+                            <span className="figure text-xs text-ink-2">{curSharpe !== null ? curSharpe.toFixed(2).replace(".", ",") : "–"}</span>
+                            <span className="figure text-xs text-accent">{suggested.sharpe_3yr !== null ? suggested.sharpe_3yr.toFixed(2).replace(".", ",") : "–"}</span>
+                          </div>
+                          {isMultiGroup && (
+                            <p className="mt-2.5 text-[11px] leading-snug text-ink-3">
+                              Nuvarande = sammanvägt över {group.length} fonder, som viktas lika i bytet.
+                            </p>
+                          )}
+                        </InfoPopover>
+                      );
 
                       return (
                         <div
                           key={gi}
-                          className={`py-4 first:pt-0 last:pb-0${hidden ? " swap-hidden" : ""}`}
+                          className={cn("border-b border-line py-4", hidden && "swap-hidden")}
                         >
-                          {isConsolidate && isMultiGroup && (
-                            <div className="mb-2">
-                              <span className="inline-flex text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md bg-info text-accent">
-                                Konsolidera {group.length} fonder
-                              </span>
-                            </div>
-                          )}
-                          <div className="relative flex flex-col gap-2.5 sm:flex-row sm:items-stretch sm:gap-2">
-                            <div className="min-w-0 pr-8 sm:pr-0 sm:flex-1">
-                              <p className="text-[10px] font-semibold uppercase tracking-wider text-accent mb-1">Nuvarande</p>
+                          {/* Desktop: tre kolumner på en rad */}
+                          <div className="hidden grid-cols-[1fr_40px_1fr] items-baseline sm:grid">
+                            <div className="min-w-0 pr-4">
+                              {/* Alla fonder i en bytesgrupp väger lika och sätts
+                                  därför likadant — ingen av dem är underordnad. */}
                               {group.map((item, si) => (
-                                <p key={si} className="text-sm font-semibold text-ink leading-snug break-words">{item.currentFund.name}</p>
+                                <p
+                                  key={si}
+                                  className={cn(
+                                    "text-base font-medium leading-snug text-ink break-words",
+                                    si > 0 && "mt-1"
+                                  )}
+                                >
+                                  {item.currentFund.name}
+                                </p>
                               ))}
                             </div>
-                            <div className="flex shrink-0 items-center justify-center sm:px-1">
-                              <div className="w-7 h-7 rounded-md bg-slate-100 flex items-center justify-center">
-                                <ArrowRight className="w-3.5 h-3.5 text-slate-400 rotate-90 sm:rotate-0" />
+                            <p aria-hidden="true" className="text-center text-[17px] leading-none text-ink-3">→</p>
+                            <div className="flex min-w-0 items-baseline justify-between gap-3 pl-4">
+                              <div className="min-w-0">
+                                <p className="text-base font-semibold leading-snug text-accent break-words">
+                                  {suggested.name}
+                                </p>
+                                {isConsolidate && (
+                                  <p className="mt-1 text-[13px] text-ink-3">Ökad vikt i en fond du redan äger</p>
+                                )}
                               </div>
+                              <span className="shrink-0">{infoPanel}</span>
                             </div>
-                            <div className="min-w-0 sm:flex-1 sm:text-right">
-                              <p className="text-[10px] font-semibold uppercase tracking-wider text-accent mb-1">
-                                {isConsolidate ? "Alternativt ökad vikt i befintlig fond" : "Alternativ"}
+                          </div>
+
+                          {/* Mobil: ett vertikalt block med etiketter */}
+                          <div className="sm:hidden">
+                            <div className="flex items-baseline justify-between gap-3">
+                              <p className="label-meta">Nuvarande</p>
+                              <span className="shrink-0">{infoPanel}</span>
+                            </div>
+                            {group.map((item, si) => (
+                              <p
+                                key={si}
+                                className="mt-1.5 text-base font-medium leading-snug text-ink break-words"
+                              >
+                                {item.currentFund.name}
                               </p>
-                              <p className="text-sm font-semibold text-ink leading-snug break-words">{suggested.name}</p>
-                            </div>
-                            <div className="absolute top-0 right-0 sm:static sm:shrink-0 sm:pt-0.5">
-                              <InfoPopover title="Jämförelse" width={340} ariaLabel="Visa jämförelse mellan nuvarande fond och alternativ fond">
-                                {suggested.category && (
-                                  <p className="text-[11px] text-slate-400 mb-2.5">{suggested.category}</p>
-                                )}
-                                <div className="grid grid-cols-[1fr_auto_auto] gap-x-5 gap-y-2 items-baseline">
-                                  <span />
-                                  <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400 text-right whitespace-nowrap">Nuvarande</span>
-                                  <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400 text-right whitespace-nowrap">{isConsolidate ? "Ökad vikt" : "Alternativ"}</span>
-
-                                  <span className="text-xs text-slate-500">Avgift</span>
-                                  <span className="text-xs font-semibold text-ink tabular-nums text-right">{curCost !== null ? `${curCost.toFixed(2)}%` : "–"}</span>
-                                  <span className="text-xs font-semibold text-accent tabular-nums text-right">{sugCost !== null ? `${sugCost.toFixed(2)}%` : "–"}</span>
-
-                                  <span className="text-xs text-slate-500 whitespace-nowrap">Avkastning 3 år</span>
-                                  <span className="text-xs font-semibold text-ink tabular-nums text-right">{curReturn != null ? `${curReturn.toFixed(1)}%` : "–"}</span>
-                                  <span className="text-xs font-semibold text-accent tabular-nums text-right">{suggested.return_3yr != null ? `${suggested.return_3yr.toFixed(1)}%` : "–"}</span>
-
-                                  <span className="text-xs text-slate-500">Sharpe</span>
-                                  <span className="text-xs font-semibold text-ink tabular-nums text-right">{curSharpe !== null ? curSharpe.toFixed(2) : "–"}</span>
-                                  <span className="text-xs font-semibold text-accent tabular-nums text-right">{suggested.sharpe_3yr !== null ? suggested.sharpe_3yr.toFixed(2) : "–"}</span>
-                                </div>
-                                {isMultiGroup && (
-                                  <p className="text-[10px] text-slate-400 mt-2.5">Nuvarande = sammanvägt över {group.length} fonder utifrån dina vikter.</p>
-                                )}
-                              </InfoPopover>
-                            </div>
+                            ))}
+                            <p aria-hidden="true" className="my-2 text-[17px] leading-none text-ink-3">↓</p>
+                            <p className="label-meta">Föreslås bytas till</p>
+                            <p className="mt-1.5 text-base font-semibold leading-snug text-accent break-words">
+                              {suggested.name}
+                            </p>
+                            {isConsolidate && (
+                              <p className="mt-1 text-[13px] text-ink-3">Ökad vikt i en fond du redan äger</p>
+                            )}
                           </div>
                         </div>
                       );
                     })}
                   </div>
+
                   {total > VISIBLE && (
                     <button
+                      type="button"
                       onClick={() => setShowAllSwaps(v => !v)}
-                      className="mt-2 w-full py-2.5 text-sm font-medium text-slate-500 hover:text-ink border border-slate-100 hover:border-slate-200 rounded-md transition-colors"
+                      className="mt-4 text-sm text-accent underline decoration-line-strong underline-offset-2 transition-colors duration-150 hover:decoration-accent"
                     >
                       {showAllSwaps ? "Visa färre förslag" : `Visa alla ${total} förslag`}
                     </button>
@@ -2494,7 +2520,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
 
               </>
             )}
-          </div>
+            </div>
           </section>
         </div>
       )}
@@ -2726,13 +2752,57 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
     ? (current.avgCost - suggested.avgCost) / 100 * pv : null;
   const returnGainKr = current.weightedReturn3yr !== null && suggested.weightedReturn3yr !== null
     ? (ann3yr(suggested.weightedReturn3yr) - ann3yr(current.weightedReturn3yr)) / 100 * pv : null;
+  const netKr = (feeSavingsKr ?? 0) + (returnGainKr ?? 0);
+  const hasEffect = feeSavingsKr !== null || returnGainKr !== null;
+
+  const kr = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(Math.round(v)).toLocaleString("sv-SE")} kr`;
+  const tone = (v: number) => (v >= 0 ? "pos" as const : "neg" as const);
 
   const rows = [
-    { label: "Snittavgift", sub: "per år", currentVal: current.avgCost, suggestedVal: suggested.avgCost, lowerIsBetter: true },
-    { label: "Avkastning 1 år", sub: "viktad", currentVal: current.weightedReturn1yr, suggestedVal: suggested.weightedReturn1yr },
-    { label: "Avkastning 3 år", sub: "totalt", currentVal: current.weightedReturn3yr, suggestedVal: suggested.weightedReturn3yr },
-    { label: "Sharpe 3 år", sub: "riskjusterad", currentVal: current.weightedSharpe, suggestedVal: suggested.weightedSharpe },
+    { label: "Snittavgift", currentVal: current.avgCost, suggestedVal: suggested.avgCost, lowerIsBetter: true },
+    { label: "Avkastning 1 år", currentVal: current.weightedReturn1yr, suggestedVal: suggested.weightedReturn1yr },
+    { label: "Avkastning 3 år", currentVal: current.weightedReturn3yr, suggestedVal: suggested.weightedReturn3yr },
+    { label: "Sharpe 3 år", currentVal: current.weightedSharpe, suggestedVal: suggested.weightedSharpe },
   ];
+
+  const allocation = [...suggested.funds].sort((a, b) => b.weight - a.weight);
+
+  const comparison = (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[420px] text-sm">
+        <thead>
+          <tr className="border-b border-line">
+            <th className="label-meta py-2 pr-3 text-left font-medium">Nyckeltal</th>
+            <th className="label-meta py-2 px-3 text-right font-medium">Nuvarande</th>
+            <th className="label-meta py-2 px-3 text-right font-medium">Scenario</th>
+            <th className="label-meta py-2 pl-3 text-right font-medium">
+              <span className="sm:hidden">Δ</span>
+              <span className="hidden sm:inline">Ändring</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => {
+            const d = delta(row.suggestedVal, row.currentVal, row.lowerIsBetter);
+            return (
+              <tr key={row.label} className="border-b border-line last:border-0">
+                <td className="py-3 pr-3 text-ink-2">{row.label}</td>
+                <td className="figure py-3 px-3 text-right text-xs text-ink-3 sm:text-sm">{fmt(row.currentVal)}</td>
+                <td className="figure py-3 px-3 text-right text-xs text-ink sm:text-sm">{fmt(row.suggestedVal)}</td>
+                <td className="figure py-3 pl-3 text-right text-xs sm:text-sm">
+                  {d ? (
+                    <span className={d.better ? "text-pos" : "text-neg"}>
+                      {d.diff >= 0 ? "+" : "−"}{fmt(Math.abs(d.diff))}
+                    </span>
+                  ) : <span className="text-ink-3">–</span>}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
 
   return (
     <div>
@@ -2740,98 +2810,72 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
         title="Alternativt scenario"
         sub="Nyckeltal om innehaven byttes mot de jämförbara alternativen."
       />
+
       <section className="overflow-hidden rounded-md border border-line bg-white">
-      <div className="p-5 sm:p-8">
-
-      <div className="mb-6">
-        <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-3">Fondinnehav</p>
-        <div className="space-y-0">
-          {suggested.funds.map((f, i) => (
-            <div key={i} className="flex items-center justify-between py-2.5 border-b border-slate-50 last:border-0 gap-2">
-              <div className="min-w-0">
-                <span className="text-sm font-medium text-ink break-words">{f.name}</span>
-                <span className="hidden sm:inline text-xs text-slate-400 ml-2">{f.isin}</span>
-              </div>
-              <span className="text-sm font-semibold text-slate-500 tabular-nums shrink-0">{f.weight.toFixed(1)}%</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="mb-6">
-        <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-3">Jämförelse</p>
-        <div className="overflow-hidden rounded-md border border-slate-100">
-          <table className="w-full text-xs sm:text-sm">
-            <thead>
-              <tr className="bg-slate-50 text-[10px] sm:text-xs font-semibold tracking-[0.06em] uppercase text-slate-400">
-                <th className="text-left py-2.5 px-3 sm:px-4 font-semibold">Nyckeltal</th>
-                <th className="text-right py-2.5 px-2 sm:px-4 font-semibold">Nuvarande</th>
-                <th className="text-right py-2.5 px-2 sm:px-4 font-semibold">Scenario</th>
-                <th className="text-right py-2.5 px-3 sm:px-4 font-semibold">Förändring</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => {
-                const d = delta(row.suggestedVal, row.currentVal, row.lowerIsBetter);
-                return (
-                  <tr key={row.label} className="border-t border-slate-100">
-                    <td className="py-2.5 sm:py-3 px-3 sm:px-4 text-slate-600">{row.label}</td>
-                    <td className="text-right py-2.5 sm:py-3 px-2 sm:px-4 text-slate-400 tabular-nums">{fmt(row.currentVal)}</td>
-                    <td className="text-right py-2.5 sm:py-3 px-2 sm:px-4 font-semibold text-ink tabular-nums">{fmt(row.suggestedVal)}</td>
-                    <td className="text-right py-2.5 sm:py-3 px-3 sm:px-4 font-semibold tabular-nums">
-                      {d ? (
-                        <span className={d.better ? "text-pos" : "text-neg"}>
-                          {d.diff > 0 ? "+" : "−"}{Math.abs(d.diff).toFixed(2)}%
-                        </span>
-                      ) : <span className="text-slate-300">–</span>}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {(feeSavingsKr !== null || returnGainKr !== null) && (
-        <div className="bg-slate-50 rounded-md p-5 space-y-4">
-          <div className="flex items-start justify-between gap-2">
-            <p className="text-sm font-semibold text-ink">Beräknad effekt per år</p>
-            <p className="text-xs text-slate-400 text-right">
-              {assumed ? "vid 100 000 kr investerat" : `vid ${pv.toLocaleString("sv-SE")} kr investerat`}
-            </p>
-          </div>
-          <div className="space-y-3">
-            {feeSavingsKr !== null && (
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-ink">Avgiftsbesparing</p>
-                  <p className="text-xs text-slate-400">Beräknad utifrån redovisad avgift</p>
-                </div>
-                <p className={`text-base font-bold tabular-nums ${feeSavingsKr >= 0 ? "text-pos" : "text-red-500"}`}>
-                  {`${feeSavingsKr >= 0 ? "+" : ""}${Math.round(feeSavingsKr).toLocaleString("sv-SE")} kr`}
+        <div className="p-5 sm:p-8">
+      {/* Effekten först, detaljerna på begäran. På desktop ligger fondinnehavet
+          till vänster; på mobil kommer effekten först i läsordningen. */}
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:items-start lg:gap-12">
+        <div className="lg:order-2">
+          {hasEffect && (
+            <>
+              <div className="flex items-baseline justify-between gap-4">
+                <p className="label-meta">Beräknad effekt per år</p>
+                <p className="text-xs text-ink-3">
+                  {assumed ? "vid 100 000 kr investerat" : `vid ${pv.toLocaleString("sv-SE")} kr investerat`}
                 </p>
               </div>
-            )}
-            {returnGainKr !== null && (
-              <div className="flex items-center justify-between border-t border-slate-200 pt-3">
-                <div>
-                  <p className="text-sm font-medium text-ink">Historisk avkastningsskillnad</p>
-                  <p className="text-xs text-slate-400">Baserat på 3-årsavkastning, annualiserad</p>
-                </div>
-                <p className={`text-base font-bold tabular-nums ${returnGainKr >= 0 ? "text-pos" : "text-red-500"}`}>
-                  {`${returnGainKr >= 0 ? "+" : ""}${Math.round(returnGainKr).toLocaleString("sv-SE")} kr`}
-                </p>
+
+              <div className="mt-2 divide-y divide-line border-b border-line">
+                {feeSavingsKr !== null && (
+                  <KeyValueRow
+                    label="Avgiftsbesparing"
+                    note="Beräknad utifrån redovisad avgift"
+                    value={kr(feeSavingsKr)}
+                    tone={tone(feeSavingsKr)}
+                  />
+                )}
+                {returnGainKr !== null && (
+                  <KeyValueRow
+                    label="Historisk avkastningsskillnad"
+                    note="Baserat på 3-årsavkastning, annualiserad"
+                    value={kr(returnGainKr)}
+                    tone={tone(returnGainKr)}
+                  />
+                )}
               </div>
-            )}
-          </div>
-          <p className="text-[10px] text-slate-400 leading-snug border-t border-slate-200 pt-3">
-            Avgiftsbesparing är en beräkning utifrån redovisade avgifter. Kontrollera alltid aktuella villkor hos fondbolag eller depåplattform. Historisk avkastning är ingen garanti för framtida resultat — avkastningssiffran ska ses som referens, inte som en prognos.
-          </p>
+
+              <KeyValueRow label="Netto per år" value={kr(netKr)} tone={tone(netKr)} emphasis className="pt-4" />
+            </>
+          )}
+
+          <Disclosure
+            className="mt-6"
+            showLabel="Visa jämförelse"
+            hideLabel="Dölj jämförelse"
+          >
+            <p className="label-meta mb-3">Jämförelse</p>
+            {comparison}
+          </Disclosure>
         </div>
-      )}
+
+        <div className="lg:order-1">
+          <p className="label-meta mb-2">Fondinnehav</p>
+          <div className="divide-y divide-line border-t border-line">
+            {allocation.map((f, i) => (
+              <AllocationRow key={i} name={f.name} weight={f.weight} />
+            ))}
+          </div>
+        </div>
       </div>
-    </section>
+
+      <p className="mt-8 text-xs leading-relaxed text-ink-3">
+        Avgiftsbesparing är en beräkning utifrån redovisade avgifter. Kontrollera alltid aktuella
+        villkor hos fondbolag eller depåplattform. Historisk avkastning är ingen garanti för
+        framtida resultat — avkastningssiffran ska ses som referens, inte som en prognos.
+      </p>
+        </div>
+      </section>
     </div>
   );
 }
