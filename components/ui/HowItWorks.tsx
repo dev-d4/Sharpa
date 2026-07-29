@@ -129,7 +129,7 @@ export default function HowItWorks() {
           Analysera och Bygg portfölj är jämbördiga huvudfunktioner och får
           därför samma knappvikt, inte primär/sekundär. */}
       <section className="py-12 sm:py-16">
-        <p className="label-meta mb-6">Välj den väg som passar dig</p>
+        <p className="label-meta mb-6 text-center">Välj den väg som passar dig</p>
 
         <div className="grid gap-10 sm:grid-cols-2 sm:gap-12">
           <div className="border-t-2 border-ink pt-5">

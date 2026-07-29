@@ -18,11 +18,11 @@ export default function LandingPage() {
         </div>
 
         {/* För företag */}
-        <section className="border-t border-line bg-white">
+        <section className="border-t border-line bg-[#EEF0F2]">
           <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
+            <p className="label-meta mb-6 text-center">För företag och rådgivare</p>
             <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
               <div className="max-w-[720px]">
-                <p className="label-meta mb-3">För företag och rådgivare</p>
                 <h2 className="font-display text-[26px] leading-tight text-ink sm:text-[32px]">
                   Fond- och portföljanalys för professionell rådgivning
                 </h2>
