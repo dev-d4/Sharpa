@@ -2121,67 +2121,97 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
 
       {/* Sammanfattning — ett kortlager, inre grupper avdelade med hårlinjer */}
       <section className="no-print overflow-hidden rounded-md border border-line bg-white">
-        <div className="grid grid-cols-1 divide-y divide-line sm:grid-cols-2 sm:divide-x sm:divide-y-0">
-          <div className="px-5 py-6 sm:px-8 sm:py-8">
-            <Label className="mb-3">Portföljbetyg</Label>
-            <div className="flex items-baseline gap-1.5">
-              {/* Betyget är neutralt i ink — betygsnivån bärs av texten nedanför,
-                  inte av en trafikljusfärg på siffran. */}
-              <span className="figure text-[44px] leading-none text-ink sm:text-[52px]">
-                {score.toFixed(1).replace(".", ",")}
-              </span>
-              <span className="figure text-xl text-ink-3">/10</span>
-            </div>
+        {/* Band 1 — betyget. Förklaringen står vänsterställd under siffran i
+            stället för ragged-left i högerkant, där den konkurrerade med talet. */}
+        <div className="px-5 py-6 sm:px-8 sm:py-8">
+          <Label className="mb-3">Portföljbetyg</Label>
+          <div className="flex items-baseline gap-1.5">
+            {/* Betyget är neutralt i ink — betygsnivån bärs av texten nedanför,
+                inte av en trafikljusfärg på siffran. */}
+            <span className="figure text-[44px] leading-none text-ink sm:text-[52px]">
+              {score.toFixed(1).replace(".", ",")}
+            </span>
+            <span className="figure text-xl text-ink-3">/10</span>
           </div>
-          {potentialGainKr !== null && (
-            <div className="px-5 py-6 sm:px-8 sm:py-8">
-              <Label className="mb-3">Beräknad skillnad</Label>
-              <p className="figure text-[32px] leading-none text-pos sm:text-[38px]">
-                +{Math.round(potentialGainKr).toLocaleString("sv-SE")} kr
-              </p>
-              <p className="mt-3 text-sm text-ink-2">
-                per år{assumed ? " (vid 100 000 kr)" : ""} · inkl. historisk avkastningsskillnad
-              </p>
-            </div>
-          )}
+          <p className="mt-4 max-w-[460px] text-sm leading-relaxed text-ink-3">
+            Väger samman avgift, historisk avkastning, riskjusterad avkastning
+            och riskspridning.
+          </p>
         </div>
 
         <Divider />
 
+        {/* Band 2 — sammanfattningen ensam i en läskolumn, inget annat i vägen. */}
         <div className="px-5 py-6 sm:px-8 sm:py-8">
-          <p className="max-w-[680px] text-[15px] leading-[1.7] text-ink-2">
+          <Label className="mb-3">Sammanfattning</Label>
+          <p className="max-w-[620px] text-[15px] leading-[1.75] text-ink-2">
             {analysis.summaryText}
           </p>
+        </div>
 
-          {(strengths.length > 0 || warnings.length > 0) && (
-            <div className="mt-8 grid gap-8 sm:grid-cols-2">
-              {strengths.length > 0 && (
-                <div>
-                  <Label className="mb-3">Styrkor</Label>
-                  <ul className="space-y-2">
+        {/* Band 3 — omdömena som ett linjerat par, så de läses som data och inte
+            som ännu ett textblock efter sammanfattningen. */}
+        {(strengths.length > 0 || warnings.length > 0) && (
+          <>
+            <Divider />
+            <div className="grid grid-cols-1 divide-y divide-line sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+              <div className="px-5 py-6 sm:px-8 sm:py-8">
+                <Label className="mb-4">Styrkor</Label>
+                {strengths.length > 0 ? (
+                  <ul className="space-y-2.5">
                     {strengths.map(s => (
-                      <li key={s} className="flex gap-2.5 text-[15px] text-ink">
+                      <li key={s} className="flex gap-2.5 text-[15px] leading-snug text-ink">
                         <StatusDot tone="pos" /> {s}
                       </li>
                     ))}
                   </ul>
-                </div>
-              )}
-              {warnings.length > 0 && (
-                <div>
-                  <Label className="mb-3">Förbättringsområden</Label>
-                  <ul className="space-y-2">
+                ) : (
+                  <p className="text-[15px] text-ink-3">Inga tydliga styrkor utmärker sig.</p>
+                )}
+              </div>
+              <div className="px-5 py-6 sm:px-8 sm:py-8">
+                <Label className="mb-4">Förbättringsområden</Label>
+                {warnings.length > 0 ? (
+                  <ul className="space-y-2.5">
                     {warnings.map(w => (
-                      <li key={w} className="flex gap-2.5 text-[15px] text-ink">
+                      <li key={w} className="flex gap-2.5 text-[15px] leading-snug text-ink">
                         <StatusDot tone="warn" /> {w}
                       </li>
                     ))}
                   </ul>
-                </div>
-              )}
+                ) : (
+                  <p className="text-[15px] text-ink-3">Inget som sticker ut som svagt.</p>
+                )}
+              </div>
             </div>
-          )}
-        </div>
+          </>
+        )}
+
+        {potentialGainKr !== null && (
+          <>
+            <Divider />
+            <div className="px-5 py-6 sm:px-8 sm:py-7">
+              <Label className="mb-3">Möjlig förbättring med föreslagna alternativ</Label>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="figure text-[32px] leading-none text-pos sm:text-[38px]">
+                    +{Math.round(potentialGainKr).toLocaleString("sv-SE")} kr per år
+                  </p>
+                  <p className="mt-2 text-xs text-ink-3">
+                    {assumed ? "Beräknat på 100 000 kr. " : ""}
+                    Baserat på avgifter och historisk treårsavkastning – inte en prognos.
+                  </p>
+                </div>
+                <a
+                  href="#foreslagna-alternativ"
+                  className="shrink-0 text-sm font-semibold text-accent underline decoration-accent/30 underline-offset-4 transition-colors hover:text-accent-hover"
+                >
+                  Se föreslagna alternativ
+                </a>
+              </div>
+            </div>
+          </>
+        )}
 
         <Divider />
 
