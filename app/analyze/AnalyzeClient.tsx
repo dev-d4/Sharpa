@@ -1528,7 +1528,7 @@ export default function AnalyzeClient() {
                 type="button"
                 onClick={() => setInputMethod("manual")}
                 className={cn(
-                  "group flex min-h-[64px] items-center justify-start gap-3 px-5 py-3 text-left transition-colors duration-150 sm:justify-center sm:px-4",
+                  "group flex min-h-[64px] items-center justify-start gap-3 px-5 py-3 text-left transition-colors duration-150",
                   inputMethod === "manual" ? "bg-section" : "bg-white hover:bg-section/60"
                 )}
               >
@@ -1551,7 +1551,7 @@ export default function AnalyzeClient() {
                 onClick={() => { setImportResult(null); setImportError(null); setImportWizard({ open: true, file: null }); }}
                 disabled={importing}
                 className={cn(
-                  "group flex min-h-[64px] items-center justify-start gap-3 px-5 py-3 text-left transition-colors duration-150 disabled:cursor-wait sm:justify-center sm:px-4",
+                  "group flex min-h-[64px] items-center justify-start gap-3 px-5 py-3 text-left transition-colors duration-150 disabled:cursor-wait",
                   importing ? "bg-section" : "bg-white hover:bg-section/60"
                 )}
               >
@@ -1577,7 +1577,7 @@ export default function AnalyzeClient() {
                 type="button"
                 onClick={() => setInputMethod("ai")}
                 className={cn(
-                  "group flex min-h-[64px] items-center justify-start gap-3 px-5 py-3 text-left transition-colors duration-150 sm:justify-center sm:px-4",
+                  "group flex min-h-[64px] items-center justify-start gap-3 px-5 py-3 text-left transition-colors duration-150",
                   inputMethod === "ai" ? "bg-section" : "bg-white hover:bg-section/60"
                 )}
               >
