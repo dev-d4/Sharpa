@@ -392,7 +392,7 @@ function HoldingsSection({ data }: { data: PortfolioData }) {
   const tdCls = "px-3 py-3.5 text-sm text-[#5B6472] whitespace-nowrap";
 
   return (
-    <div className="rounded-xl overflow-hidden inline-block min-w-full">
+    <div className="rounded-md overflow-hidden inline-block min-w-full">
       <table className="border-collapse">
         <thead>
           <tr>
@@ -877,7 +877,7 @@ export default function MorningstarDashboard({
   if (error) {
     return (
       <main className="min-h-screen flex items-center justify-center p-6" style={{ background: "#FAFAF8" }}>
-        <div className="bg-white border border-[#F6F7F9] rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-10 flex gap-5 max-w-xl w-full">
+        <div className="bg-white border border-[#F6F7F9] rounded-lg shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-10 flex gap-5 max-w-xl w-full">
           <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center shrink-0">
             <AlertCircle className="text-red-500" size={18} />
           </div>
@@ -970,7 +970,7 @@ export default function MorningstarDashboard({
                 )}
               </button>
               {docsOpen && (
-                <div className="absolute right-0 top-full mt-2 z-50 bg-white border border-[#F6F7F9] rounded-xl shadow-xl overflow-hidden">
+                <div className="absolute right-0 top-full mt-2 z-50 bg-white border border-[#F6F7F9] rounded-md shadow-xl overflow-hidden">
                   <DocumentsPanel portfolioId={portfolioId} onCountChange={setDocCount} />
                 </div>
               )}
@@ -1193,7 +1193,7 @@ export default function MorningstarDashboard({
                 className="mt-3 text-sm font-medium transition-colors"
                 style={{ color: "#274C77" }}
               >
-                Lägg till sektioner →
+                Lägg till sektioner
               </button>
             )}
           </div>
@@ -1227,7 +1227,7 @@ export default function MorningstarDashboard({
 
                   {/* Section */}
                   <div className={cn(
-                    "transition-all duration-200 py-10 sm:py-12 rounded-2xl",
+                    "transition-all duration-200 py-10 sm:py-12 rounded-lg",
                     isBeingDragged
                       ? "opacity-30"
                       : canPair
@@ -1344,7 +1344,7 @@ export default function MorningstarDashboard({
             onDragLeave={() => setEndZoneActive(false)}
             onDrop={handleEndDrop}
             className={cn(
-              "flex items-center justify-center rounded-xl border-2 border-dashed transition-all mb-6",
+              "flex items-center justify-center rounded-md border-2 border-dashed transition-all mb-6",
               endZoneActive
                 ? "h-16 border-[#274C77] bg-[#EEF4FF]/40"
                 : "h-10 border-[#F6F7F9]"

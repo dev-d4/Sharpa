@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
-import { Inter, Manrope, DM_Serif_Display } from "next/font/google";
+import { IBM_Plex_Sans, IBM_Plex_Mono, Source_Serif_4, DM_Serif_Display } from "next/font/google";
 import "./globals.css";
 import Header from "./Header";
 import Footer from "./Footer";
@@ -9,8 +9,29 @@ import { Prefetch } from "@/components/ui/prefetch";
 import CookieBanner from "@/components/ui/CookieBanner";
 import { ScrollToTop } from "@/components/ui/ScrollToTop";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" }); // unslop-ignore — valt för tabulära siffror i datatäta vyer
-const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" });
+// Neutral grotesk för all UI och brödtext — äkta tabulära siffror och full
+// svensk teckenuppsättning. Ersätter Manrope, vars geometriska former läste
+// som lekfulla i displaystorlek.
+const plexSans = IBM_Plex_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-plex-sans",
+  display: "swap",
+});
+// Redaktionell serif — endast displayrubriker (landning, sidtitlar, rapport).
+const sourceSerif = Source_Serif_4({
+  subsets: ["latin"],
+  style: ["normal", "italic"],
+  variable: "--font-source-serif",
+  display: "swap",
+});
+// Mono för nyckeltal och versaletiketter.
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-plex-mono",
+  display: "swap",
+});
 export const dmSerif = DM_Serif_Display({ // unslop-ignore — används endast av rapport/portfolioanalysis (eget designsystem)
   weight: "400",
   subsets: ["latin"],
@@ -51,22 +72,24 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-const bodyClass = `${inter.variable} ${manrope.variable} ${dmSerif.variable} ${inter.className} min-h-dvh flex flex-col text-slate-900 leading-relaxed`; // unslop-ignore — dm-serif exponeras enbart för rapport/portfolioanalysis
+// Fontvariablerna sitter på <html>, inte <body>: Tailwinds @theme skriver
+// --font-sans/--font-display/--font-mono på :root, och var()-uppslaget sker där
+// variabeln definieras. Låg de på body skulle uppslaget ske utanför räckvidd.
+const htmlClass = `${plexSans.variable} ${sourceSerif.variable} ${plexMono.variable} ${dmSerif.variable}`; // unslop-ignore — dm-serif exponeras enbart för rapport/portfolioanalysis
+const bodyClass = `${plexSans.className} min-h-dvh flex flex-col text-ink leading-relaxed`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="sv">
+    <html lang="sv" className={htmlClass}>
       <body className={bodyClass}>
         <ScrollToTop />
         <ResumeAfterLogin />
         <Header />
 
         <Prefetch hrefs={["/analyze", "/bygg-portfolj"]} />
-        <main className="flex-1 pb-nav-safe sm:pb-0">{children}</main>
+        <main className="flex-1">{children}</main>
 
         <Footer />
-        {/* Spacer so the footer clears the fixed mobile quick actions */}
-        <div className="sm:hidden shrink-0" style={{ height: "calc(76px + max(8px, env(safe-area-inset-bottom, 0px)))" }} aria-hidden="true" />
 
         <CookieBanner />
         <Analytics />

@@ -89,7 +89,7 @@ function FundSearch({ custodian, excludeIsins, onSelect }: {
 
   return (
     <div ref={ref} className="relative">
-      <div className="flex items-center gap-2 border border-slate-200 rounded-xl bg-white px-3 py-2.5 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all">
+      <div className="flex items-center gap-2 border border-slate-200 rounded-md bg-white px-3 py-2.5 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all">
         <Search className="w-4 h-4 text-slate-400 shrink-0" />
         <input
           value={query}
@@ -105,7 +105,7 @@ function FundSearch({ custodian, excludeIsins, onSelect }: {
         )}
       </div>
       {open && results.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-30 overflow-hidden">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-md shadow-lg z-30 overflow-hidden">
           {results.map(r => (
             <button
               key={r.isin}
@@ -218,7 +218,7 @@ export default function FondguideTab({
 
       {/* Comparison table */}
       {details.length > 0 && !loadingDetails && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[560px]">
               <thead>
@@ -362,7 +362,7 @@ export default function FondguideTab({
 
       {/* Empty state */}
       {details.length === 0 && !loadingDetails && (
-        <div className="bg-slate-50 rounded-2xl border border-dashed border-slate-200 p-10 text-center">
+        <div className="bg-slate-50 rounded-lg border border-dashed border-slate-200 p-10 text-center">
           <p className="text-sm font-medium text-slate-500">Inga fonder att jämföra</p>
           <p className="text-xs text-slate-400 mt-1">Sök ovan för att lägga till fonder i jämförelsen</p>
         </div>

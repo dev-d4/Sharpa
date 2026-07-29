@@ -112,7 +112,7 @@ function FundRowInput({
           <ChevronDown className={cn("w-4 h-4 text-[#8D95A3] shrink-0 transition-transform", open && "rotate-180")} />
         </button>
         {open && (
-          <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#E8EAE8] rounded-xl shadow-xl overflow-hidden">
+          <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#E8EAE8] rounded-md shadow-xl overflow-hidden">
             <div className="p-2 border-b border-[#F6F7F9]">
               <input
                 autoFocus
@@ -234,7 +234,7 @@ function CostCard({
   return (
     <div
       className={cn(
-        "rounded-2xl p-6 flex-1 border",
+        "rounded-lg p-6 flex-1 border",
         accent ? "border-[#274C77]/20" : "border-[#E8EAE8]",
       )}
       style={{ background: accent ? "#EEF4FF" : "#FAFAF8" }}
@@ -360,7 +360,7 @@ export default function ComparisonTool({
           Ange kundens nuvarande fondinnehav och depåkostnader för att beräkna en jämförelse.
         </p>
 
-        <div className="bg-white border border-[#E8EAE8] rounded-2xl p-6 space-y-6 max-w-2xl">
+        <div className="bg-white border border-[#E8EAE8] rounded-lg p-6 space-y-6 max-w-2xl">
 
           {/* Platform name */}
           <div>
@@ -458,7 +458,7 @@ export default function ComparisonTool({
               disabled={!hasFunds || !weightOk}
               onClick={() => setCalculated(true)}
               className={cn(
-                "px-5 py-2.5 rounded-xl text-sm font-semibold transition-all",
+                "px-5 py-2.5 rounded-md text-sm font-semibold transition-all",
                 hasFunds && weightOk
                   ? "text-white hover:opacity-90 active:scale-[0.98]"
                   : "opacity-40 cursor-not-allowed text-white",
@@ -507,7 +507,7 @@ export default function ComparisonTool({
             {/* Savings banner */}
             {annualSaving != null && annualSaving > 0 && (
               <div
-                className="max-w-2xl rounded-2xl px-6 py-5 flex flex-wrap items-center gap-4"
+                className="max-w-2xl rounded-lg px-6 py-5 flex flex-wrap items-center gap-4"
                 style={{ background: "linear-gradient(135deg, #274C77 0%, #1F3D61 100%)" }}
               >
                 <div className="flex-1 min-w-0">
@@ -533,7 +533,7 @@ export default function ComparisonTool({
               </div>
             )}
             {annualSaving != null && annualSaving <= 0 && (
-              <div className="max-w-2xl rounded-2xl px-6 py-4 border border-[#E8EAE8] bg-[#FAFAF8]">
+              <div className="max-w-2xl rounded-lg px-6 py-4 border border-[#E8EAE8] bg-[#FAFAF8]">
                 <p className="text-sm text-[#5B6472]">
                   Den befintliga portföljens totala kostnad ({existingMetrics.totalFee.toFixed(2)}%) är jämförbar med {portfolioName} ({targetMetrics.totalFee.toFixed(2)}%).
                 </p>
@@ -547,7 +547,7 @@ export default function ComparisonTool({
               Avkastning &amp; risk
             </p>
 
-            <div className="bg-white border border-[#E8EAE8] rounded-2xl overflow-hidden max-w-2xl">
+            <div className="bg-white border border-[#E8EAE8] rounded-lg overflow-hidden max-w-2xl">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-[#F6F7F9]" style={{ background: "#FAFAF8" }}>
@@ -637,7 +637,7 @@ export default function ComparisonTool({
               Fondspecifikation – befintlig portfölj
             </p>
 
-            <div className="bg-white border border-[#E8EAE8] rounded-2xl overflow-hidden max-w-2xl">
+            <div className="bg-white border border-[#E8EAE8] rounded-lg overflow-hidden max-w-2xl">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-[#F6F7F9]" style={{ background: "#FAFAF8" }}>

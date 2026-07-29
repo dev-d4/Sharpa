@@ -622,7 +622,7 @@ export default function PrintClient() {
                           <div className="swap-fund-name">{swap.currentFund.name}</div>
                           <div className="swap-fund-isin">{swap.currentFund.isin}</div>
                         </div>
-                        <div className="swap-arrow">→</div>
+                        <div className="swap-arrow">till</div>
                         <div className="swap-fund">
                           <div className="swap-fund-label buy">{swap.consolidate ? "Alternativ viktning" : "Alternativ fond"}</div>
                           <div className="swap-fund-name">{swap.suggestedFund.name}</div>

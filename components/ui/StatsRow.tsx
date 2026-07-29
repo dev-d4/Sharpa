@@ -6,17 +6,17 @@ import { getAnalyzedPortfolioCount, getAnalyzedFundCount, formatPortfolioCount, 
 
 function StatCell({ value, label }: { value: string; label: string }) {
   return (
-    <div className="flex-1 px-1.5 sm:px-6 text-center">
-      <span className="block font-heading font-extrabold text-[13px] sm:text-[17px] text-ink tabular-nums leading-tight">
+    <div className="flex-1 px-2 text-center sm:px-6">
+      <span className="figure block text-[18px] leading-tight text-ink sm:text-[26px]">
         {value}
       </span>
-      <span className="block mt-0.5 text-[9px] sm:text-[11px] text-ink-2 leading-snug">{label}</span>
+      <span className="mt-1.5 block text-[11px] leading-snug text-ink-3 sm:text-[13px]">{label}</span>
     </div>
   );
 }
 
 function Divider() {
-  return <div aria-hidden="true" className="w-px h-6 sm:h-6 bg-line shrink-0" />;
+  return <div aria-hidden="true" className="w-px shrink-0 self-stretch bg-line" />;
 }
 
 export default async function StatsRow() {
@@ -28,8 +28,8 @@ export default async function StatsRow() {
   const funds = fundCount > 0 ? formatFundCount(fundCount) : "1 500+";
 
   return (
-    <section className="py-5 sm:py-6">
-      <div className="mx-auto flex max-w-lg sm:max-w-none items-center justify-center gap-1 sm:gap-0">
+    <section className="py-8 sm:py-10">
+      <div className="mx-auto flex max-w-lg items-stretch justify-center sm:max-w-none">
         <StatCell value={funds} label="fonder analyserade" />
         <Divider />
         <StatCell value={portfolios} label="portföljexempel skapade" />

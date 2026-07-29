@@ -180,7 +180,7 @@ export default function EditPortfolioClient({ portfolio: initial }: { portfolio:
         <form onSubmit={save} className="space-y-6">
 
           {/* Grundinformation */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
+          <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6 space-y-5">
             <h2 className="text-sm font-bold text-slate-900">Grundinformation</h2>
 
             <div className="grid sm:grid-cols-2 gap-4">
@@ -192,7 +192,7 @@ export default function EditPortfolioClient({ portfolio: initial }: { portfolio:
                   value={fields.display_name}
                   onChange={e => set("display_name", e.target.value)}
                   placeholder="Global Aktieportfölj"
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-slate-200 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div className="space-y-1.5">
@@ -204,7 +204,7 @@ export default function EditPortfolioClient({ portfolio: initial }: { portfolio:
                   value={fields.slug}
                   onChange={e => set("slug", e.target.value.trim().toLowerCase())}
                   placeholder="global-aktier"
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-slate-200 rounded-md px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <p className="text-[10px] text-slate-400">
                   Länk: /radgivning/portfolioanalysis/
@@ -220,7 +220,7 @@ export default function EditPortfolioClient({ portfolio: initial }: { portfolio:
               <input
                 value={initial.morningstar_id}
                 readOnly
-                className="w-full border border-slate-100 bg-slate-50 rounded-xl px-3 py-2.5 text-sm font-mono text-slate-400 cursor-not-allowed"
+                className="w-full border border-slate-100 bg-slate-50 rounded-md px-3 py-2.5 text-sm font-mono text-slate-400 cursor-not-allowed"
               />
             </div>
 
@@ -249,7 +249,7 @@ export default function EditPortfolioClient({ portfolio: initial }: { portfolio:
           </div>
 
           {/* Metadata */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
+          <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6 space-y-5">
             <h2 className="text-sm font-bold text-slate-900">Metadata</h2>
 
             <div className="grid sm:grid-cols-3 gap-4">
@@ -265,7 +265,7 @@ export default function EditPortfolioClient({ portfolio: initial }: { portfolio:
                   value={fields.fee}
                   onChange={e => set("fee", e.target.value)}
                   placeholder="0.50"
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-slate-200 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div className="space-y-1.5">
@@ -275,7 +275,7 @@ export default function EditPortfolioClient({ portfolio: initial }: { portfolio:
                 <select
                   value={fields.risk_level}
                   onChange={e => set("risk_level", e.target.value)}
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="w-full border border-slate-200 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 >
                   <option value="">—</option>
                   <option value="1">1 — Låg</option>
@@ -292,7 +292,7 @@ export default function EditPortfolioClient({ portfolio: initial }: { portfolio:
                 <select
                   value={fields.portfolio_type}
                   onChange={e => set("portfolio_type", e.target.value)}
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="w-full border border-slate-200 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 >
                   <option value="equity">Aktier (equity)</option>
                   <option value="bond">Räntor (bond)</option>
@@ -302,7 +302,7 @@ export default function EditPortfolioClient({ portfolio: initial }: { portfolio:
           </div>
 
           {/* Dashboard-kommentar */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
             <div className="px-4 pt-4 pb-3 border-b border-slate-100">
               <h2 className="text-sm font-bold text-slate-900 mb-3">Dashboard-kommentar</h2>
               <div className="space-y-1.5">
@@ -313,7 +313,7 @@ export default function EditPortfolioClient({ portfolio: initial }: { portfolio:
                   value={fields.commentary_title}
                   onChange={e => set("commentary_title", e.target.value)}
                   placeholder="Kommentar från portföljförvaltaren"
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-slate-200 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <p className="text-[10px] text-slate-400">Visas som rubrik ovanför kommentarstexten. Tomt = standardrubrik.</p>
               </div>
@@ -370,7 +370,7 @@ export default function EditPortfolioClient({ portfolio: initial }: { portfolio:
           </div>
 
           {error && (
-            <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 px-4 py-3 rounded-xl border border-red-100">
+            <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 px-4 py-3 rounded-md border border-red-100">
               <AlertCircle className="w-4 h-4 shrink-0" />
               {error}
             </div>
@@ -380,7 +380,7 @@ export default function EditPortfolioClient({ portfolio: initial }: { portfolio:
             type="submit"
             disabled={saving}
             className={cn(
-              "flex items-center gap-2 text-sm font-semibold px-6 py-3 rounded-xl transition-all",
+              "flex items-center gap-2 text-sm font-semibold px-6 py-3 rounded-md transition-all",
               saved
                 ? "bg-emerald-500 text-white"
                 : "bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-60",
@@ -396,7 +396,7 @@ export default function EditPortfolioClient({ portfolio: initial }: { portfolio:
         </form>
 
         {/* Portföljdokument (utanför formuläret, egna API-anrop) */}
-        <div className="mt-6 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+        <div className="mt-6 bg-white rounded-lg border border-slate-200 shadow-sm p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-sm font-bold text-slate-900">Portföljdokument</h2>

@@ -27,17 +27,17 @@ export default function CookieBanner() {
 
   return (
     <div ref={bannerRef} className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 sm:px-6 sm:pb-6 pointer-events-none">
-      <div className="max-w-2xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-lg p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5 pointer-events-auto">
-        <p className="text-sm text-slate-600 flex-1 leading-relaxed">
+      <div className="pointer-events-auto mx-auto flex max-w-2xl flex-col gap-3 rounded-md border border-line bg-white p-4 shadow-[0_8px_28px_rgba(20,20,30,.12)] sm:flex-row sm:items-center sm:gap-5 sm:p-5">
+        <p className="flex-1 text-sm leading-relaxed text-ink-2">
           Vi använder nödvändiga cookies för autentisering. Inga spårningskakor.{" "}
-          <Link href="/kakpolicy" className="text-blue-600 hover:underline">
+          <Link href="/kakpolicy" className="text-accent underline decoration-line-strong underline-offset-2 transition-colors duration-150 hover:decoration-accent">
             Läs mer
           </Link>
           .
         </p>
         <button
           onClick={accept}
-          className="shrink-0 bg-slate-900 hover:bg-slate-700 text-white text-sm font-medium px-5 py-2 rounded-xl transition-colors"
+          className="h-11 shrink-0 rounded-xs bg-accent px-5 text-sm font-medium text-white transition-colors duration-150 hover:bg-accent-hover"
         >
           Förstått
         </button>

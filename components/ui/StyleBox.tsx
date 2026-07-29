@@ -112,7 +112,7 @@ export default function StyleBox({ data, heatColors }: { data: StyleboxItem[]; h
             borderRadius: 2,
           }}
         />
-        <span className="text-[9px] text-slate-400">Lägre → Högre vikt</span>
+        <span className="text-[9px] text-slate-400">Lägre till högre vikt</span>
       </div>
 
       {/* Tooltip */}

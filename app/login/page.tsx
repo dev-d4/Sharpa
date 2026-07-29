@@ -53,27 +53,26 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+    <div className="flex min-h-screen items-center justify-center bg-canvas px-4 py-12">
       <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="flex flex-col items-center mb-8">
+        {/* Logo — nedtonad märkesyta, titeln bär vyn */}
+        <div className="mb-8 flex flex-col items-center text-center">
           <Link href="/">
-            <Image src="/logo.svg" alt="Sharpa" width={48} height={48} />
+            <Image src="/logo.svg" alt="Sharpa" width={28} height={28} />
           </Link>
-          <h1 className="mt-3 text-2xl font-bold text-slate-900">Logga in eller skapa konto</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <h1 className="mt-5 font-display text-[26px] leading-tight text-ink sm:text-[30px]">Logga in eller skapa konto</h1>
+          <p className="mt-2 text-[15px] text-ink-2">
             Inget konto? Vi skapar ett åt dig automatiskt.
           </p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
+        <div className="space-y-4 rounded-md border border-line bg-white p-6">
           {sent && MAGIC_LINK_ENABLED ? (
-            <div className="text-center py-4 space-y-2">
-              <div className="text-3xl">✉️</div>
-              <p className="font-semibold text-slate-900">Kolla din e-post</p>
-              <p className="text-sm text-slate-500">
+            <div className="space-y-2 py-4 text-center">
+              <p className="text-base font-medium text-ink">Kolla din e-post</p>
+              <p className="text-sm text-ink-2">
                 Vi har skickat en inloggningslänk till{" "}
-                <span className="font-medium text-slate-700">{email}</span>.
+                <span className="text-ink">{email}</span>.
               </p>
             </div>
           ) : (
@@ -81,7 +80,7 @@ function LoginForm() {
               {/* Google */}
               <button
                 onClick={handleGoogle}
-                className="w-full flex items-center justify-center gap-3 border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                className="flex h-11 w-full items-center justify-center gap-3 rounded-xs border border-line-strong bg-white text-sm font-medium text-ink transition-colors duration-150 hover:bg-section"
               >
                 <svg width="18" height="18" viewBox="0 0 18 18">
                   <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/>
@@ -95,9 +94,9 @@ function LoginForm() {
               {MAGIC_LINK_ENABLED && (
                 <>
                   <div className="flex items-center gap-3">
-                    <div className="flex-1 h-px bg-slate-200" />
-                    <span className="text-xs text-slate-400">eller</span>
-                    <div className="flex-1 h-px bg-slate-200" />
+                    <div className="h-px flex-1 bg-line" />
+                    <span className="text-xs text-ink-3">eller</span>
+                    <div className="h-px flex-1 bg-line" />
                   </div>
 
                   {/* Magic link */}
@@ -108,13 +107,13 @@ function LoginForm() {
                       placeholder="din@email.se"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="h-11 w-full rounded-xs border border-line-strong bg-white px-4 text-sm text-ink placeholder:text-ink-3 focus:border-accent"
                     />
-                    {error && <p className="text-xs text-red-600">{error}</p>}
+                    {error && <p className="text-xs text-neg">{error}</p>}
                     <button
                       type="submit"
                       disabled={loading}
-                      className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press disabled:bg-blue-300 text-white font-semibold rounded-[10px] py-2.5 text-sm transition-colors"
+                      className="flex h-11 w-full items-center justify-center rounded-xs bg-accent text-sm font-medium text-white transition-colors duration-150 hover:bg-accent-hover active:bg-accent-press disabled:opacity-50"
                     >
                       {loading ? "Skickar…" : "Skicka inloggningslänk"}
                     </button>
@@ -125,11 +124,11 @@ function LoginForm() {
           )}
         </div>
 
-        <p className="text-center text-xs text-slate-400 mt-6">
+        <p className="mt-6 text-center text-xs leading-relaxed text-ink-3">
           Genom att logga in godkänner du våra{" "}
-          <Link href="/villkor" className="underline hover:text-slate-600 transition-colors">användarvillkor</Link>
+          <Link href="/villkor" className="text-accent underline decoration-line-strong underline-offset-2 transition-colors duration-150 hover:decoration-accent">användarvillkor</Link>
           {" "}och{" "}
-          <Link href="/integritetspolicy" className="underline hover:text-slate-600 transition-colors">integritetspolicy</Link>.
+          <Link href="/integritetspolicy" className="text-accent underline decoration-line-strong underline-offset-2 transition-colors duration-150 hover:decoration-accent">integritetspolicy</Link>.
         </p>
       </div>
     </div>

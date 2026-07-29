@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, ChevronRight, RotateCcw } from "lucide-react";
+import { ChevronRight, RotateCcw } from "lucide-react";
 import { createClient } from "@/lib/supabase-browser";
 import { RISK_LABELS, RISK_EQUITY, RISK_EQUITY_PCT, type RiskLevel } from "@/lib/risk";
 import type { User } from "@supabase/supabase-js";
@@ -277,23 +277,36 @@ const RATIONALE_SHORT: Record<string, string> = {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
+/**
+ * En rad i alternativlistan. Raderna sitter i en gemensam bordad grupp och
+ * avdelas av hårlinjer — inte fem separata kort. Radioknappen är avsiktligt
+ * cirkulär (funktionellt cirkulärt element) och vald rad får både fylld radio
+ * och en dämpad bakgrund, så färg aldrig är enda markören.
+ */
 function OptionCard({ label, desc, onClick, selected }: {
   label: string; desc: string; onClick: () => void; selected?: boolean;
 }) {
   return (
     <button
       type="button"
+      role="radio"
+      aria-checked={!!selected}
       onClick={onClick}
-      className={`w-full rounded-[10px] border px-3.5 py-3 text-left transition-colors sm:px-4 sm:py-4 ${
-        selected ? "border-accent bg-info" : "border-line bg-white hover:border-accent"
+      className={`flex w-full min-h-[56px] items-center gap-3.5 border-b border-line px-4 py-3.5 text-left transition-colors duration-150 last:border-b-0 sm:px-5 sm:py-4 ${
+        selected ? "bg-section" : "bg-white hover:bg-section/60"
       }`}
     >
-      <span className="flex items-center justify-between gap-3">
-        <span className="min-w-0">
-          <p className="text-[13px] font-semibold leading-snug text-slate-800 sm:text-[15px]">{label}</p>
-          <p className="mt-0.5 text-xs leading-snug text-slate-500 sm:mt-1 sm:text-sm">{desc}</p>
-        </span>
-        {selected && <Check className="h-4 w-4 shrink-0 text-accent" strokeWidth={2.5} aria-hidden="true" />}
+      <span
+        aria-hidden="true"
+        className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 ${
+          selected ? "border-accent" : "border-line-strong"
+        }`}
+      >
+        {selected && <span className="h-[7px] w-[7px] rounded-full bg-accent" />}
+      </span>
+      <span className="min-w-0">
+        <span className={`block text-[15px] leading-snug ${selected ? "font-medium text-ink" : "text-ink"}`}>{label}</span>
+        <span className="mt-0.5 block text-sm leading-snug text-ink-3">{desc}</span>
       </span>
     </button>
   );
@@ -702,6 +715,9 @@ export default function BuilderClient() {
   };
 
   const meta = STEP_META[step];
+  // Stegen med rena alternativlistor får radiolistan som enda kortyta; stegen
+  // med rikare innehåll (kategorival, resultat) behåller sitt kortomslag.
+  const isOptionStep = !isResults && step !== "selections";
 
   // Group selection options by group label
   const selectionGroups = SELECTION_OPTIONS.reduce<Record<string, typeof SELECTION_OPTIONS>>((acc, o) => {
@@ -720,25 +736,32 @@ export default function BuilderClient() {
     <div className={`${isResults ? "max-w-4xl" : step === "selections" ? "max-w-3xl" : showPreview ? "max-w-3xl" : "max-w-lg"} mx-auto px-4 py-5 transition-all duration-200 sm:py-16`}>
 
       {/* Page header */}
-      <div className="mb-5 text-center sm:mb-8">
-        <h1 className="font-heading text-xl font-bold text-slate-900 sm:text-3xl">Bygg din portfölj</h1>
-        <p className="mt-1 text-xs text-slate-500 sm:mt-2 sm:text-sm">
-          Svara på {totalSteps} frågor — vi visar ett komplett portföljexempel
+      <div className="mb-8 text-center sm:mb-12">
+        <h1 className="font-display text-[30px] leading-tight text-ink sm:text-[42px]">Bygg din portfölj</h1>
+        <p className="mt-2 text-sm text-ink-2 sm:text-base">
+          Svara på {totalSteps} frågor — vi visar ett komplett portföljexempel.
         </p>
       </div>
 
-      {/* Progress bar */}
+      {/* Stegmätare — mono-metadata över en tunn neutral progressrad */}
       {!isResults && (
-        <div className="mb-4 sm:mb-6">
-          <div className="flex justify-between text-xs text-slate-400 mb-1.5">
-            <span>Fråga {stepIdx + 1} av {totalSteps}</span>
-            <span>{Math.round(((stepIdx + 1) / totalSteps) * 100)}%</span>
+        <div className="mb-8">
+          <div className="mb-2 flex justify-between">
+            <span className="label-meta">Fråga {stepIdx + 1} av {totalSteps}</span>
+            <span className="label-meta">{Math.round(((stepIdx + 1) / totalSteps) * 100)} %</span>
           </div>
-          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+          <div
+            className="h-[3px] bg-fill-muted"
+            role="progressbar"
+            aria-label={`Steg ${stepIdx + 1} av ${totalSteps}`}
+            aria-valuemin={1}
+            aria-valuemax={totalSteps}
+            aria-valuenow={stepIdx + 1}
+          >
             <motion.div
-              className="h-full bg-accent rounded-full"
+              className="h-full bg-ink"
               animate={{ width: `${((stepIdx + 1) / totalSteps) * 100}%` }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 0.2 }}
             />
           </div>
         </div>
@@ -758,22 +781,28 @@ export default function BuilderClient() {
           animate="center"
           exit="exit"
           transition={{ duration: 0.2 }}
-          className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"
+          className={isOptionStep ? "" : "overflow-hidden rounded-md border border-line bg-white"}
         >
           {!isResults && (
-            <div className="border-b border-slate-100 px-4 pb-3 pt-4 sm:px-5 sm:pb-4 sm:pt-5">
-              <p className="text-sm font-bold leading-snug text-slate-900 sm:text-base">{meta.title}</p>
-              {meta.subtitle && <p className="mt-0.5 text-[11px] leading-snug text-slate-400 sm:text-xs">{meta.subtitle}</p>}
+            /* Frågan står direkt på pappersytan när alternativen är en radiolista
+               — kortet nedanför håller enbart valen. */
+            <div className={isOptionStep ? "mb-4" : "border-b border-line px-4 pb-3 pt-4 sm:px-5 sm:pb-4 sm:pt-5"}>
+              <p className="text-lg leading-snug font-medium text-ink sm:text-xl">{meta.title}</p>
+              {meta.subtitle && <p className="mt-1 text-sm leading-snug text-ink-3">{meta.subtitle}</p>}
             </div>
           )}
 
-          <div className="space-y-2 p-4 sm:p-5">
+          <div
+            className={isOptionStep ? "overflow-hidden rounded-md border border-line" : "space-y-2 p-4 sm:p-5"}
+            role={isOptionStep ? "radiogroup" : undefined}
+            aria-label={isOptionStep ? meta.title : undefined}
+          >
 
             {/* Platform */}
             {step === "platform" && (
               <>
                 {platformPrefilled && answers.platform && (
-                  <p className="rounded-[10px] bg-info px-3.5 py-2.5 text-xs leading-snug text-accent-press">
+                  <p className="border-b border-line bg-section px-4 py-3 text-sm leading-snug text-ink-2 sm:px-5">
                     Vi har fyllt i ditt svar från fondanalysen — klicka för att bekräfta, eller välj ett annat.
                   </p>
                 )}
@@ -825,10 +854,10 @@ export default function BuilderClient() {
                         const opt = SELECTION_OPTIONS.find((o) => o.value === id)!;
                         const prio = priorities[id] ?? 2;
                         return (
-                          <div key={id} className="flex items-center gap-1.5 bg-info border border-info-line rounded-lg pl-3 pr-2 py-1.5">
-                            <span className="text-xs font-semibold text-blue-700">{opt.label}</span>
-                            <span className="text-[10px] text-blue-400">· {TIER_LABELS[prio]}</span>
-                            <button type="button" onClick={() => toggleSelection(id)} className="w-4 h-4 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-500 flex items-center justify-center transition-colors shrink-0">
+                          <div key={id} className="flex items-center gap-1.5 rounded-xs border border-line bg-section py-1.5 pl-3 pr-2">
+                            <span className="text-xs font-medium text-ink">{opt.label}</span>
+                            <span className="text-[10px] text-ink-3">· {TIER_LABELS[prio]}</span>
+                            <button type="button" onClick={() => toggleSelection(id)} className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-ink-3 transition-colors duration-150 hover:text-ink">
                               <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                             </button>
                           </div>
@@ -844,12 +873,12 @@ export default function BuilderClient() {
                     </button>
 
                     {autoExplanation && (
-                      <div className="flex items-start gap-2.5 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
-                        <svg className="mt-0.5 h-4 w-4 shrink-0 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                      <div className="flex items-start gap-2.5 rounded-md border border-line bg-section px-4 py-3">
+                        <svg className="mt-0.5 h-4 w-4 shrink-0 text-ink-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         <div>
-                          <p className="text-xs font-semibold text-blue-800">Förslag baserat på din valda risknivå</p>
-                          <p className="mt-1 text-xs leading-relaxed text-blue-700">{autoExplanation}</p>
-                          <p className="mt-1.5 text-xs leading-relaxed text-blue-600">
+                          <p className="text-xs font-medium text-ink">Förslag baserat på din valda risknivå</p>
+                          <p className="mt-1 text-xs leading-relaxed text-ink-2">{autoExplanation}</p>
+                          <p className="mt-1.5 text-xs leading-relaxed text-ink-3">
                             Fortsätt med förslaget som det är, eller ändra kategorierna själv.
                           </p>
                         </div>
@@ -866,10 +895,10 @@ export default function BuilderClient() {
                       onClick={() => setShowManualSelections(false)}
                       className="text-xs text-blue-600 hover:text-blue-800 transition-colors mb-1"
                     >
-                      ← Tillbaka till översikten
+                      Tillbaka till översikten
                     </button>
 
-                    <div className="rounded-[10px] bg-slate-50 px-3.5 py-2.5">
+                    <div className="rounded-md bg-slate-50 px-3.5 py-2.5">
                       <p className="text-xs leading-relaxed text-slate-600">
                         Välj de kategorier du vill ha med. De markerade kategorierna ingår redan i förslaget.
                       </p>
@@ -890,7 +919,7 @@ export default function BuilderClient() {
                                     key={o.value}
                                     type="button"
                                     onClick={() => toggleSelection(o.value)}
-                                    className={`w-full rounded-[10px] border px-3.5 py-2.5 text-left transition-colors sm:px-4 sm:py-3 ${
+                                    className={`w-full rounded-md border px-3.5 py-2.5 text-left transition-colors sm:px-4 sm:py-3 ${
                                       selected
                                         ? "border-accent bg-info"
                                         : "border-line bg-white hover:border-accent"
@@ -907,7 +936,7 @@ export default function BuilderClient() {
                         <button
                           type="button"
                           onClick={() => setShowAdvanced((v) => !v)}
-                          className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-slate-600 border border-dashed border-slate-200 rounded-xl py-3 transition-colors"
+                          className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-slate-600 border border-dashed border-slate-200 rounded-md py-3 transition-colors"
                         >
                           <svg className={`w-3.5 h-3.5 transition-transform ${showAdvanced ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/></svg>
                           {showAdvanced ? "Dölj avancerade val" : "Branscher, stil & räntor"}
@@ -924,7 +953,7 @@ export default function BuilderClient() {
                             const opt  = SELECTION_OPTIONS.find((o) => o.value === id)!;
                             const prio = priorities[id] ?? 2;
                             return (
-                              <div key={id} className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                              <div key={id} className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-md">
                                 <p className="text-xs font-semibold text-slate-700 truncate mb-1.5">{opt.label}</p>
                                 {pending.length > 1 ? (
                                   <div className="flex items-center gap-1.5">
@@ -952,9 +981,9 @@ export default function BuilderClient() {
                     type="button"
                     onClick={confirmSelections}
                     disabled={pending.length === 0}
-                    className="bg-accent hover:bg-accent-hover active:bg-accent-press disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-6 py-2.5 rounded-[10px] transition-colors text-sm"
+                    className="bg-accent hover:bg-accent-hover active:bg-accent-press disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-6 py-2.5 rounded-md transition-colors text-sm"
                   >
-                    Fortsätt →
+                    Fortsätt
                   </button>
                 </div>
               </>
@@ -988,7 +1017,7 @@ export default function BuilderClient() {
                 {!loading && !error && result && (
                   <div className="space-y-4">
 
-                    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                    <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                           <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Din valda fördelning</p>
@@ -1027,7 +1056,7 @@ export default function BuilderClient() {
                       </p>
 
                       {result.droppedSelections?.length > 0 && (
-                        <div className="bg-warn-soft border border-amber-200 rounded-xl px-4 py-3 space-y-1">
+                        <div className="bg-warn-soft border border-amber-200 rounded-md px-4 py-3 space-y-1">
                           <p className="text-xs font-semibold text-amber-800">Vissa kategorier togs bort</p>
                           {result.droppedSelections.map((msg, i) => (
                             <p key={i} className="text-xs text-amber-700">{msg}</p>
@@ -1036,7 +1065,7 @@ export default function BuilderClient() {
                       )}
 
                       {/* Sammanhållen fondlista */}
-                      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                      <div className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
                         <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-b border-slate-100 bg-slate-50 px-4 py-2.5">
                           <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 sm:pl-28">Fond</span>
                           <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Vikt</span>
@@ -1089,7 +1118,7 @@ export default function BuilderClient() {
                         })}
                       </div>
 
-                      <details className="group overflow-hidden rounded-xl border border-slate-200 bg-white">
+                      <details className="group overflow-hidden rounded-md border border-slate-200 bg-white">
                         <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50">
                           Läs mer om portföljexemplet
                           <svg className="h-4 w-4 text-slate-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/></svg>
@@ -1155,12 +1184,12 @@ export default function BuilderClient() {
                       </details>
 
                       {/* Slider */}
-                      <div className="border border-slate-100 rounded-xl p-4 space-y-3">
+                      <div className="border border-slate-100 rounded-md p-4 space-y-3">
                         <div className="flex justify-between items-center">
                           <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Justera fördelning</p>
                           {localEquity !== result.equityPct && (
                             <button onClick={() => submit({ ...answers, equityOverride: localEquity })} className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors">
-                              Generera om →
+                              Generera om
                             </button>
                           )}
                         </div>
@@ -1183,7 +1212,7 @@ export default function BuilderClient() {
 
                     <div className="mx-auto max-w-md space-y-3">
                       {/* Save — primary CTA */}
-                      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-3">
+                      <div className="bg-white border border-slate-200 rounded-md p-5 shadow-sm space-y-3">
                                 {saveStatus === "saved" ? (
                                   <p className="text-sm text-green-700 font-semibold text-center py-1">Portföljen sparad ✓</p>
                                 ) : !user ? (
@@ -1194,7 +1223,7 @@ export default function BuilderClient() {
                                     </div>
                                     <button
                                       onClick={openAuthModal}
-                                      className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold py-3.5 rounded-[10px] transition-colors"
+                                      className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold py-3.5 rounded-md transition-colors"
                                     >
                                       Logga in för att spara
                                     </button>
@@ -1205,30 +1234,30 @@ export default function BuilderClient() {
                                       <p className="text-sm font-semibold text-slate-900">Spara din portfölj</p>
                                       <p className="text-xs text-slate-400 mt-0.5">Kom åt den när som helst från Mina portföljer.</p>
                                     </div>
-                                    <button onClick={() => { setShowSaveForm(true); requestAnimationFrame(() => saveNameRef.current?.focus({ preventScroll: true })); }} className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold py-3.5 rounded-[10px] transition-colors">
+                                    <button onClick={() => { setShowSaveForm(true); requestAnimationFrame(() => saveNameRef.current?.focus({ preventScroll: true })); }} className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold py-3.5 rounded-md transition-colors">
                                       Spara portfölj
                                     </button>
                                   </>
                                 ) : (
                                   <div className="space-y-2">
-                                    <input ref={saveNameRef} type="text" placeholder="t.ex. ISK, Pension, Barnspar…" value={savingName} onChange={(e) => { setSavingName(e.target.value); setDuplicatePortfolio(null); setSaveStatus("idle"); }} onKeyDown={(e) => e.key === "Enter" && handleSave()} className="w-full border border-slate-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                    <input ref={saveNameRef} type="text" placeholder="t.ex. ISK, Pension, Barnspar…" value={savingName} onChange={(e) => { setSavingName(e.target.value); setDuplicatePortfolio(null); setSaveStatus("idle"); }} onKeyDown={(e) => e.key === "Enter" && handleSave()} className="w-full border border-slate-200 rounded-md px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                                     {duplicatePortfolio && (
-                                      <div className="rounded-xl border border-amber-200 bg-warn-soft px-3 py-3 space-y-2">
+                                      <div className="rounded-md border border-amber-200 bg-warn-soft px-3 py-3 space-y-2">
                                         <p className="text-xs font-medium text-amber-800">
                                           Du har redan en portfölj med namnet &ldquo;{duplicatePortfolio.name}&rdquo;. Vill du skriva över den?
                                         </p>
                                         <div className="flex gap-2">
-                                          <button type="button" onClick={() => { setDuplicatePortfolio(null); setSaveStatus("idle"); saveNameRef.current?.focus(); }} className="flex-1 rounded-[10px] border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-50">
+                                          <button type="button" onClick={() => { setDuplicatePortfolio(null); setSaveStatus("idle"); saveNameRef.current?.focus(); }} className="flex-1 rounded-md border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-50">
                                             Ändra namn
                                           </button>
-                                          <button type="button" onClick={() => handleSave(true)} disabled={saveStatus === "saving"} className="flex-1 rounded-[10px] bg-accent px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-40">
+                                          <button type="button" onClick={() => handleSave(true)} disabled={saveStatus === "saving"} className="flex-1 rounded-md bg-accent px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-40">
                                             Skriv över
                                           </button>
                                         </div>
                                       </div>
                                     )}
                                     <div className="flex gap-2">
-                                      <button onClick={() => handleSave()} disabled={!savingName.trim() || saveStatus === "saving"} className="flex-1 bg-accent hover:bg-accent-hover active:bg-accent-press disabled:opacity-40 text-white text-sm font-semibold py-3 rounded-[10px] transition-colors">
+                                      <button onClick={() => handleSave()} disabled={!savingName.trim() || saveStatus === "saving"} className="flex-1 bg-accent hover:bg-accent-hover active:bg-accent-press disabled:opacity-40 text-white text-sm font-semibold py-3 rounded-md transition-colors">
                                         {saveStatus === "saving" ? "Sparar…" : "Spara"}
                                       </button>
                                       <button onClick={() => { setShowSaveForm(false); setSavingName(""); setSaveStatus("idle"); setDuplicatePortfolio(null); }} className="text-sm text-slate-400 hover:text-slate-600 px-3 transition-colors">
@@ -1240,14 +1269,14 @@ export default function BuilderClient() {
                                 )}
                       </div>
 
-                      <button onClick={sendToAnalyze} className="w-full flex items-center justify-center gap-1.5 text-sm font-medium text-blue-600 border border-blue-200 rounded-xl py-3 hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700 transition-all">
+                      <button onClick={sendToAnalyze} className="w-full flex items-center justify-center gap-1.5 text-sm font-medium text-blue-600 border border-blue-200 rounded-md py-3 hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700 transition-all">
                         Analysera portföljen
                         <ChevronRight className="w-3.5 h-3.5" />
                       </button>
 
                     </div>
 
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3">
                       <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Ett exempel — inte en rekommendation</p>
                       <p className="mt-1 text-xs leading-relaxed text-slate-600">
                         Fördelningen är automatiskt genererad utifrån den risknivå du valt och generella
@@ -1266,9 +1295,9 @@ export default function BuilderClient() {
       </AnimatePresence>
 
       {/* Back button */}
-      {step !== "horizon" && (
+      {stepIdx > 0 && (
         <button onClick={goBack} className="mt-4 text-xs text-slate-400 hover:text-slate-600 transition-colors">
-          ← Tillbaka
+          Tillbaka
         </button>
       )}
 
@@ -1277,7 +1306,7 @@ export default function BuilderClient() {
       {/* Live preview panel — only on desktop, from step 2 onward */}
       {showPreview && (
         <div className="hidden lg:block sticky top-20 space-y-3">
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-4">
+          <div className="bg-white rounded-md border border-slate-200 shadow-sm p-4 space-y-4">
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Dina val hittills</p>
 
             {/* Risk score bar */}
@@ -1288,7 +1317,7 @@ export default function BuilderClient() {
               </div>
               <div className="flex gap-1">
                 {[1,2,3,4,5].map(i => (
-                  <div key={i} className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${i <= previewRiskScore ? "bg-blue-500" : "bg-slate-100"}`} />
+                  <div key={i} className={`h-[3px] flex-1 transition-colors duration-150 ${i <= previewRiskScore ? "bg-ink" : "bg-fill-muted"}`} />
                 ))}
               </div>
             </div>
@@ -1299,8 +1328,8 @@ export default function BuilderClient() {
                 <span>Aktier</span>
                 <span className="font-semibold text-slate-700">{previewEquity}%</span>
               </div>
-              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 rounded-full transition-all duration-500" style={{ width: `${previewEquity}%` }} />
+              <div className="h-[3px] overflow-hidden bg-fill-muted">
+                <div className="h-full bg-accent transition-all duration-200" style={{ width: `${previewEquity}%` }} />
               </div>
               <div className="flex justify-between text-xs text-slate-500">
                 <span>Räntor</span>
@@ -1374,7 +1403,7 @@ export default function BuilderClient() {
           className="fixed inset-0 bg-black/40 flex items-center justify-center z-[70] p-4"
           onClick={(e) => { if (e.target === e.currentTarget) { setAuthModal(false); setAuthSent(false); setAuthEmail(""); setAuthError(null); } }}
         >
-          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 space-y-4">
+          <div className="bg-white rounded-md shadow-2xl max-w-sm w-full p-6 space-y-4">
             <div className="text-center space-y-1">
               <p className="font-semibold text-slate-900 text-base">Logga in eller skapa konto</p>
               <p className="text-xs text-slate-400">Inget konto? Vi skapar ett åt dig automatiskt.</p>
@@ -1390,7 +1419,7 @@ export default function BuilderClient() {
               <>
                 <button
                   onClick={handleAuthGoogle}
-                  className="w-full flex items-center justify-center gap-3 border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                  className="w-full flex items-center justify-center gap-3 border border-slate-300 rounded-md px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
                 >
                   <svg width="18" height="18" viewBox="0 0 18 18">
                     <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/>
@@ -1414,13 +1443,13 @@ export default function BuilderClient() {
                         placeholder="din@email.se"
                         value={authEmail}
                         onChange={(e) => setAuthEmail(e.target.value)}
-                        className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full border border-slate-300 rounded-md px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                       {authError && <p className="text-xs text-red-600">{authError}</p>}
                       <button
                         type="submit"
                         disabled={authLoading}
-                        className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press disabled:bg-blue-300 text-white font-semibold rounded-[10px] py-2.5 text-sm transition-colors"
+                        className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press disabled:bg-blue-300 text-white font-semibold rounded-md py-2.5 text-sm transition-colors"
                       >
                         {authLoading ? "Skickar…" : "Skicka inloggningslänk"}
                       </button>
@@ -1443,7 +1472,7 @@ export default function BuilderClient() {
             type="button"
             onClick={confirmSelections}
             disabled={pending.length === 0}
-            className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-6 py-4 rounded-xl text-sm transition-colors"
+            className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-6 py-4 rounded-md text-sm transition-colors"
           >
             {pending.length === 0 ? "Välj minst ett alternativ" : `Fortsätt — ${pending.length} valda`}
           </button>

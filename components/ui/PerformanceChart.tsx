@@ -239,7 +239,7 @@ export default function PerformanceChart({ data }: { data: TWRData }) {
             <button
               key={r}
               onClick={() => changeRange(r)}
-              className="flex flex-col items-start px-4 py-2.5 rounded-xl transition-all text-left"
+              className="flex flex-col items-start px-4 py-2.5 rounded-md transition-all text-left"
               style={active
                 ? { background: "#274C77", color: "#fff" }
                 : { background: "#F3F4F2" }}

@@ -107,7 +107,7 @@ export default function VillkorPage() {
       <div className="mt-10 pt-6 border-t border-slate-200 flex gap-4 text-xs text-slate-400">
         <Link href="/integritetspolicy" className="hover:text-slate-600 transition-colors">Integritetspolicy</Link>
         <Link href="/kakpolicy" className="hover:text-slate-600 transition-colors">Kakpolicy</Link>
-        <Link href="/" className="hover:text-slate-600 transition-colors">← Tillbaka till startsidan</Link>
+        <Link href="/" className="hover:text-slate-600 transition-colors">Tillbaka till startsidan</Link>
       </div>
     </div>
   );

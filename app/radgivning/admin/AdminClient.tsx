@@ -111,7 +111,7 @@ function ManagedPortfoliosSection({ initial }: { initial: ManagedPortfolio[] }) 
       {showAdd && (
         <form
           onSubmit={addPortfolio}
-          className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4"
+          className="bg-white rounded-lg border border-slate-200 shadow-sm p-5 space-y-4"
         >
           <h3 className="text-xs font-bold text-slate-700 uppercase tracking-widest">Ny portfölj</h3>
           <div className="grid sm:grid-cols-3 gap-3">
@@ -124,7 +124,7 @@ function ManagedPortfoliosSection({ initial }: { initial: ManagedPortfolio[] }) 
                 value={msId}
                 onChange={e => setMsId(e.target.value.trim())}
                 placeholder="FOGBR$$ALL_1234"
-                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-slate-200 rounded-md px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div className="space-y-1.5">
@@ -136,7 +136,7 @@ function ManagedPortfoliosSection({ initial }: { initial: ManagedPortfolio[] }) 
                 value={slug}
                 onChange={e => setSlug(e.target.value.trim().toLowerCase())}
                 placeholder="global-equity"
-                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-slate-200 rounded-md px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <p className="text-[10px] text-slate-400">Används i URL:en — inga mellanslag</p>
             </div>
@@ -148,7 +148,7 @@ function ManagedPortfoliosSection({ initial }: { initial: ManagedPortfolio[] }) 
                 value={displayName}
                 onChange={e => setDisplayName(e.target.value)}
                 placeholder="Global Aktieportfölj"
-                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-slate-200 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
@@ -157,7 +157,7 @@ function ManagedPortfoliosSection({ initial }: { initial: ManagedPortfolio[] }) 
             <button
               type="submit"
               disabled={saving}
-              className="flex items-center gap-2 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl transition-colors disabled:opacity-60"
+              className="flex items-center gap-2 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-md transition-colors disabled:opacity-60"
             >
               {saving
                 ? <><RefreshCw className="w-4 h-4 animate-spin" /> Sparar…</>
@@ -166,7 +166,7 @@ function ManagedPortfoliosSection({ initial }: { initial: ManagedPortfolio[] }) 
             <button
               type="button"
               onClick={() => { setShowAdd(false); setError(""); }}
-              className="text-sm text-slate-500 hover:text-slate-700 px-4 py-2.5 rounded-xl transition-colors"
+              className="text-sm text-slate-500 hover:text-slate-700 px-4 py-2.5 rounded-md transition-colors"
             >
               Avbryt
             </button>
@@ -175,13 +175,13 @@ function ManagedPortfoliosSection({ initial }: { initial: ManagedPortfolio[] }) 
       )}
 
       {portfolios.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400 text-sm">
+        <div className="bg-white rounded-lg border border-slate-200 p-8 text-center text-slate-400 text-sm">
           Inga portföljer konfigurerade ännu.
         </div>
       ) : (
         <div className="space-y-3">
           {portfolios.map(p => (
-            <div key={p.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm px-5 py-4">
+            <div key={p.id} className="bg-white rounded-lg border border-slate-200 shadow-sm px-5 py-4">
               <div className="flex items-center gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
@@ -263,7 +263,7 @@ function SettingsPanel({ initial }: { initial: Record<string, string> }) {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
+    <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6 space-y-5">
       <h2 className="text-sm font-bold text-slate-900">Morningstar-inställningar</h2>
 
       <div className="space-y-3">
@@ -274,7 +274,7 @@ function SettingsPanel({ initial }: { initial: Record<string, string> }) {
             value={fields.morningstar_api_token}
             onChange={e => setFields(p => ({ ...p, morningstar_api_token: e.target.value }))}
             placeholder="••••••••••••••••"
-            className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-slate-200 rounded-md px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
       </div>
@@ -283,7 +283,7 @@ function SettingsPanel({ initial }: { initial: Record<string, string> }) {
         onClick={save}
         disabled={saving}
         className={cn(
-          "flex items-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-xl transition-all",
+          "flex items-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-md transition-all",
           saved
             ? "bg-emerald-500 text-white"
             : "bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-60"
@@ -327,7 +327,7 @@ function AddAdvisorForm({ onAdded }: { onAdded: () => void }) {
   }
 
   return (
-    <form onSubmit={submit} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+    <form onSubmit={submit} className="bg-white rounded-lg border border-slate-200 shadow-sm p-6 space-y-4">
       <h2 className="text-sm font-bold text-slate-900">Lägg till rådgivare</h2>
 
       <div className="grid sm:grid-cols-2 gap-3">
@@ -338,7 +338,7 @@ function AddAdvisorForm({ onAdded }: { onAdded: () => void }) {
             value={name}
             onChange={e => setName(e.target.value)}
             placeholder="Anna Svensson"
-            className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-slate-200 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div className="space-y-1.5">
@@ -348,7 +348,7 @@ function AddAdvisorForm({ onAdded }: { onAdded: () => void }) {
             value={code}
             onChange={e => setCode(e.target.value.trim())}
             placeholder="199001011234ABC123"
-            className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-slate-200 rounded-md px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <p className="text-[10px] text-slate-400">Personnummer + rådgivningssystemets ID</p>
         </div>
@@ -359,7 +359,7 @@ function AddAdvisorForm({ onAdded }: { onAdded: () => void }) {
       <button
         type="submit"
         disabled={saving}
-        className="flex items-center gap-2 text-sm font-semibold bg-slate-900 hover:bg-slate-700 text-white px-4 py-2.5 rounded-xl transition-colors disabled:opacity-60"
+        className="flex items-center gap-2 text-sm font-semibold bg-slate-900 hover:bg-slate-700 text-white px-4 py-2.5 rounded-md transition-colors disabled:opacity-60"
       >
         <UserPlus className="w-4 h-4" />
         {saving ? "Sparar…" : "Lägg till"}
@@ -401,13 +401,13 @@ function AdvisorList({ initial }: { initial: Advisor[] }) {
       </div>
 
       {advisors.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400 text-sm">
+        <div className="bg-white rounded-lg border border-slate-200 p-8 text-center text-slate-400 text-sm">
           Inga rådgivare tillagda ännu.
         </div>
       ) : (
         <div className="space-y-3">
           {advisors.map(a => (
-            <div key={a.code} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
+            <div key={a.code} className="bg-white rounded-lg border border-slate-200 shadow-sm p-4 sm:p-5">
               <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-slate-900">{a.name}</p>

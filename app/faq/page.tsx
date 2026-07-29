@@ -1,8 +1,9 @@
-"use client";
+import { AccordionItem } from "@/components/ui/Accordion";
 
-import { useState } from "react";
-import { cn } from "@/lib/utils";
-import { ChevronDown } from "lucide-react";
+export const metadata = {
+  title: "FAQ",
+  description: "Svar på de vanligaste frågorna om vad Sharpa är — och inte är.",
+};
 
 const FAQS = [
   {
@@ -31,57 +32,25 @@ const FAQS = [
   },
 ];
 
-function AccordionItem({ q, a }: { q: string; a: string }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="border-b border-slate-100 last:border-0">
-      <button
-        onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center justify-between gap-4 py-4 text-left group"
-      >
-        <span className="text-sm sm:text-base font-medium text-slate-800 group-hover:text-slate-900 transition-colors">
-          {q}
-        </span>
-        <ChevronDown
-          className={cn(
-            "w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200",
-            open && "rotate-180"
-          )}
-        />
-      </button>
-      {open && (
-        <div className="pb-5 pr-8">
-          <p className="text-sm text-slate-500 leading-[1.75]">{a}</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
+/**
+ * Redaktionellt upplägg: ingen kortyta. Kicker, serifrubrik och ingress i en
+ * läskolumn, därefter frågorna som hårlinjeavdelade rader direkt på papperet.
+ */
 export default function FAQPage() {
   return (
     <div className="min-h-screen bg-canvas">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-14 sm:py-20">
+      <div className="mx-auto max-w-[760px] px-4 py-16 sm:px-6 sm:py-24">
+        <p className="label-meta mb-4">Vanliga frågor</p>
+        <h1 className="font-display text-[38px] leading-[1.05] text-ink sm:text-[48px]">FAQ</h1>
+        <p className="mt-4 text-base leading-[1.7] text-ink-2">
+          Svar på de vanligaste frågorna om vad Sharpa är — och inte är.
+        </p>
 
-        {/* Header */}
-        <div className="mb-10">
-          <p className="text-xs font-semibold text-accent uppercase tracking-[0.08em] mb-3">
-            Vanliga frågor
-          </p>
-          <h1 className="font-heading text-3xl sm:text-4xl font-bold text-ink leading-[1.1] mb-4">
-            FAQ
-          </h1>
-          <p className="text-base text-ink-2 leading-[1.7] max-w-xl">
-            Svar på de vanligaste frågorna om vad Sharpa är — och inte är.
-          </p>
-        </div>
-
-        <div className="bg-white rounded-xl border border-line px-6" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)" }}>
-          {FAQS.map(item => (
+        <div className="mt-10 border-t border-ink">
+          {FAQS.map((item) => (
             <AccordionItem key={item.q} q={item.q} a={item.a} />
           ))}
         </div>
-
       </div>
     </div>
   );

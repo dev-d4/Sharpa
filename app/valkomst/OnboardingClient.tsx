@@ -144,22 +144,7 @@ export default function OnboardingClient() {
   if (!ready) return null;
 
   return (
-    <div className="fixed inset-0 z-[200] flex flex-col overflow-y-auto bg-white text-ink">
-      {/* Mjuka, långsamt drivande klot bakom hela vyn — tonar ut mot botten */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
-        style={{
-          maskImage: "linear-gradient(to bottom, #000 55%, transparent 96%)",
-          WebkitMaskImage: "linear-gradient(to bottom, #000 55%, transparent 96%)",
-        }}
-      >
-        <span className="onboarding-blob onboarding-blob-1" />
-        <span className="onboarding-blob onboarding-blob-2" />
-        <span className="onboarding-blob onboarding-blob-3" />
-        <span className="onboarding-blob onboarding-blob-4" />
-      </div>
-
+    <div className="fixed inset-0 z-[200] flex flex-col overflow-y-auto bg-canvas text-ink">
       <div className="relative z-10 flex min-h-dvh flex-col items-center px-6 py-12 sm:px-10 sm:py-16">
         <div className="animate-fade-in-up my-auto w-full max-w-[860px]">
           {/* ── Rubrik ─────────────────────────────────────────────────── */}
@@ -192,11 +177,11 @@ export default function OnboardingClient() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, ease: cardEase, delay: 0.08 + index * 0.08 }}
                   whileHover={prefersReducedMotion ? undefined : { y: -4 }}
-                  className="group relative flex flex-col overflow-hidden rounded-2xl border border-[rgba(23,33,43,0.1)] bg-white/85 p-4 text-left shadow-[0_10px_30px_rgba(23,33,43,0.06)] backdrop-blur-sm transition-[box-shadow,border-color] duration-300 hover:border-accent/60 hover:shadow-[0_20px_44px_rgba(11,110,153,0.14)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-wait disabled:opacity-70 sm:p-7"
+                  className="group relative flex flex-col overflow-hidden rounded-lg border border-[rgba(23,33,43,0.1)] bg-white/85 p-4 text-left shadow-[0_10px_30px_rgba(23,33,43,0.06)] backdrop-blur-sm transition-[box-shadow,border-color] duration-300 hover:border-accent/60 hover:shadow-[0_20px_44px_rgba(11,110,153,0.14)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-wait disabled:opacity-70 sm:p-7"
                 >
                   <span
                     className={[
-                      "relative flex h-11 w-11 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-105 sm:h-14 sm:w-14 sm:rounded-2xl",
+                      "relative flex h-11 w-11 items-center justify-center rounded-md transition-transform duration-300 group-hover:scale-105 sm:h-14 sm:w-14 sm:rounded-lg",
                       choice.iconClass,
                     ].join(" ")}
                   >

@@ -255,7 +255,7 @@ export default function MorningstarLandingPage() {
             <div className="flex flex-wrap gap-3">
               <a
                 href="#demo"
-                className="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-6 py-3.5 rounded-2xl text-sm transition-all shadow-md shadow-blue-500/25 hover:-translate-y-0.5"
+                className="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-6 py-3.5 rounded-lg text-sm transition-all shadow-md shadow-blue-500/25 hover:-translate-y-0.5"
               >
                 Generera länk
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -264,15 +264,15 @@ export default function MorningstarLandingPage() {
               </a>
               <a
                 href="#kod"
-                className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-700 text-white font-semibold px-6 py-3.5 rounded-2xl text-sm transition-all hover:-translate-y-0.5"
+                className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-700 text-white font-semibold px-6 py-3.5 rounded-lg text-sm transition-all hover:-translate-y-0.5"
               >
-                Se kod →
+                Se kod
               </a>
             </div>
           </div>
 
           {/* Right — terminal preview */}
-          <div className="bg-slate-900 rounded-2xl overflow-hidden shadow-2xl">
+          <div className="bg-slate-900 rounded-lg overflow-hidden shadow-2xl">
             <div className="flex items-center gap-1.5 px-4 py-3 border-b border-white/10">
               <div className="w-3 h-3 rounded-full bg-red-400/80" />
               <div className="w-3 h-3 rounded-full bg-amber-400/80" />
@@ -285,7 +285,7 @@ export default function MorningstarLandingPage() {
               <p className="pl-4"><span className="text-amber-300">advisorId</span><span className="text-slate-400">:</span>  <span className="text-emerald-300">&quot;rådgivare-uuid&quot;</span><span className="text-slate-400">,</span></p>
               <p className="pl-4"><span className="text-amber-300">name</span><span className="text-slate-400">:</span>        <span className="text-emerald-300">&quot;Diskretionär Portfölj 50&quot;</span><span className="text-slate-400">,</span></p>
               <p><span className="text-slate-400">{"});"}</span></p>
-              <p className="mt-3 text-slate-500">{"// → "}<span className="text-slate-400">https://er-domän.se/radgivning/portfolioanalysis/abc-123...</span></p>
+              <p className="mt-3 text-slate-500">{"// "}<span className="text-slate-400">https://er-domän.se/radgivning/portfolioanalysis/abc-123...</span></p>
             </div>
           </div>
 
@@ -324,7 +324,7 @@ export default function MorningstarLandingPage() {
         <div className="grid lg:grid-cols-[1fr_420px] gap-8 items-start">
 
           {/* Form */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-7 space-y-4">
+          <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-5 sm:p-7 space-y-4">
 
             <div className="grid sm:grid-cols-2 gap-4">
 
@@ -335,7 +335,7 @@ export default function MorningstarLandingPage() {
                   <select
                     value={portfolioId}
                     onChange={e => { setPortfolioId(e.target.value); setSignError(null); }}
-                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    className="w-full border border-slate-200 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                   >
                     {managedPortfolios.map(p => (
                       <option key={p.id} value={p.slug}>
@@ -348,7 +348,7 @@ export default function MorningstarLandingPage() {
                     value={portfolioId}
                     onChange={e => { setPortfolioId(e.target.value); setSignError(null); }}
                     placeholder="portfölj-slug"
-                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-slate-200 rounded-md px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 )}
                 <p className="text-[10px] text-slate-400">
@@ -367,7 +367,7 @@ export default function MorningstarLandingPage() {
                   value={advisorCode}
                   onChange={e => { setAdvisorCode(e.target.value.trim()); setSignError(null); }}
                   placeholder="199001011234ABC123"
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-slate-200 rounded-md px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <p className="text-[10px] text-slate-400">Personnummer (12 siffror) + rådgivningssystemets ID</p>
               </div>
@@ -377,7 +377,7 @@ export default function MorningstarLandingPage() {
 
           {/* URL output — sticky */}
           <div className="space-y-4 lg:sticky lg:top-24">
-            <div className="bg-slate-900 rounded-2xl overflow-hidden">
+            <div className="bg-slate-900 rounded-lg overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
                 <span className="text-xs text-slate-500 font-mono">Genererad URL</span>
               </div>
@@ -404,7 +404,7 @@ export default function MorningstarLandingPage() {
             {portfolioId.trim() && (
               <button
                 onClick={() => router.push(`/radgivning/portfolioanalysis/${encodeURIComponent(portfolioId.trim())}`)}
-                className="w-full flex items-center justify-center gap-2 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold py-3 rounded-2xl text-sm transition-all"
+                className="w-full flex items-center justify-center gap-2 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold py-3 rounded-lg text-sm transition-all"
               >
                 <Settings2 className="w-4 h-4" />
                 Öppna analysverktyg (rådgivarläge)
@@ -417,7 +417,7 @@ export default function MorningstarLandingPage() {
                   onClick={copyUrl}
                   disabled={signing}
                   className={cn(
-                    "flex-1 flex items-center justify-center gap-2 font-semibold py-3.5 rounded-2xl text-sm transition-all",
+                    "flex-1 flex items-center justify-center gap-2 font-semibold py-3.5 rounded-lg text-sm transition-all",
                     copiedUrl
                       ? "bg-emerald-500 text-white"
                       : "bg-slate-900 hover:bg-slate-700 text-white disabled:opacity-60"
@@ -432,7 +432,7 @@ export default function MorningstarLandingPage() {
                 <button
                   onClick={openUrl}
                   disabled={signing}
-                  className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 disabled:opacity-60 text-white font-semibold px-5 py-3.5 rounded-2xl text-sm transition-all shadow-md shadow-blue-500/25 hover:-translate-y-0.5"
+                  className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 disabled:opacity-60 text-white font-semibold px-5 py-3.5 rounded-lg text-sm transition-all shadow-md shadow-blue-500/25 hover:-translate-y-0.5"
                 >
                   <ExternalLink className="w-4 h-4" />
                   Öppna
@@ -441,7 +441,7 @@ export default function MorningstarLandingPage() {
             )}
 
             {/* Info card */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3">
+            <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-3">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">URL-struktur</p>
               {[
                 { p: "portfolioId", type: "path",  req: true,  desc: "Morningstar portfölj-UUID" },
@@ -478,7 +478,7 @@ export default function MorningstarLandingPage() {
             <h2 className="text-3xl sm:text-4xl text-slate-900 font-bold">Fungerar i alla stackar</h2>
           </div>
 
-          <div className="bg-slate-900 rounded-2xl overflow-hidden shadow-xl">
+          <div className="bg-slate-900 rounded-lg overflow-hidden shadow-xl">
             <div className="flex items-center gap-1 px-4 pt-4 border-b border-white/10">
               {(["ts", "py"] as const).map(t => (
                 <button
@@ -521,7 +521,7 @@ export default function MorningstarLandingPage() {
           </div>
           <div className="grid grid-cols-1 gap-2">
             {FEATURES.map(f => (
-              <div key={f} className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-3">
+              <div key={f} className="flex items-center gap-3 bg-slate-50 rounded-md px-4 py-3">
                 <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
                   <Check className="w-3 h-3 text-emerald-600" />
                 </div>
@@ -544,9 +544,9 @@ export default function MorningstarLandingPage() {
           </p>
           <a
             href="mailto:sharpakontakt@gmail.com"
-            className="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-400 text-white font-semibold px-8 py-4 rounded-2xl text-sm transition-all"
+            className="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-400 text-white font-semibold px-8 py-4 rounded-lg text-sm transition-all"
           >
-            Kontakta oss →
+            Kontakta oss
           </a>
         </div>
       </section>

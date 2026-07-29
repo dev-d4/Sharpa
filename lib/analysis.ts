@@ -382,6 +382,16 @@ function buildSuggestedMetrics(
 
 // ── Summary text ──────────────────────────────────────────────────────────────
 
+/** Svensk sifferkonvention: decimalkomma och hårt mellanslag före procenttecknet. */
+function pct(value: number, decimals: number): string {
+  return `${value.toFixed(decimals).replace(".", ",")} %`;
+}
+
+/** Decimaltal utan enhet, t.ex. Sharpe-kvoten. */
+function dec(value: number, decimals: number): string {
+  return value.toFixed(decimals).replace(".", ",");
+}
+
 function buildSummary(
   categoryBreakdown: CategoryBreakdown[],
   avgCost: number | null,
@@ -395,36 +405,36 @@ function buildSummary(
 
   const top = categoryBreakdown.slice(0, 3);
   if (top.length > 0) {
-    const desc = top.map((c) => `${c.weight.toFixed(0)}% ${c.label.toLowerCase()}`).join(", ");
+    const desc = top.map((c) => `${pct(c.weight, 0)} ${c.label.toLowerCase()}`).join(", ");
     lines.push(`Din portfölj består till ${desc}.`);
   }
 
   if (avgCost !== null) {
     if (avgCost < 0.5) {
-      lines.push(`Den genomsnittliga avgiften är ${avgCost.toFixed(2)}%, vilket är lågt jämfört med snittet för aktivt förvaltade fonder.`);
+      lines.push(`Den genomsnittliga avgiften är ${pct(avgCost, 2)}, vilket är lågt jämfört med snittet för aktivt förvaltade fonder.`);
     } else if (avgCost < 1.0) {
-      lines.push(`Den genomsnittliga avgiften är ${avgCost.toFixed(2)}%.`);
+      lines.push(`Den genomsnittliga avgiften är ${pct(avgCost, 2)}.`);
     } else {
-      lines.push(`Den genomsnittliga avgiften är ${avgCost.toFixed(2)}%, vilket är högt jämfört med indexfonder som ofta ligger under 0,40%.`);
+      lines.push(`Den genomsnittliga avgiften är ${pct(avgCost, 2)}, vilket är högt jämfört med indexfonder som ofta ligger under 0,40 %.`);
     }
   }
 
   if (return1yr !== null)
-    lines.push(`Avkastning senaste 12 månader: ${return1yr.toFixed(1)}%.`);
+    lines.push(`Avkastningen de senaste 12 månaderna är ${pct(return1yr, 1)}.`);
   if (return3yr !== null)
-    lines.push(`Total 3-årsavkastning: ${return3yr.toFixed(1)}%.`);
+    lines.push(`Total avkastning på tre år är ${pct(return3yr, 1)}.`);
 
   if (sharpe !== null) {
     if (sharpe > 1)
-      lines.push(`Sharpe-kvoten är ${sharpe.toFixed(2)}. Sharpe mäter historisk avkastning i förhållande till risk — värden över 1 brukar räknas som starka.`);
+      lines.push(`Sharpe-kvoten är ${dec(sharpe, 2)} — avkastning i förhållande till risk, där värden över 1 brukar räknas som starka.`);
     else if (sharpe > 0)
-      lines.push(`Sharpe-kvoten är ${sharpe.toFixed(2)}. Sharpe mäter historisk avkastning i förhållande till risk — värden mellan 0 och 1 är positiva men lägre.`);
+      lines.push(`Sharpe-kvoten är ${dec(sharpe, 2)} — avkastning i förhållande till risk, där värden mellan 0 och 1 är positiva men lägre.`);
     else
-      lines.push(`Sharpe-kvoten är ${sharpe.toFixed(2)}. En negativ Sharpe innebär att avkastningen inte kompenserade för risken under perioden.`);
+      lines.push(`Sharpe-kvoten är ${dec(sharpe, 2)} — en negativ kvot innebär att avkastningen inte kompenserade för risken under perioden.`);
   }
 
   if (Math.abs(totalWeight - 100) > 0.01)
-    lines.push(`OBS: Vikterna summerar till ${totalWeight.toFixed(1)}%, inte 100%.`);
+    lines.push(`OBS: Vikterna summerar till ${pct(totalWeight, 1)}, inte 100 %.`);
   if (notFound.length > 0)
     lines.push(`Följande ISIN hittades inte: ${notFound.join(", ")}.`);
 

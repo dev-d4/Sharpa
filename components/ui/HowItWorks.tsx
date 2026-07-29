@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-
-const CARD_SHADOW = { boxShadow: "0 1px 2px rgba(16,24,40,.04)" };
+import { ButtonLink } from "@/components/ui/button";
+import { AccordionItem } from "@/components/ui/Accordion";
 
 // ── Trust section ─────────────────────────────────────────────────────────────
 
@@ -46,63 +46,63 @@ function PortfolioCalculator() {
   const kr = (n: number) => Math.round(n).toLocaleString("sv-SE") + " kr";
 
   return (
-    <div className="mx-auto max-w-[680px] rounded-md border border-line bg-white p-6 sm:p-9" style={CARD_SHADOW}>
+    <div className="mx-auto max-w-[680px] rounded-md border border-line bg-white p-6 sm:p-9">
       {/* Sliders */}
-      <div className="mb-5">
+      <div className="mb-6">
         <div className="flex items-baseline justify-between">
-          <span className="text-[13px] text-ink-2">Sparkapital</span>
-          <span className="text-base font-semibold text-ink tabular-nums">{kr(capital)}</span>
+          <span className="text-sm text-ink-2">Sparkapital</span>
+          <span className="figure text-base text-ink">{kr(capital)}</span>
         </div>
         <input type="range" className="calc-range" min={10000} max={2000000} step={10000} value={capital}
           onChange={(e) => setCapital(Number(e.target.value))} aria-label="Sparkapital" />
-        <div className="flex justify-between text-[11px] text-ink-4">
+        <div className="flex justify-between text-[11px] text-ink-3">
           <span>10 000 kr</span><span>2 000 000 kr</span>
         </div>
       </div>
 
-      <div className="mb-5">
+      <div className="mb-6">
         <div className="flex items-baseline justify-between">
-          <span className="text-[13px] text-ink-2">Din förväntade avkastning</span>
-          <span className="text-base font-semibold text-ink tabular-nums">{grossReturn.toLocaleString("sv-SE", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %</span>
+          <span className="text-sm text-ink-2">Din förväntade avkastning</span>
+          <span className="figure text-base text-ink">{grossReturn.toLocaleString("sv-SE", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %</span>
         </div>
         <input type="range" className="calc-range" min={1} max={15} step={0.5} value={grossReturn}
           onChange={(e) => setGrossReturn(Number(e.target.value))} aria-label="Din förväntade avkastning" />
-        <div className="flex justify-between text-[11px] text-ink-4">
+        <div className="flex justify-between text-[11px] text-ink-3">
           <span>1 %</span><span>15 %</span>
         </div>
       </div>
 
-      <div className="mb-7">
+      <div className="mb-8">
         <div className="flex items-baseline justify-between">
-          <span className="text-[13px] text-ink-2">Dina fonders avgift</span>
-          <span className="text-base font-semibold text-ink tabular-nums">{fee.toLocaleString("sv-SE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %</span>
+          <span className="text-sm text-ink-2">Dina fonders avgift</span>
+          <span className="figure text-base text-ink">{fee.toLocaleString("sv-SE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %</span>
         </div>
         <input type="range" className="calc-range" min={0} max={2} step={0.05} value={fee}
           onChange={(e) => setFee(Number(e.target.value))} aria-label="Dina fonders avgift" />
-        <div className="flex justify-between text-[11px] text-ink-4">
+        <div className="flex justify-between text-[11px] text-ink-3">
           <span>0 %</span><span>2 %</span>
         </div>
       </div>
 
       {/* Kvitto */}
-      <div className="border-t border-line pt-5">
-        <div className="flex flex-col gap-1 border-b border-dashed border-line py-2 sm:flex-row sm:justify-between sm:gap-3">
-          <span className="text-[13px] text-ink-2 leading-snug">Nuvarande portfölj, 10 år ({net.toLocaleString("sv-SE", { minimumFractionDigits: 1, maximumFractionDigits: 2 })} %/år netto)</span>
-          <span className="text-base font-semibold text-ink tabular-nums sm:shrink-0">{kr(endValue)}</span>
+      <div className="border-t border-line pt-6">
+        <div className="flex flex-col gap-1 border-b border-line py-3 sm:flex-row sm:justify-between sm:gap-3">
+          <span className="text-sm leading-snug text-ink-2">Nuvarande portfölj, 10 år ({net.toLocaleString("sv-SE", { minimumFractionDigits: 1, maximumFractionDigits: 2 })} %/år netto)</span>
+          <span className="figure text-base text-ink sm:shrink-0">{kr(endValue)}</span>
         </div>
-        <div className="flex flex-col gap-1 py-2 sm:flex-row sm:justify-between sm:gap-3">
-          <span className="text-[13px] text-ink-2 leading-snug">Optimerad avgift (0,15 %), 10 år</span>
-          <span className="text-base font-semibold text-accent tabular-nums sm:shrink-0">{kr(endValueOpt)}</span>
+        <div className="flex flex-col gap-1 border-b border-line py-3 sm:flex-row sm:justify-between sm:gap-3">
+          <span className="text-sm leading-snug text-ink-2">Optimerad avgift (0,15 %), 10 år</span>
+          <span className="figure text-base text-ink sm:shrink-0">{kr(endValueOpt)}</span>
         </div>
         <div className="flex flex-col gap-1 pt-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-          <span className="font-heading text-[15px] font-bold text-pos">Skillnad efter 10 år</span>
-          <span className="font-heading text-[22px] font-extrabold text-pos tabular-nums sm:shrink-0">
+          <span className="text-[15px] font-medium text-ink">Skillnad efter 10 år</span>
+          <span className="figure text-[24px] text-pos sm:shrink-0">
             {(diff >= 0 ? "+" : "") + kr(diff)}
           </span>
         </div>
       </div>
 
-      <p className="mt-5 text-[11.5px] text-ink-4 leading-[1.5]">
+      <p className="mt-6 text-xs leading-[1.5] text-ink-3">
         Illustrativ jämförelse med en fondavgift på 0,15 %. Faktiska alternativ och framtida avkastning kan skilja sig. Inte en finansiell prognos.
       </p>
     </div>
@@ -118,24 +118,6 @@ const FAQS = [
   { q: "Behöver jag logga in?", a: "Nej. Du kan analysera fonder och se portföljexempel utan konto. Du behöver ett konto bara om du vill spara en portfölj." },
 ];
 
-function FAQItem({ q, a }: { q: string; a: string }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="border-b border-line-soft last:border-0">
-      <button type="button" onClick={() => setOpen((o) => !o)} className="w-full flex items-center justify-between py-4 text-left gap-4">
-        <span className="text-sm font-semibold text-ink">{q}</span>
-        <svg
-          className={`w-4 h-4 text-ink-4 shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
-          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      {open && <p className="text-sm text-ink-2 leading-[1.7] pb-5">{a}</p>}
-    </div>
-  );
-}
-
 // ── Main ──────────────────────────────────────────────────────────────────────
 // Genomgående rytm: sektioner delas av tunna hårlinjer i stället för färgblock.
 
@@ -143,63 +125,55 @@ export default function HowItWorks() {
   return (
     <div>
 
-      <section className="py-12 sm:py-14">
-        <div className="mb-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-accent">Vad vill du göra?</p>
-          <h2 className="mt-2 font-heading text-2xl font-bold leading-tight text-ink sm:text-3xl">
-            Välj den väg som passar dig
-          </h2>
-        </div>
+      {/* Vägval — två linjekolumner med en 2px inklinje över, inte kort.
+          Analysera och Bygg portfölj är jämbördiga huvudfunktioner och får
+          därför samma knappvikt, inte primär/sekundär. */}
+      <section className="py-12 sm:py-16">
+        <p className="label-meta mb-6">Välj den väg som passar dig</p>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Link
-            href="/analyze"
-            className="group rounded-[14px] border border-line bg-white p-5 transition-all hover:border-info-line hover:shadow-sm sm:p-6"
-          >
-            <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-ink-4">Jag har redan fonder</p>
-                <h3 className="mt-1 font-heading text-base font-bold text-ink">Analysera min portfölj</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-ink-2">
-                  Se avgifter, avkastning, risk och möjliga alternativ.
-                </p>
-                <span className="mt-4 inline-flex items-center text-sm font-semibold text-accent">
-                  Börja analysera <span aria-hidden="true" className="ml-1 transition-transform group-hover:translate-x-0.5">→</span>
-                </span>
-            </div>
-          </Link>
+        <div className="grid gap-10 sm:grid-cols-2 sm:gap-12">
+          <div className="border-t-2 border-ink pt-5">
+            <p className="label-meta">Jag har redan fonder</p>
+            <h3 className="mt-3 font-display text-[22px] leading-tight text-ink sm:text-[26px]">
+              Analysera min portfölj
+            </h3>
+            <p className="mt-2 text-[15px] leading-relaxed text-ink-2">
+              Se avgifter, avkastning, risk och möjliga alternativ.
+            </p>
+            <ButtonLink href="/analyze" variant="primary" className="mt-6">
+              Börja analysera
+            </ButtonLink>
+          </div>
 
-          <Link
-            href="/bygg-portfolj"
-            className="group rounded-[14px] border border-line bg-white p-5 transition-all hover:border-info-line hover:shadow-sm sm:p-6"
-          >
-            <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-ink-4">Jag har ingen portfölj att analysera</p>
-                <h3 className="mt-1 font-heading text-base font-bold text-ink">Skapa ett portföljexempel</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-ink-2">
-                  Svara på 4 frågor och se ett illustrativt portföljexempel.
-                </p>
-                <span className="mt-4 inline-flex items-center text-sm font-semibold text-accent">
-                  Skapa portföljexempel <span aria-hidden="true" className="ml-1 transition-transform group-hover:translate-x-0.5">→</span>
-                </span>
-            </div>
-          </Link>
+          <div className="border-t-2 border-ink pt-5">
+            <p className="label-meta">Jag har ingen portfölj</p>
+            <h3 className="mt-3 font-display text-[22px] leading-tight text-ink sm:text-[26px]">
+              Skapa ett portföljexempel
+            </h3>
+            <p className="mt-2 text-[15px] leading-relaxed text-ink-2">
+              Svara på 4 frågor och se ett illustrativt portföljexempel.
+            </p>
+            <ButtonLink href="/bygg-portfolj" variant="primary" className="mt-6">
+              Skapa portföljexempel
+            </ButtonLink>
+          </div>
         </div>
       </section>
 
       <div className="h-px bg-line" />
 
       {/* Varför Sharpa — diskreta 01–04 */}
-      <section className="py-16 sm:py-16">
-        <h2 className="font-heading text-xl sm:text-2xl font-bold text-ink mb-8">Varför Sharpa?</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-9 max-w-4xl">
+      <section className="py-12 sm:py-16">
+        <h2 className="mb-8 font-display text-[26px] leading-tight text-ink sm:mb-10 sm:text-[32px]">Varför Sharpa?</h2>
+        <div className="grid max-w-4xl grid-cols-1 gap-x-12 gap-y-8 sm:grid-cols-2 sm:gap-y-10">
           {TRUST_ITEMS.map((item, i) => (
             <div key={item.title} className="flex gap-4">
-              <span className="font-heading text-[22px] font-extrabold leading-none text-[#D8DDE1] tabular-nums shrink-0">
+              <span className="figure shrink-0 text-[18px] leading-tight text-ink-3">
                 {String(i + 1).padStart(2, "0")}
               </span>
               <div>
-                <p className="text-sm font-semibold text-ink mb-1.5">{item.title}</p>
-                <p className="text-sm text-ink-2 leading-[1.6]">{item.desc}</p>
+                <p className="mb-1.5 text-[15px] font-medium text-ink">{item.title}</p>
+                <p className="text-[15px] leading-[1.6] text-ink-2">{item.desc}</p>
               </div>
             </div>
           ))}
@@ -209,11 +183,11 @@ export default function HowItWorks() {
       <div className="h-px bg-line" />
 
       {/* Räkna själv — interaktiv kalkylator */}
-      <section className="py-16 sm:py-16">
-        <div className="mx-auto max-w-[680px] mb-8 text-center">
-          <p className="text-xs font-semibold text-accent uppercase tracking-[0.08em] mb-3">Räkna själv</p>
-          <h2 className="font-heading text-2xl sm:text-3xl font-bold text-ink leading-tight">Vad är skillnaden egentligen?</h2>
-          <p className="mt-3 text-[13.5px] text-ink-2 leading-[1.6]">
+      <section className="py-12 sm:py-16">
+        <div className="mx-auto mb-8 max-w-[680px] text-center">
+          <p className="label-meta mb-3">Räkna själv</p>
+          <h2 className="font-display text-[26px] leading-tight text-ink sm:text-[32px]">Vad är skillnaden egentligen?</h2>
+          <p className="mt-3 text-[15px] leading-[1.6] text-ink-2">
             Ränta-på-ränta gör att även en liten förbättring i avgift och avkastning ger stor skillnad på lång sikt.
           </p>
         </div>
@@ -222,26 +196,23 @@ export default function HowItWorks() {
 
       <div className="h-px bg-line" />
 
-      {/* FAQ — oförändrad */}
-      <section className="py-16 sm:py-16">
-        <div className="grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] gap-8 lg:gap-16 items-start">
+      {/* Vanliga frågor — hårlinjeavdelade rader, ingen kortyta */}
+      <section className="py-12 sm:py-16">
+        <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
           <div>
-            <h2 className="font-heading text-2xl sm:text-3xl font-bold text-ink leading-tight">Vanliga frågor</h2>
-            <p className="text-ink-2 mt-4 text-base leading-[1.7]">
+            <h2 className="font-display text-[26px] leading-tight text-ink sm:text-[32px]">Vanliga frågor</h2>
+            <p className="mt-4 text-[15px] leading-[1.7] text-ink-2">
               Det viktigaste om hur Sharpa fungerar — kort och rakt på sak.
             </p>
             <Link
               href="/faq"
-              className="inline-flex items-center gap-1.5 mt-4 text-sm font-semibold text-accent hover:text-accent-hover transition-colors"
+              className="mt-4 inline-block text-sm text-accent underline decoration-line-strong underline-offset-2 transition-colors duration-150 hover:decoration-accent"
             >
               Se alla frågor och svar
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-              </svg>
             </Link>
           </div>
-          <div className="bg-white rounded-xl border border-line px-6" style={CARD_SHADOW}>
-            {FAQS.map((faq) => <FAQItem key={faq.q} q={faq.q} a={faq.a} />)}
+          <div className="border-t border-ink">
+            {FAQS.map((faq) => <AccordionItem key={faq.q} q={faq.q} a={faq.a} />)}
           </div>
         </div>
       </section>

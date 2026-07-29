@@ -1,0 +1,29 @@
+{
+  "name": "sharpa-video",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Remotion-kompositioner för Sharpas TikTok-videor. Medvetet isolerat från Next.js-appen — egna node_modules så att Vercel-bygget inte drar in Remotions renderare.",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render",
+    "batch": "tsx scripts/render-batch.ts",
+    "typecheck": "tsc --noEmit",
+    "build:data": "tsx scripts/build-data.ts",
+    "build:vo": "tsx scripts/build-voiceover.ts"
+  },
+  "dependencies": {
+    "@remotion/bundler": "^4.0.499",
+    "@remotion/cli": "4.0.499",
+    "@remotion/google-fonts": "4.0.499",
+    "@remotion/renderer": "^4.0.499",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "remotion": "4.0.499"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "tsx": "^4.20.0",
+    "typescript": "^5"
+  }
+}

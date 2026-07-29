@@ -24,13 +24,13 @@ export default function Error({
       <div className="mt-6 flex gap-3">
         <button
           onClick={reset}
-          className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 text-white font-semibold px-6 py-3 rounded-xl transition-all shadow-md shadow-blue-200 text-sm"
+          className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 text-white font-semibold px-6 py-3 rounded-md transition-all shadow-md shadow-blue-200 text-sm"
         >
           Försök igen
         </button>
         <Link
           href="/"
-          className="border border-slate-200 hover:border-slate-300 text-slate-700 font-semibold px-6 py-3 rounded-xl transition-all text-sm"
+          className="border border-slate-200 hover:border-slate-300 text-slate-700 font-semibold px-6 py-3 rounded-md transition-all text-sm"
         >
           Startsidan
         </Link>
