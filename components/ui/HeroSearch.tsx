@@ -336,7 +336,8 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
 
       <div className="relative mt-6 w-full max-w-[720px] sm:mt-10">
           <div
-            className="flex items-center gap-3 rounded-xs border border-line-strong bg-white px-4 py-3.5 transition-colors duration-150 focus-within:border-accent sm:px-6 sm:py-[18px]"
+            // Minimal lyft så fältet skiljer sig från heronsens bakgrundslager
+            className="flex items-center gap-3 rounded-xs border border-line-strong bg-white px-4 py-3.5 shadow-[0_1px_2px_rgba(20,20,30,.04)] transition-colors duration-150 focus-within:border-accent sm:px-6 sm:py-[18px]"
           >
             <Search className="h-5 w-5 sm:h-[22px] sm:w-[22px] shrink-0 text-ink-3" strokeWidth={1.75} aria-hidden="true" />
             <div className="relative flex-1 min-w-0">

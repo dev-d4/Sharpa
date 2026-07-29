@@ -1,12 +1,14 @@
 import Link from "next/link";
 import HeroDemo from "@/components/ui/HeroSearch";
+import HeroBackground from "@/components/ui/HeroBackground";
 
 export default function Hero() {
   return (
     // Platt pappersyta — gradienten och de roterande kloten är borttagna.
     // Sökfältet är sidans dominanta yta, rubriken satt i redaktionell serif.
-    <section className="relative w-full bg-canvas px-5 py-16 sm:px-10 sm:pt-24 sm:pb-20 lg:px-20">
-      <div className="mx-auto w-full max-w-[760px]">
+    <section className="relative w-full overflow-hidden bg-canvas px-5 py-16 sm:px-10 sm:pt-24 sm:pb-20 lg:px-20">
+      <HeroBackground />
+      <div className="relative z-10 mx-auto w-full max-w-[760px]">
         <HeroDemo
           belowSearch={
             <>
