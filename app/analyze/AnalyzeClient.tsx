@@ -1480,8 +1480,8 @@ export default function AnalyzeClient() {
         </div>
       )}
 
-      {/* Inmatningen hålls i en smal kolumn; resultatet får hela bredden. */}
-      <section className={cn("no-print space-y-6", !analysis && "max-w-[720px]")}>
+      {/* Inmatningen hålls i en smal, centrerad kolumn; resultatet får hela bredden. */}
+      <section className={cn("no-print space-y-6", !analysis && "mx-auto max-w-[720px]")}>
         {analysis && inputCollapsed ? (
           /* Sidhuvudsrad — titel + sekundärknapp, avdelad av en hårlinje. Inget kort. */
           <div className="flex flex-col gap-3 border-b border-line pb-5 sm:flex-row sm:items-start sm:justify-between">

@@ -18,6 +18,9 @@ export default function HeroBackground() {
         style={{
           backgroundImage:
             "repeating-linear-gradient(to right, transparent 0 159px, #EAE7E0 159px 160px)",
+          // Linjerna tonar ut mot heronsens botten i stället för att kapas av
+          maskImage: "linear-gradient(to bottom, #000 0 62%, transparent 96%)",
+          WebkitMaskImage: "linear-gradient(to bottom, #000 0 62%, transparent 96%)",
         }}
       />
       {/* Lager 2 — svag baslinjekurva förankrad i heronsens botten */}
@@ -26,17 +29,25 @@ export default function HeroBackground() {
         preserveAspectRatio="none"
         className="absolute inset-x-0 bottom-0 h-[120px] w-full md:h-[210px]"
       >
+        <defs>
+          {/* Areafyllningen tonar ut mot noll nedåt, så bandet inte får en hård
+              kant där heron slutar. Kurvans linje lämnas orörd och skarp. */}
+          <linearGradient id="hero-curve-fade" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#1F3A5F" stopOpacity={0.05} />
+            <stop offset="55%" stopColor="#1F3A5F" stopOpacity={0.02} />
+            <stop offset="100%" stopColor="#1F3A5F" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <path
+          d="M0,170 C220,150 360,110 520,120 C700,132 820,60 1010,64 C1130,66 1210,44 1280,36 L1280,200 L0,200 Z"
+          fill="url(#hero-curve-fade)"
+        />
         <path
           d="M0,170 C220,150 360,110 520,120 C700,132 820,60 1010,64 C1130,66 1210,44 1280,36"
           fill="none"
           stroke="#1F3A5F"
           strokeWidth={1.5}
           opacity={0.14}
-        />
-        <path
-          d="M0,170 C220,150 360,110 520,120 C700,132 820,60 1010,64 C1130,66 1210,44 1280,36 L1280,200 L0,200 Z"
-          fill="#1F3A5F"
-          opacity={0.04}
         />
       </svg>
     </div>

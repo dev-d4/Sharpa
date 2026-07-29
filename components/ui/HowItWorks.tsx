@@ -126,7 +126,8 @@ export default function HowItWorks() {
     <div>
 
       {/* Vägval — två linjekolumner med en 2px inklinje över, inte kort.
-          Analysera och Bygg portfölj är jämbördiga: en primär, en sekundär knapp. */}
+          Analysera och Bygg portfölj är jämbördiga huvudfunktioner och får
+          därför samma knappvikt, inte primär/sekundär. */}
       <section className="py-12 sm:py-16">
         <p className="label-meta mb-6">Välj den väg som passar dig</p>
 
@@ -152,7 +153,7 @@ export default function HowItWorks() {
             <p className="mt-2 text-[15px] leading-relaxed text-ink-2">
               Svara på 4 frågor och se ett illustrativt portföljexempel.
             </p>
-            <ButtonLink href="/bygg-portfolj" variant="secondary" className="mt-6">
+            <ButtonLink href="/bygg-portfolj" variant="primary" className="mt-6">
               Skapa portföljexempel
             </ButtonLink>
           </div>
