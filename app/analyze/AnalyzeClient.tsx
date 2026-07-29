@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { FileUp, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react"
+import { ArrowRight, FileUp, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react"
 import type { SavedPortfolio } from "@/lib/portfolio"
 import { Button } from "@/components/ui/button"
 import DonutChart from "@/components/ui/DonutChart"
@@ -1101,7 +1101,12 @@ export default function AnalyzeClient() {
 
     // Some weights exist — distribute the remaining % evenly across unweighted funds,
     // or adjust all weighted funds proportionally to reach 100%.
-    const unweighted = withIsins.filter((e) => !e.weight.trim());
+    // En uttryckligen angiven nolla är fortfarande en ofördelad fond.
+    // Tidigare räknades strängen "0" som en giltig vikt och följde därför
+    // med in i alternativscenariot som en grå 0,0 %-post.
+    const unweighted = withIsins.filter(
+      (e) => !e.weight.trim() || (parseFloat(e.weight) || 0) <= 0
+    );
     if (unweighted.length > 0) {
       const remaining = 100 - currentTotal;
       if (remaining <= 0.1) {
@@ -1122,7 +1127,7 @@ export default function AnalyzeClient() {
       // Give each unweighted fund an equal share of whatever remains
       const sharePerFund = remaining / unweighted.length;
       const newEntries = src.map((e) => {
-        if (!e.isin.trim() || e.weight.trim()) return e;
+        if (!e.isin.trim() || (e.weight.trim() && (parseFloat(e.weight) || 0) > 0)) return e;
         return { ...e, weight: sharePerFund.toFixed(1) };
       });
       setEntries(newEntries);
@@ -1281,7 +1286,9 @@ export default function AnalyzeClient() {
       } else {
         // Auto-distribute if weights don't sum to 100, OR if any ISINed fund has no weight set
         const currentTotal = workingEntries.reduce((s, e) => s + (parseFloat(e.weight) || 0), 0);
-        const hasUnweighted = workingEntries.some((e) => e.isin.trim() && !e.weight.trim());
+        const hasUnweighted = workingEntries.some(
+          (e) => e.isin.trim() && (!e.weight.trim() || (parseFloat(e.weight) || 0) <= 0)
+        );
         if (Math.abs(currentTotal - 100) > 0.1 || hasUnweighted) {
           workingEntries = distributeWeights(workingEntries);
         }
@@ -2305,20 +2312,30 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
             sub="Fonder med starkare nyckeltal i samma kategori."
           />
           <section className="relative overflow-hidden rounded-md border border-line bg-white">
-            <div className="p-5 sm:p-8">
+          <div className="p-5 sm:p-8">
 
             {showBlur ? (
             <div>
-              <div aria-hidden className="pointer-events-none select-none border-t border-ink">
+              <div aria-hidden className="pointer-events-none select-none divide-y divide-slate-200">
                 {[
                   ["Swedbank Robur Ny Teknik A", "TIN Ny Teknik A"],
                   ["Länsförsäkringar Global Aktiv A", "Avanza Global"],
                   ["SEB Sverigefond Stora bolag", "PLUS Allabolag Sverige Index"],
                 ].map(([cur, sug], i) => (
-                  <div key={i} className="grid grid-cols-[1fr_40px_1fr] items-baseline border-b border-line py-4">
-                    <p className="text-base font-medium text-ink">{cur}</p>
-                    <p className="text-center text-[17px] text-ink-3">→</p>
-                    <p className="text-base font-semibold text-accent">{sug}</p>
+                  <div key={i} className="py-4 flex flex-col gap-2.5 sm:flex-row sm:items-stretch sm:gap-2">
+                    <div className="min-w-0 sm:flex-1">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-accent mb-1">Nuvarande</p>
+                      <p className="text-sm font-semibold text-ink leading-snug">{cur}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center justify-center sm:px-1">
+                      <div className="w-7 h-7 rounded-md bg-slate-100 flex items-center justify-center">
+                        <ArrowRight className="w-3.5 h-3.5 text-slate-400 rotate-90 sm:rotate-0" />
+                      </div>
+                    </div>
+                    <div className="min-w-0 sm:flex-1 sm:text-right">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-accent mb-1">Alternativ</p>
+                      <p className="text-sm font-semibold text-ink leading-snug">{sug}</p>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -2350,15 +2367,18 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
               const hasSwaps = (analysis.swapSuggestions?.length ?? 0) > 0;
               const label = bics.length === 1 ? "Redan bäst i sin kategori" : "Redan bäst i sina kategorier";
               return (
-                <div className={cn("border-t border-line pt-4", hasSwaps && "mb-8")}>
-                  <p className="label-meta mb-3">{label}</p>
-                  <ul className="space-y-2">
+                <div className={`flex items-start gap-3 ${hasSwaps ? "mb-4 pb-4 border-b border-slate-200" : ""}`}>
+                  <div className="w-8 h-8 rounded-md bg-green-50 flex items-center justify-center shrink-0 mt-0.5">
+                    <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-green-600 mb-1">{label}</p>
                     {bics.map((bic, i) => (
-                      <li key={i} className="flex gap-2.5 text-[15px] leading-snug text-ink">
-                        <StatusDot tone="pos" /> {bic.fundName}
-                      </li>
+                      <p key={i} className="text-sm font-semibold text-ink leading-snug truncate">{bic.fundName}</p>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               );
             })()}
@@ -2378,16 +2398,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
 
               return (
                 <>
-                  {/* Ren byteslista — inga nyckeltalskolumner. Jämförelsen av
-                      avgift och Sharpe ligger i Alternativt scenario nedanför. */}
-                  <div className="border-t border-ink">
-                    {/* Kolumnhuvud en gång, bara på desktop */}
-                    <div className="hidden grid-cols-[1fr_40px_1fr] border-b border-line py-3 sm:grid">
-                      <span className="label-meta">Nuvarande</span>
-                      <span />
-                      <span className="label-meta">Föreslås bytas till</span>
-                    </div>
-
+                  <div className="divide-y divide-slate-200">
                     {groups.map((group, gi) => {
                       const hidden = !showAllSwaps && gi >= VISIBLE;
                       const suggested = group[0].suggestedFund;
@@ -2444,61 +2455,43 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                       return (
                         <div
                           key={gi}
-                          className={cn("border-b border-line py-4", hidden && "swap-hidden")}
+                          className={`py-4 first:pt-0 last:pb-0${hidden ? " swap-hidden" : ""}`}
                         >
-                          {/* Desktop: tre kolumner på en rad */}
-                          <div className="hidden grid-cols-[1fr_40px_1fr] items-baseline sm:grid">
-                            <div className="min-w-0 pr-4">
-                              {/* Alla fonder i en bytesgrupp väger lika och sätts
-                                  därför likadant — ingen av dem är underordnad. */}
+                          {isConsolidate && isMultiGroup && (
+                            <div className="mb-2">
+                              <span className="inline-flex text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md bg-info text-accent">
+                                Konsolidera {group.length} fonder
+                              </span>
+                            </div>
+                          )}
+                          <div className="relative flex flex-col gap-2.5 sm:flex-row sm:items-stretch sm:gap-2">
+                            <div className="min-w-0 pr-8 sm:pr-0 sm:flex-1">
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-accent mb-1">Nuvarande</p>
                               {group.map((item, si) => (
                                 <p
                                   key={si}
-                                  className={cn(
-                                    "text-base font-medium leading-snug text-ink break-words",
-                                    si > 0 && "mt-1"
-                                  )}
+                                  className="text-sm font-semibold text-ink leading-snug break-words"
                                 >
                                   {item.currentFund.name}
                                 </p>
                               ))}
                             </div>
-                            <p aria-hidden="true" className="text-center text-[17px] leading-none text-ink-3">→</p>
-                            <div className="flex min-w-0 items-baseline justify-between gap-3 pl-4">
-                              <div className="min-w-0">
-                                <p className="text-base font-semibold leading-snug text-accent break-words">
-                                  {suggested.name}
-                                </p>
-                                {isConsolidate && (
-                                  <p className="mt-1 text-[13px] text-ink-3">Ökad vikt i en fond du redan äger</p>
-                                )}
+                            <div className="flex shrink-0 items-center justify-center sm:px-1">
+                              <div className="w-7 h-7 rounded-md bg-slate-100 flex items-center justify-center">
+                                <ArrowRight className="w-3.5 h-3.5 text-slate-400 rotate-90 sm:rotate-0" />
                               </div>
-                              <span className="shrink-0">{infoPanel}</span>
                             </div>
-                          </div>
-
-                          {/* Mobil: ett vertikalt block med etiketter */}
-                          <div className="sm:hidden">
-                            <div className="flex items-baseline justify-between gap-3">
-                              <p className="label-meta">Nuvarande</p>
-                              <span className="shrink-0">{infoPanel}</span>
-                            </div>
-                            {group.map((item, si) => (
-                              <p
-                                key={si}
-                                className="mt-1.5 text-base font-medium leading-snug text-ink break-words"
-                              >
-                                {item.currentFund.name}
+                            <div className="min-w-0 sm:flex-1 sm:text-right">
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-accent mb-1">
+                                {isConsolidate ? "Alternativt ökad vikt i befintlig fond" : "Alternativ"}
                               </p>
-                            ))}
-                            <p aria-hidden="true" className="my-2 text-[17px] leading-none text-ink-3">↓</p>
-                            <p className="label-meta">Föreslås bytas till</p>
-                            <p className="mt-1.5 text-base font-semibold leading-snug text-accent break-words">
-                              {suggested.name}
-                            </p>
-                            {isConsolidate && (
-                              <p className="mt-1 text-[13px] text-ink-3">Ökad vikt i en fond du redan äger</p>
-                            )}
+                              <p className="text-sm font-semibold text-ink leading-snug break-words">
+                                {suggested.name}
+                              </p>
+                            </div>
+                            <div className="absolute top-0 right-0 sm:static sm:shrink-0 sm:pt-0.5">
+                              {infoPanel}
+                            </div>
                           </div>
                         </div>
                       );
@@ -2509,7 +2502,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                     <button
                       type="button"
                       onClick={() => setShowAllSwaps(v => !v)}
-                      className="mt-4 text-sm text-accent underline decoration-line-strong underline-offset-2 transition-colors duration-150 hover:decoration-accent"
+                      className="mt-2 w-full py-2.5 text-sm font-medium text-slate-500 hover:text-ink border border-slate-100 hover:border-slate-200 rounded-md transition-colors"
                     >
                       {showAllSwaps ? "Visa färre förslag" : `Visa alla ${total} förslag`}
                     </button>
@@ -2520,7 +2513,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
 
               </>
             )}
-            </div>
+          </div>
           </section>
         </div>
       )}

@@ -451,14 +451,8 @@ function buildSummary(
   if (return3yr !== null)
     lines.push(`Total avkastning på tre år är ${pct(return3yr, 1)}.`);
 
-  if (sharpe !== null) {
-    if (sharpe > 1)
-      lines.push(`Sharpe-kvoten är ${dec(sharpe, 2)} — avkastning i förhållande till risk, där värden över 1 brukar räknas som starka.`);
-    else if (sharpe > 0)
-      lines.push(`Sharpe-kvoten är ${dec(sharpe, 2)} — avkastning i förhållande till risk, där värden mellan 0 och 1 är positiva men lägre.`);
-    else
-      lines.push(`Sharpe-kvoten är ${dec(sharpe, 2)} — en negativ kvot innebär att avkastningen inte kompenserade för risken under perioden.`);
-  }
+  if (sharpe !== null)
+    lines.push(`Den riskjusterade avkastningen (Sharpe-kvoten) är ${dec(sharpe, 2)}.`);
 
   if (Math.abs(totalWeight - 100) > 0.01)
     lines.push(`OBS: Vikterna summerar till ${pct(totalWeight, 1)}, inte 100 %.`);
