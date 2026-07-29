@@ -9,10 +9,10 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { ArrowRight, FileUp, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react"
 import type { SavedPortfolio } from "@/lib/portfolio"
-import DonutChart from "@/components/ui/DonutChart"
+import { Button } from "@/components/ui/button"
+import { Divider, Label, MetricGrid, ShareBar, Stat, StatusDot } from "@/components/ui/primitives"
 import DataFreshness from "@/components/ui/DataFreshness"
 import { computePortfolioScore } from "@/lib/portfolio-score"
-import { CHART_PALETTE } from "@/lib/chart-palette"
 import { useMobileBottomOverlay } from "@/lib/mobile-bottom-overlay"
 import { BEFORE_LOGIN_EVENT, prepareLoginResume, saveResume, takeResumeData } from "@/lib/resume-session"
 import {
@@ -259,7 +259,7 @@ function FundQuiz({
   };
 
   return (
-    <div className="rounded-xl border border-slate-200 overflow-hidden">
+    <div className="rounded-md border border-slate-200 overflow-hidden">
 
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-slate-50/60 border-b border-slate-100">
@@ -305,7 +305,7 @@ function FundQuiz({
                 key={o.value}
                 type="button"
                 onClick={() => pick("assetClass", o.value)}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 bg-white hover:border-accent hover:bg-slate-50 transition-all text-left group"
+                className="flex items-center gap-3 px-4 py-3 rounded-md border border-slate-200 bg-white hover:border-accent hover:bg-slate-50 transition-all text-left group"
               >
                 <div>
                   <p className="text-sm font-medium text-slate-800">{o.label}</p>
@@ -324,7 +324,7 @@ function FundQuiz({
                 key={o.value}
                 type="button"
                 onClick={() => pick("market", o.value)}
-                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-accent hover:bg-slate-50 transition-all text-left group"
+                className="flex items-center gap-2.5 px-3 py-2.5 rounded-md border border-slate-200 bg-white hover:border-accent hover:bg-slate-50 transition-all text-left group"
               >
                 <span className="text-sm font-medium text-slate-700">{o.label}</span>
               </button>
@@ -340,7 +340,7 @@ function FundQuiz({
                 key={o.value}
                 type="button"
                 onClick={() => pick("sector", o.value)}
-                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-accent hover:bg-slate-50 transition-all text-left group"
+                className="flex items-center gap-2.5 px-3 py-2.5 rounded-md border border-slate-200 bg-white hover:border-accent hover:bg-slate-50 transition-all text-left group"
               >
                 <span className="text-sm font-medium text-slate-700">{o.label}</span>
               </button>
@@ -356,7 +356,7 @@ function FundQuiz({
                 key={o.value}
                 type="button"
                 onClick={() => pick("management", o.value)}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 bg-white hover:border-accent hover:bg-slate-50 transition-all text-left group"
+                className="flex items-center gap-3 px-4 py-3 rounded-md border border-slate-200 bg-white hover:border-accent hover:bg-slate-50 transition-all text-left group"
               >
                 <div>
                   <p className="text-sm font-medium text-slate-800">{o.label}</p>
@@ -375,7 +375,7 @@ function FundQuiz({
                 key={String(o.value)}
                 type="button"
                 onClick={() => pick("maxCost", o.value)}
-                className="flex flex-col gap-0.5 px-4 py-3 rounded-xl border border-slate-200 bg-white hover:border-accent hover:bg-slate-50 transition-all text-left group"
+                className="flex flex-col gap-0.5 px-4 py-3 rounded-md border border-slate-200 bg-white hover:border-accent hover:bg-slate-50 transition-all text-left group"
               >
                 <span className="text-sm font-semibold text-slate-800">{o.label}</span>
                 <span className="text-xs text-slate-400">{o.desc}</span>
@@ -392,7 +392,7 @@ function FundQuiz({
                 key={o.value}
                 type="button"
                 onClick={() => pick("sortBy", o.value)}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 bg-white hover:border-accent hover:bg-slate-50 transition-all text-left group"
+                className="flex items-center gap-3 px-4 py-3 rounded-md border border-slate-200 bg-white hover:border-accent hover:bg-slate-50 transition-all text-left group"
               >
                 <div>
                   <p className="text-sm font-medium text-slate-800">{o.label}</p>
@@ -703,7 +703,7 @@ function FundSearchSheet({
       aria-modal="true"
       aria-label="Lägg till fonder"
     >
-      <div className="flex h-full w-full flex-col overflow-hidden bg-white sm:h-[85vh] sm:max-w-md sm:rounded-2xl sm:shadow-xl">
+      <div className="flex h-full w-full flex-col overflow-hidden bg-white sm:h-[85vh] sm:max-w-md sm:rounded-lg sm:shadow-xl">
         {/* Header */}
         <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
           <button
@@ -731,7 +731,7 @@ function FundSearchSheet({
               autoComplete="off"
               autoCorrect="off"
               spellCheck={false}
-              className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-10 pr-9 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-md border border-slate-300 bg-white py-3 pl-10 pr-9 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {query && (
               <button
@@ -775,7 +775,7 @@ function FundSearchSheet({
                     type="button"
                     onClick={() => toggle(f)}
                     className={cn(
-                      "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors",
+                      "flex w-full items-center gap-3 rounded-md px-3 py-3 text-left transition-colors",
                       isSelected ? "bg-blue-50" : "hover:bg-slate-50 active:bg-slate-100"
                     )}
                   >
@@ -804,7 +804,7 @@ function FundSearchSheet({
           <button
             type="button"
             onClick={onClose}
-            className="w-full rounded-[10px] bg-accent py-3 font-semibold text-white transition-colors hover:bg-accent-hover active:bg-accent-press"
+            className="w-full rounded-md bg-accent py-3 font-semibold text-white transition-colors hover:bg-accent-hover active:bg-accent-press"
           >
             {count > 0 ? `Klar · ${count} ${count === 1 ? "fond vald" : "fonder valda"}` : "Klar"}
           </button>
@@ -836,7 +836,7 @@ function CustodianDropdown({ onSelect }: { onSelect: (value: string) => void }) 
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border-2 bg-white text-sm font-medium transition-all
+        className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-md border-2 bg-white text-sm font-medium transition-all
           ${open ? "border-blue-500 ring-2 ring-blue-100" : "border-slate-200 hover:border-slate-300"}`}
       >
         <span className={current ? "text-slate-900" : "text-slate-400"}>
@@ -851,7 +851,7 @@ function CustodianDropdown({ onSelect }: { onSelect: (value: string) => void }) 
       </button>
 
       {open && (
-        <div className="absolute z-10 top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+        <div className="absolute z-10 top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-md shadow-lg overflow-hidden">
           {CUSTODIANS.map((c) => (
             <button
               key={c.value}
@@ -1397,9 +1397,9 @@ export default function AnalyzeClient() {
           <p className="flex min-h-6 items-center justify-center text-center text-base font-medium text-slate-700">
             {LOADING_STEPS[loadingStep]}
           </p>
-          <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+          <div className="h-[3px] overflow-hidden bg-fill-muted">
             <div
-              className="h-full bg-blue-500 rounded-full transition-all duration-500"
+              className="h-full bg-ink transition-all duration-200"
               style={{ width: `${((loadingStep + 1) / LOADING_STEPS.length) * 100}%` }}
             />
           </div>
@@ -1437,7 +1437,7 @@ export default function AnalyzeClient() {
               </svg>
             </button>
             {portfolioDropdownOpen && (
-              <div className="absolute z-20 top-full left-0 mt-1 min-w-[180px] bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+              <div className="absolute z-20 top-full left-0 mt-1 min-w-[180px] bg-white border border-slate-200 rounded-md shadow-lg overflow-hidden">
                 {savedPortfolios.map((p) => {
                   const custodianLabel = p.custodian === "nordnet" ? "Nordnet" : p.custodian === "övrigt" ? "Övrigt" : "Avanza";
                   return (
@@ -1480,36 +1480,36 @@ export default function AnalyzeClient() {
         </div>
       )}
 
-      <section className="no-print bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6 space-y-5">
+      {/* Inmatningen hålls i en smal kolumn; resultatet får hela bredden. */}
+      <section className={cn("no-print space-y-6", !analysis && "max-w-[720px]")}>
         {analysis && inputCollapsed ? (
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          /* Sidhuvudsrad — titel + sekundärknapp, avdelad av en hårlinje. Inget kort. */
+          <div className="flex flex-col gap-3 border-b border-line pb-5 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
-              <p className="font-heading text-base font-bold text-slate-900">Din portfölj</p>
-              <p className="mt-1 text-xs leading-relaxed text-slate-500">
-                {entries.filter((e) => e.isin).length} fonder analyserade.
+              <h2 className="font-display text-[26px] leading-tight text-ink sm:text-[32px]">Din portfölj</h2>
+              <p className="mt-1 text-sm text-ink-3">
+                {entries.filter((e) => e.isin).length} fonder analyserade
               </p>
             </div>
-            <button
-              type="button"
+            <Button
+              variant="secondary"
               onClick={() => setInputCollapsed(false)}
-              className="inline-flex w-full items-center justify-center rounded-[10px] border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-accent transition-colors hover:border-accent hover:bg-info sm:w-auto"
+              className="w-full sm:w-auto"
             >
               Ändra fonder
-            </button>
+            </Button>
           </div>
         ) : (
           <>
-        {/* Header */}
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="font-heading text-lg font-bold text-slate-900 shrink-0">Din portfölj</h2>
+        {/* Sidhuvud */}
+        <div>
+          <h2 className="font-display text-[26px] leading-tight text-ink sm:text-[32px]">Din portfölj</h2>
+          <p className="mt-1 text-sm text-ink-2">Var finns dina fonder?</p>
         </div>
 
-        {/* Custodian selector */}
-        <div className="rounded-xl border border-line-soft bg-section/60 p-3 sm:p-4">
-          <div className="pb-3">
-            <p className="font-heading text-base font-bold text-ink">Var finns dina fonder?</p>
-          </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        {/* Depåval — tre likvärdiga linjeknappar i en grupp, ingen omslutande kortyta */}
+        <div>
+          <div className="grid grid-cols-1 divide-y divide-line overflow-hidden rounded-md border border-line sm:grid-cols-3 sm:divide-x sm:divide-y-0">
             {[
               { value: "avanza", label: "Avanza" },
               { value: "nordnet", label: "Nordnet" },
@@ -1519,6 +1519,7 @@ export default function AnalyzeClient() {
                 key={c.value}
                 type="button"
                 aria-label={c.label}
+                aria-pressed={custodian === c.value}
                 onClick={() => {
                   if (custodian !== c.value) {
                     setEntries([{ isin: "", name: "", weight: "" }]);
@@ -1531,19 +1532,19 @@ export default function AnalyzeClient() {
                   setCustodian(c.value);
                 }}
                 className={cn(
-                  "flex min-h-[46px] items-center justify-center rounded-[10px] border px-4 py-2.5 text-center text-sm font-bold transition-all",
+                  "flex min-h-[56px] items-center justify-center px-4 py-3 text-center text-sm transition-colors duration-150",
                   custodian === c.value
-                    ? "border-accent bg-accent text-white shadow-sm"
-                    : "border-line-soft bg-white text-ink-2 hover:border-info-line hover:bg-white hover:text-accent"
+                    ? "bg-section font-medium text-ink"
+                    : "bg-white text-ink-2 hover:bg-section"
                 )}
               >
                 {c.label}
               </button>
             ))}
           </div>
-          <p className="mt-3 text-xs text-slate-400">
+          <p className="mt-3 text-sm text-ink-3">
             Äger du inga fonder?{" "}
-            <Link href="/bygg-portfolj" className="text-blue-600 hover:underline font-medium">
+            <Link href="/bygg-portfolj" className="text-accent underline decoration-line-strong underline-offset-2 transition-colors duration-150 hover:decoration-accent">
               Skapa ett portföljexempel
             </Link>
           </p>
@@ -1565,33 +1566,31 @@ export default function AnalyzeClient() {
         {custodian && (
           <>
             {/* Divider */}
-            <div className="h-px bg-slate-100" />
+            <div className="h-px bg-line" />
 
-            {/* Method selector */}
-            <div className="space-y-3">
+            {/* Metodval — tre likvärdiga linjeknappar i en grupp */}
+            <div className="space-y-4">
               <div>
-                <p className="font-heading text-base font-bold text-ink">Hur vill du lägga in innehaven?</p>
+                <p className="text-lg font-medium text-ink">Hur vill du lägga in innehaven?</p>
                 <p className="mt-1 text-sm text-ink-3">
                   Sök själv, ladda upp en fil eller låt guiden hjälpa dig hitta fonder.
                 </p>
               </div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <div className="grid grid-cols-1 divide-y divide-line overflow-hidden rounded-md border border-line sm:grid-cols-3 sm:divide-x sm:divide-y-0">
               {/* Manual */}
               <button
                 type="button"
                 onClick={() => setInputMethod("manual")}
                 className={cn(
-                  "group flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-xl border px-2.5 py-2 text-center transition-all",
-                  inputMethod === "manual"
-                    ? "border-accent bg-info shadow-sm ring-1 ring-accent/15"
-                    : "border-line-soft bg-white hover:border-info-line hover:bg-section/60"
+                  "group flex min-h-[84px] flex-col items-center justify-center gap-2 px-3 py-4 text-center transition-colors duration-150",
+                  inputMethod === "manual" ? "bg-section" : "bg-white hover:bg-section/60"
                 )}
               >
-                <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] border transition-colors", inputMethod === "manual" ? "border-accent bg-accent text-white" : "border-line-soft bg-section text-ink-3 group-hover:text-accent")}>
+                <span className={cn("shrink-0 transition-colors duration-150", inputMethod === "manual" ? "text-accent" : "text-ink-3")}>
                   <Search className="h-4 w-4" />
                 </span>
                 <span>
-                  <span className={cn("block text-sm font-semibold", inputMethod === "manual" ? "text-accent" : "text-ink")}>
+                  <span className={cn("block text-sm", inputMethod === "manual" ? "font-medium text-ink" : "text-ink")}>
                     Sök manuellt
                   </span>
                   <span className="mt-1 block text-xs leading-snug text-ink-3">
@@ -1606,21 +1605,19 @@ export default function AnalyzeClient() {
                 onClick={() => { setImportResult(null); setImportError(null); setImportWizard({ open: true, file: null }); }}
                 disabled={importing}
                 className={cn(
-                  "group flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-xl border px-2.5 py-2 text-center transition-all disabled:cursor-wait",
-                  importing
-                    ? "border-accent bg-info shadow-sm ring-1 ring-accent/15"
-                    : "border-line-soft bg-white hover:border-info-line hover:bg-section/60"
+                  "group flex min-h-[84px] flex-col items-center justify-center gap-2 px-3 py-4 text-center transition-colors duration-150 disabled:cursor-wait",
+                  importing ? "bg-section" : "bg-white hover:bg-section/60"
                 )}
               >
-                <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] border transition-colors", importing ? "border-accent bg-accent text-white" : "border-line-soft bg-section text-ink-3 group-hover:text-accent")}>
+                <span className={cn("shrink-0 transition-colors duration-150", importing ? "text-accent" : "text-ink-3")}>
                   {importing ? (
-                    <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-ink-3 border-t-transparent" />
                   ) : (
                     <FileUp className="h-4 w-4" />
                   )}
                 </span>
                 <span>
-                  <span className={cn("block text-sm font-semibold", importing ? "text-accent" : "text-ink")}>
+                  <span className={cn("block text-sm", importing ? "font-medium text-ink" : "text-ink")}>
                     {importing ? "Importerar…" : "Importera fil"}
                   </span>
                   <span className="mt-1 block text-xs leading-snug text-ink-3">
@@ -1634,17 +1631,15 @@ export default function AnalyzeClient() {
                 type="button"
                 onClick={() => setInputMethod("ai")}
                 className={cn(
-                  "group flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-xl border px-2.5 py-2 text-center transition-all",
-                  inputMethod === "ai"
-                    ? "border-accent bg-info shadow-sm ring-1 ring-accent/15"
-                    : "border-line-soft bg-white hover:border-info-line hover:bg-section/60"
+                  "group flex min-h-[84px] flex-col items-center justify-center gap-2 px-3 py-4 text-center transition-colors duration-150",
+                  inputMethod === "ai" ? "bg-section" : "bg-white hover:bg-section/60"
                 )}
               >
-                <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] border transition-colors", inputMethod === "ai" ? "border-accent bg-accent text-white" : "border-line-soft bg-section text-ink-3 group-hover:text-accent")}>
+                <span className={cn("shrink-0 transition-colors duration-150", inputMethod === "ai" ? "text-accent" : "text-ink-3")}>
                   <SlidersHorizontal className="h-4 w-4" />
                 </span>
                 <span>
-                  <span className={cn("block text-sm font-semibold", inputMethod === "ai" ? "text-accent" : "text-ink")}>
+                  <span className={cn("block text-sm", inputMethod === "ai" ? "font-medium text-ink" : "text-ink")}>
                     Guidad sökning
                   </span>
                   <span className="mt-1 block text-xs leading-snug text-ink-3">
@@ -1676,15 +1671,15 @@ export default function AnalyzeClient() {
             {/* Fund rows — in AI mode only shown once at least one fund is selected */}
             {(inputMethod === "manual" || (inputMethod === "ai" && entries.some((e) => e.isin))) && (<>
             <div className="flex items-center justify-between gap-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Innehav</p>
-              <div className="flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5" role="group" aria-label="Ange innehav i vikt eller belopp">
+              <p className="label-meta">Innehav</p>
+              <div className="flex items-center overflow-hidden rounded-xs border border-line-strong" role="group" aria-label="Ange innehav i vikt eller belopp">
                 {([["weight", "Vikt (%)"], ["amount", "Belopp (kr)"]] as const).map(([mode, label]) => (
                   <button
                     key={mode}
                     type="button"
                     onClick={() => setInputMode(mode)}
-                    className={`px-2.5 py-1 text-xs font-semibold rounded-md whitespace-nowrap transition-colors ${
-                      inputMode === mode ? "bg-white text-ink shadow-sm" : "text-slate-400 hover:text-slate-600"
+                    className={`whitespace-nowrap px-3 py-1.5 text-xs transition-colors duration-150 ${
+                      inputMode === mode ? "bg-section font-medium text-ink" : "bg-white text-ink-3 hover:text-ink"
                     }`}
                   >
                     {label}
@@ -1694,7 +1689,7 @@ export default function AnalyzeClient() {
             </div>
 
             {importError && (
-              <p className="rounded-[10px] border border-neg/25 bg-neg-soft px-3 py-2 text-xs text-neg">
+              <p className="rounded-md border border-neg/25 bg-neg-soft px-3 py-2 text-xs text-neg">
                 {importError}
               </p>
             )}
@@ -1721,7 +1716,7 @@ export default function AnalyzeClient() {
                 <span />
               </div>
               {entries.map((entry, i) => (
-                <div key={i} className={cn("space-y-2.5 sm:space-y-0 sm:grid sm:grid-cols-[1fr_100px_44px] sm:gap-2 bg-slate-50 sm:bg-transparent rounded-xl sm:rounded-none p-4 sm:p-0 border border-slate-100 sm:border-0", !entry.isin && "hidden sm:grid")}>
+                <div key={i} className={cn("space-y-2.5 sm:space-y-0 sm:grid sm:grid-cols-[1fr_100px_44px] sm:gap-2 bg-slate-50 sm:bg-transparent rounded-md sm:rounded-none p-4 sm:p-0 border border-slate-100 sm:border-0", !entry.isin && "hidden sm:grid")}>
                   {/* Mobil: rubrikrad med ta bort-knapp — desktop har egen knappkolumn */}
                   <div className="flex items-center justify-between sm:hidden">
                     <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Fond {i + 1}</p>
@@ -1766,7 +1761,7 @@ export default function AnalyzeClient() {
               <button
                 type="button"
                 onClick={() => setSearchSheetOpen(true)}
-                className="sm:hidden flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-white py-3.5 text-sm font-semibold text-blue-600 active:bg-slate-50 transition-colors"
+                className="sm:hidden flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-slate-300 bg-white py-3.5 text-sm font-semibold text-blue-600 active:bg-slate-50 transition-colors"
               >
                 <Search className="w-4 h-4" />
                 {entries.some((e) => e.isin) ? "Lägg till fler fonder" : "Lägg till fonder"}
@@ -1793,13 +1788,13 @@ export default function AnalyzeClient() {
               )}
             </div>
 
-            {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl p-3">{error}</p>}
+            {error && <p className="text-sm text-red-600 bg-red-50 rounded-md p-3">{error}</p>}
 
             </>)}
 
             <button
               onClick={() => analyze()} disabled={loading || inputMethod === null}
-              className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press disabled:bg-blue-300 text-white font-semibold rounded-[10px] py-3 transition-colors"
+              className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press disabled:bg-blue-300 text-white font-semibold rounded-md py-3 transition-colors"
             >
               {loading ? "Analyserar…" : "Analysera portfölj"}
             </button>
@@ -1823,7 +1818,7 @@ export default function AnalyzeClient() {
       {analysis && <AnalysisResult analysis={analysis} portfolioValue={portfolioValue} user={user} onLoginClick={handleLoginFromBlur} />}
 
       {analysis && user && !portfolioId && (
-        <section className="no-print bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+        <section className="no-print bg-white rounded-md shadow-sm border border-slate-200 p-4 sm:p-6">
           {!showSaveForm ? (
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -1832,7 +1827,7 @@ export default function AnalyzeClient() {
               </div>
               <button
                 onClick={() => setShowSaveForm(true)}
-                className="shrink-0 bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold px-4 py-2.5 rounded-[10px] transition-colors"
+                className="shrink-0 bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold px-4 py-2.5 rounded-md transition-colors"
               >
                 Spara
               </button>
@@ -1854,13 +1849,13 @@ export default function AnalyzeClient() {
                 <button
                   onClick={handleSaveNew}
                   disabled={!savingName.trim() || saveStatus === "saving"}
-                  className="bg-accent hover:bg-accent-hover active:bg-accent-press disabled:bg-blue-300 text-white text-sm font-semibold px-4 py-2 rounded-[10px] transition-colors"
+                  className="bg-accent hover:bg-accent-hover active:bg-accent-press disabled:bg-blue-300 text-white text-sm font-semibold px-4 py-2 rounded-md transition-colors"
                 >
                   {saveStatus === "saving" ? "Sparar…" : "Spara"}
                 </button>
                 <button
                   onClick={() => { setShowSaveForm(false); setSavingName(""); }}
-                  className="text-sm text-slate-500 hover:text-slate-700 px-4 py-2 rounded-xl border border-slate-200 transition-colors"
+                  className="text-sm text-slate-500 hover:text-slate-700 px-4 py-2 rounded-md border border-slate-200 transition-colors"
                 >
                   Avbryt
                 </button>
@@ -1883,7 +1878,7 @@ export default function AnalyzeClient() {
         className="fixed inset-0 z-[70] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4"
         onClick={(e) => { if (e.target === e.currentTarget) setImportWizard(w => ({ ...w, open: false })); }}
       >
-        <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+        <div className="bg-white rounded-md shadow-xl w-full max-w-md overflow-hidden">
           {/* Header */}
           <div className="px-6 pt-6 pb-4 border-b border-slate-100">
             <div className="flex items-center justify-between">
@@ -1915,14 +1910,14 @@ export default function AnalyzeClient() {
                 }}
               />
               <div className={cn(
-                "border-2 border-dashed rounded-xl p-8 text-center transition-all",
+                "border-2 border-dashed rounded-md p-8 text-center transition-all",
                 importWizard.file
                   ? "border-blue-300 bg-blue-50"
                   : "border-slate-200 hover:border-blue-300 hover:bg-slate-50"
               )}>
                 {importWizard.file ? (
                   <div className="space-y-2">
-                    <div className="w-10 h-10 rounded-[10px] bg-blue-100 flex items-center justify-center mx-auto">
+                    <div className="w-10 h-10 rounded-md bg-blue-100 flex items-center justify-center mx-auto">
                       <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
@@ -1932,7 +1927,7 @@ export default function AnalyzeClient() {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <div className="w-10 h-10 rounded-[10px] bg-slate-100 flex items-center justify-center mx-auto">
+                    <div className="w-10 h-10 rounded-md bg-slate-100 flex items-center justify-center mx-auto">
                       <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
                       </svg>
@@ -1945,7 +1940,7 @@ export default function AnalyzeClient() {
             </label>
 
             {importError && (
-              <p className="rounded-[10px] border border-neg/25 bg-neg-soft px-3 py-2 text-xs text-neg">
+              <p className="rounded-md border border-neg/25 bg-neg-soft px-3 py-2 text-xs text-neg">
                 {importError}
               </p>
             )}
@@ -1961,7 +1956,7 @@ export default function AnalyzeClient() {
             <button
               disabled={!importWizard.file || importing}
               onClick={handleWizardComplete}
-              className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press disabled:bg-blue-300 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-[10px] transition-colors text-sm flex items-center justify-center gap-2"
+              className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press disabled:bg-blue-300 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-md transition-colors text-sm flex items-center justify-center gap-2"
             >
               {importing ? (
                 <>
@@ -1981,7 +1976,7 @@ export default function AnalyzeClient() {
         className="fixed inset-0 z-[75] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4"
         onClick={(e) => { if (e.target === e.currentTarget) setUnmatchedNotice(null); }}
       >
-        <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+        <div className="bg-white rounded-md shadow-xl w-full max-w-md overflow-hidden">
           <div className="flex items-start justify-between gap-3 px-6 pt-6 pb-4 border-b border-slate-100">
             <h2 className="text-base font-bold text-slate-900">
               {unmatchedNotice.length === 1 ? "En fond kunde inte läsas in" : `${unmatchedNotice.length} fonder kunde inte läsas in`}
@@ -1998,12 +1993,12 @@ export default function AnalyzeClient() {
               Vi hittade dem inte i fondlistan för {custodian === "nordnet" ? "Nordnet" : custodian === "avanza" ? "Avanza" : "din depå"}.
               Sök upp dem manuellt i listan — vikterna ligger redan på plats.
             </p>
-            <ul className="max-h-48 space-y-1 overflow-y-auto rounded-[10px] border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+            <ul className="max-h-48 space-y-1 overflow-y-auto rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
               {unmatchedNotice.map((n, i) => <li key={`${n}-${i}`}>{n}</li>)}
             </ul>
             <button
               onClick={() => setUnmatchedNotice(null)}
-              className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press text-white font-semibold py-3 rounded-[10px] transition-colors text-sm"
+              className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press text-white font-semibold py-3 rounded-md transition-colors text-sm"
             >
               Okej
             </button>
@@ -2038,9 +2033,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
     if (fee + ret > 100) potentialGainKr = fee + ret;
   }
 
-  const scoreColor = score >= 7.5 ? "#18864B" : score >= 5 ? "#B97818" : "#C23A32";
   const allocationSlices = (analysis.detailedBreakdown ?? []).map(c => ({ label: c.label, weight: c.weight }));
-  const allocationCenter = allocationSlices[0];
 
   const strengths: string[] = [];
   const warnings: string[] = [];
@@ -2077,12 +2070,12 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
           <p className="text-sm text-slate-400">{new Date().toLocaleDateString("sv-SE")}</p>
         </div>
 
-        <div className="border border-slate-200 rounded-xl p-5 mb-4">
+        <div className="border border-slate-200 rounded-md p-5 mb-4">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
               <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-slate-400 mb-1">Portföljbetyg</p>
               <div className="flex items-baseline gap-1">
-                <span className="text-5xl font-bold tabular-nums" style={{ color: scoreColor }}>
+                <span className="figure text-5xl text-ink">
                   {score.toFixed(1).replace(".", ",")}
                 </span>
                 <span className="text-xl text-slate-300 font-light">/10</span>
@@ -2091,7 +2084,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
             {potentialGainKr !== null && (
               <div className="text-right">
                 <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-slate-400 mb-1">Beräknad skillnad</p>
-                <p className="text-2xl font-bold text-green-700">+{Math.round(potentialGainKr).toLocaleString("sv-SE")} kr</p>
+                <p className="figure text-2xl text-pos">+{Math.round(potentialGainKr).toLocaleString("sv-SE")} kr</p>
                 <p className="text-xs text-slate-400 mt-0.5">per år{assumed ? " (vid 100 000 kr)" : ""}</p>
               </div>
             )}
@@ -2109,7 +2102,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-2">Styrkor</p>
                   {strengths.map(s => (
-                    <p key={s} className="text-sm text-green-700 flex items-center gap-1.5 mb-1">✓ {s}</p>
+                    <p key={s} className="mb-1 text-sm text-ink">{s}</p>
                   ))}
                 </div>
               )}
@@ -2117,7 +2110,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-2">Förbättringsområden</p>
                   {warnings.map(w => (
-                    <p key={w} className="text-sm text-amber-700 flex items-center gap-1.5 mb-1">⚠ {w}</p>
+                    <p key={w} className="mb-1 text-sm text-ink">{w}</p>
                   ))}
                 </div>
               )}
@@ -2126,178 +2119,134 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
         </div>
       </div>
 
-      {/* Sammanfattande betygskort */}
-      <section className="no-print bg-white rounded-xl border border-line p-4 sm:p-8" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)" }}>
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold tracking-[0.08em] uppercase text-ink-3 mb-2">Portföljbetyg</p>
+      {/* Sammanfattning — ett kortlager, inre grupper avdelade med hårlinjer */}
+      <section className="no-print overflow-hidden rounded-md border border-line bg-white">
+        <div className="grid grid-cols-1 divide-y divide-line sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+          <div className="px-5 py-6 sm:px-8 sm:py-8">
+            <Label className="mb-3">Portföljbetyg</Label>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-5xl sm:text-6xl font-bold tabular-nums" style={{ color: scoreColor }}>
+              {/* Betyget är neutralt i ink — betygsnivån bärs av texten nedanför,
+                  inte av en trafikljusfärg på siffran. */}
+              <span className="figure text-[44px] leading-none text-ink sm:text-[52px]">
                 {score.toFixed(1).replace(".", ",")}
               </span>
-              <span className="text-2xl text-ink-4 font-light">/10</span>
+              <span className="figure text-xl text-ink-3">/10</span>
             </div>
           </div>
           {potentialGainKr !== null && (
-            <div className="sm:text-right">
-              <p className="text-xs font-semibold tracking-[0.08em] uppercase text-ink-3 mb-2">Beräknad skillnad</p>
-              <p className="text-2xl sm:text-3xl font-bold text-pos tabular-nums">+{Math.round(potentialGainKr).toLocaleString("sv-SE")} kr</p>
-              <p className="text-xs text-ink-3 mt-1">per år{assumed ? " (vid 100 000 kr)" : ""}</p>
-              <p className="text-[10px] text-ink-4 mt-0.5">inkl. historisk avkastningsskillnad</p>
+            <div className="px-5 py-6 sm:px-8 sm:py-8">
+              <Label className="mb-3">Beräknad skillnad</Label>
+              <p className="figure text-[32px] leading-none text-pos sm:text-[38px]">
+                +{Math.round(potentialGainKr).toLocaleString("sv-SE")} kr
+              </p>
+              <p className="mt-3 text-sm text-ink-2">
+                per år{assumed ? " (vid 100 000 kr)" : ""} · inkl. historisk avkastningsskillnad
+              </p>
             </div>
           )}
         </div>
 
-        <p className="mt-5 pt-5 border-t border-line-soft text-ink-2 leading-relaxed text-[15px]">
-          {analysis.summaryText}
-        </p>
+        <Divider />
 
-        {(strengths.length > 0 || warnings.length > 0) && (
-          <div className="mt-5 grid sm:grid-cols-2 gap-4">
-            {strengths.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold tracking-[0.08em] uppercase text-ink-3 mb-2">Styrkor</p>
-                <div className="space-y-1.5">
-                  {strengths.map(s => (
-                    <p key={s} className="text-sm text-pos flex items-center gap-2">
-                      <span className="shrink-0">✓</span> {s}
-                    </p>
-                  ))}
-                </div>
-              </div>
-            )}
-            {warnings.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold tracking-[0.08em] uppercase text-ink-3 mb-2">Förbättringsområden</p>
-                <div className="space-y-1.5">
-                  {warnings.map(w => (
-                    <p key={w} className="text-sm text-warn flex items-center gap-2">
-                      <span className="shrink-0">⚠</span> {w}
-                    </p>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+        <div className="px-5 py-6 sm:px-8 sm:py-8">
+          <p className="max-w-[680px] text-[15px] leading-[1.7] text-ink-2">
+            {analysis.summaryText}
+          </p>
 
-        <div className="mt-5 pt-4 border-t border-line-soft flex justify-end">
+          {(strengths.length > 0 || warnings.length > 0) && (
+            <div className="mt-8 grid gap-8 sm:grid-cols-2">
+              {strengths.length > 0 && (
+                <div>
+                  <Label className="mb-3">Styrkor</Label>
+                  <ul className="space-y-2">
+                    {strengths.map(s => (
+                      <li key={s} className="flex gap-2.5 text-[15px] text-ink">
+                        <StatusDot tone="pos" /> {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {warnings.length > 0 && (
+                <div>
+                  <Label className="mb-3">Förbättringsområden</Label>
+                  <ul className="space-y-2">
+                    {warnings.map(w => (
+                      <li key={w} className="flex gap-2.5 text-[15px] text-ink">
+                        <StatusDot tone="warn" /> {w}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <Divider />
+
+        <div className="flex justify-end px-5 py-3 sm:px-8">
           <button
             onClick={() => window.print()}
-            className="flex items-center gap-2 text-xs text-ink-3 hover:text-ink transition-colors"
+            className="text-xs text-ink-3 transition-colors duration-150 hover:text-ink"
           >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
             Spara som PDF
           </button>
         </div>
       </section>
 
-      {/* Key metrics + allocation */}
-      <section className="overflow-hidden bg-white rounded-xl p-4 sm:p-8" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)", border: "1px solid #D9E0E6" }}>
-        <p className="mb-5 text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 sm:mb-6">Nyckeltal</p>
-        <div className="grid min-w-0 gap-7 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8 lg:items-start">
-          <div className="grid min-w-0 grid-cols-2 gap-x-3 gap-y-6 sm:gap-x-8">
-            <Metric label="Snittavgift" value={analysis.avgCost !== null ? `${analysis.avgCost.toFixed(2)}%` : "–"} sub="per år" info="Den genomsnittliga årliga avgiften viktat efter din fördelning." />
-            <Metric label="Avkastning 1 år" value={analysis.weightedReturn1yr !== null ? `${analysis.weightedReturn1yr.toFixed(1)}%` : "–"} sub="senaste 12 mån" info="Portföljens viktade avkastning de senaste 12 månaderna." />
-            <Metric label="Avkastning 3 år" value={analysis.weightedReturn3yr !== null ? `${analysis.weightedReturn3yr.toFixed(1)}%` : "–"} sub="totalt" info="Portföljens viktade totalavkastning de senaste 3 åren." />
-            <Metric label="Sharpe 3 år" value={analysis.weightedSharpe !== null ? analysis.weightedSharpe.toFixed(2) : "–"} sub="riskjusterad" info="Avkastning i förhållande till risk. Högre är bättre." />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-4">Fördelning</p>
-            <div className="sm:hidden">
-              <DonutChart
-                palette={CHART_PALETTE}
-                slices={allocationSlices}
-                centerLabel={allocationCenter ? `${allocationCenter.weight.toFixed(0)}%` : ""}
-                centerSub={allocationCenter?.label ?? ""}
-                size={132}
-                thickness={20}
-                disableHover
-              />
-            </div>
-            <div className="hidden sm:block">
-              <DonutChart
-                palette={CHART_PALETTE}
-                slices={allocationSlices}
-                centerLabel={allocationCenter ? `${allocationCenter.weight.toFixed(0)}%` : ""}
-                centerSub={allocationCenter?.label ?? ""}
-                size={145}
-                thickness={22}
-                horizontal
-              />
-            </div>
-            <p className="text-[10px] text-slate-400 mt-2 leading-snug">* Baseras på fondkategori, inte underliggande innehav.</p>
-          </div>
+      {/* Nyckeltal + fördelning — linjerat rutnät, inga inre kort */}
+      <section className="overflow-hidden rounded-md border border-line bg-white">
+        <MetricGrid>
+          <Metric label="Snittavgift" value={analysis.avgCost !== null ? `${analysis.avgCost.toFixed(2).replace(".", ",")} %` : "–"} sub="per år" info="Den genomsnittliga årliga avgiften viktat efter din fördelning." />
+          <Metric label="Avkastning 1 år" value={analysis.weightedReturn1yr !== null ? `${analysis.weightedReturn1yr.toFixed(1).replace(".", ",")} %` : "–"} sub="senaste 12 mån" info="Portföljens viktade avkastning de senaste 12 månaderna." />
+          <Metric label="Avkastning 3 år" value={analysis.weightedReturn3yr !== null ? `${analysis.weightedReturn3yr.toFixed(1).replace(".", ",")} %` : "–"} sub="totalt" info="Portföljens viktade totalavkastning de senaste 3 åren." />
+          <Metric label="Sharpe 3 år" value={analysis.weightedSharpe !== null ? analysis.weightedSharpe.toFixed(2).replace(".", ",") : "–"} sub="riskjusterad" info="Avkastning i förhållande till risk. Högre är bättre." />
+        </MetricGrid>
+
+        <Divider />
+
+        {/* Fördelning — horisontella andelsstaplar i en accent i stället för donut */}
+        <div className="px-5 py-6 sm:px-8 sm:py-8">
+          <Label className="mb-4">Fördelning</Label>
+          <ShareBar items={allocationSlices} className="max-w-[720px]" />
+          <p className="mt-4 text-xs text-ink-3">* Baseras på fondkategori, inte underliggande innehav.</p>
         </div>
 
         {/* Tillgångsslag + Förvaltningsstil */}
-        <div className="mt-8 pt-6 border-t border-slate-50 grid sm:grid-cols-2 gap-8">
-          {(analysis.categoryBreakdown?.length ?? 0) > 0 && (() => {
-            const ASSET_COLORS: Record<string, string> = {
-              Aktiefonder:          "#0B6E99",
-              Räntefonder:          "#D9A542",
-              Blandfonder:          "#18864B",
-              "Alternativa fonder": "#5D6B78",
-              Penningmarknadsfonder:"#7FB3CC",
-              Övrigt:               "#9CA8B3",
-            };
-            const items = (analysis.categoryBreakdown ?? []).filter(c => c.weight > 0);
-            return (
-              <div>
-                <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-3">Tillgångsslag</p>
-                <div className="h-3 rounded-full overflow-hidden flex">
-                  {items.map((c) => (
-                    <div key={c.label} style={{ width: `${c.weight}%`, backgroundColor: ASSET_COLORS[c.label] ?? "#9CA8B3" }} />
-                  ))}
+        {((analysis.categoryBreakdown?.length ?? 0) > 0 ||
+          (analysis.managementBreakdown.active + analysis.managementBreakdown.passive + analysis.managementBreakdown.unknown) > 0) && (
+          <>
+            <Divider />
+            <div className="grid grid-cols-1 divide-y divide-line sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+              {(analysis.categoryBreakdown?.length ?? 0) > 0 && (
+                <div className="px-5 py-6 sm:px-8 sm:py-8">
+                  <Label className="mb-4">Tillgångsslag</Label>
+                  <ShareBar items={(analysis.categoryBreakdown ?? []).filter(c => c.weight > 0)} />
                 </div>
-                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
-                  {items.map((c) => (
-                    <div key={c.label} className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: ASSET_COLORS[c.label] ?? "#9CA8B3" }} />
-                      <span className="text-xs text-slate-500">{c.label}</span>
-                      <span className="text-xs font-semibold text-slate-800 tabular-nums">{c.weight.toFixed(1)}%</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })()}
+              )}
 
-          {(analysis.managementBreakdown.active + analysis.managementBreakdown.passive + analysis.managementBreakdown.unknown) > 0 && (() => {
-            const items = [
-              { label: "Aktivt förvaltad", value: analysis.managementBreakdown.active,  color: "#0B6E99" },
-              { label: "Indexfond",         value: analysis.managementBreakdown.passive, color: "#D9A542" },
-              { label: "Oklassad",          value: analysis.managementBreakdown.unknown, color: "#9CA8B3" },
-            ].filter(i => i.value > 0);
-            return (
-              <div>
-                <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-3">Förvaltningsstil</p>
-                <div className="h-3 rounded-full overflow-hidden flex">
-                  {items.map((item) => (
-                    <div key={item.label} style={{ width: `${item.value}%`, backgroundColor: item.color }} />
-                  ))}
+              {(analysis.managementBreakdown.active + analysis.managementBreakdown.passive + analysis.managementBreakdown.unknown) > 0 && (
+                <div className="px-5 py-6 sm:px-8 sm:py-8">
+                  <Label className="mb-4">Förvaltningsstil</Label>
+                  <ShareBar
+                    items={[
+                      { label: "Aktivt förvaltad", weight: analysis.managementBreakdown.active },
+                      { label: "Indexfond", weight: analysis.managementBreakdown.passive },
+                      { label: "Oklassad", weight: analysis.managementBreakdown.unknown },
+                    ].filter(i => i.weight > 0)}
+                  />
                 </div>
-                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
-                  {items.map((item) => (
-                    <div key={item.label} className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full shrink-0 border border-slate-200" style={{ backgroundColor: item.color }} />
-                      <span className="text-xs text-slate-500">{item.label}</span>
-                      <span className="text-xs font-semibold text-slate-800 tabular-nums">{item.value.toFixed(1)}%</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })()}
-        </div>
+              )}
+            </div>
+          </>
+        )}
       </section>
 
       {/* Swap suggestions + best-in-category */}
       {((analysis.swapSuggestions?.length ?? 0) > 0 ||
         (analysis.bestInCategory?.length ?? 0) > 0) && (
-        <section className="relative bg-white rounded-xl p-6 sm:p-8" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)", border: "1px solid #D9E0E6" }}>
+        <section className="relative bg-white rounded-md p-6 sm:p-8" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)", border: "1px solid #D9E0E6" }}>
             <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-1">Jämförbara alternativ</p>
             <p className="text-lg font-semibold text-ink mb-4">Alternativ med starkare nyckeltal</p>
 
@@ -2315,7 +2264,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                       <p className="text-sm font-semibold text-ink leading-snug">{cur}</p>
                     </div>
                     <div className="flex shrink-0 items-center justify-center sm:px-1">
-                      <div className="w-7 h-7 rounded-[10px] bg-slate-100 flex items-center justify-center">
+                      <div className="w-7 h-7 rounded-md bg-slate-100 flex items-center justify-center">
                         <ArrowRight className="w-3.5 h-3.5 text-slate-400 rotate-90 sm:rotate-0" />
                       </div>
                     </div>
@@ -2327,7 +2276,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                 ))}
               </div>
 
-              <div className="no-print absolute inset-0 rounded-xl backdrop-blur-[8px] bg-white/50" />
+              <div className="no-print absolute inset-0 rounded-md backdrop-blur-[8px] bg-white/50" />
               <div className="no-print absolute inset-0 z-10 flex flex-col items-center justify-center text-center px-6 space-y-3">
                 <p className="text-base font-semibold text-ink leading-snug max-w-md">
                   {potentialGainKr !== null
@@ -2340,7 +2289,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                 <p className="text-xs text-ink-3">Gratis · Klart på under en minut</p>
                 <button
                   onClick={onLoginClick}
-                  className="inline-flex items-center justify-center bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold px-7 py-2.5 rounded-[10px] transition-colors"
+                  className="inline-flex items-center justify-center bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold px-7 py-2.5 rounded-md transition-colors"
                 >
                   Logga in
                 </button>
@@ -2355,7 +2304,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
               const label = bics.length === 1 ? "Redan bäst i sin kategori" : "Redan bäst i sina kategorier";
               return (
                 <div className={`flex items-start gap-3 ${hasSwaps ? "mb-4 pb-4 border-b border-slate-200" : ""}`}>
-                  <div className="w-8 h-8 rounded-[10px] bg-green-50 flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="w-8 h-8 rounded-md bg-green-50 flex items-center justify-center shrink-0 mt-0.5">
                     <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
@@ -2433,7 +2382,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                               ))}
                             </div>
                             <div className="flex shrink-0 items-center justify-center sm:px-1">
-                              <div className="w-7 h-7 rounded-[10px] bg-slate-100 flex items-center justify-center">
+                              <div className="w-7 h-7 rounded-md bg-slate-100 flex items-center justify-center">
                                 <ArrowRight className="w-3.5 h-3.5 text-slate-400 rotate-90 sm:rotate-0" />
                               </div>
                             </div>
@@ -2478,7 +2427,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                   {total > VISIBLE && (
                     <button
                       onClick={() => setShowAllSwaps(v => !v)}
-                      className="mt-2 w-full py-2.5 text-sm font-medium text-slate-500 hover:text-ink border border-slate-100 hover:border-slate-200 rounded-xl transition-colors"
+                      className="mt-2 w-full py-2.5 text-sm font-medium text-slate-500 hover:text-ink border border-slate-100 hover:border-slate-200 rounded-md transition-colors"
                     >
                       {showAllSwaps ? "Visa färre förslag" : `Visa alla ${total} förslag`}
                     </button>
@@ -2509,12 +2458,12 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
       )}
 
       {showBlur && (analysis.swapSuggestions?.length ?? 0) === 0 && (analysis.bestInCategory?.length ?? 0) === 0 && (
-        <section className="no-print bg-white rounded-xl p-6 sm:p-8 text-center space-y-3" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)", border: "1px solid #D9E0E6" }}>
+        <section className="no-print bg-white rounded-md p-6 sm:p-8 text-center space-y-3" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)", border: "1px solid #D9E0E6" }}>
           <p className="text-base font-semibold text-ink leading-snug max-w-md mx-auto">Logga in för att se jämförbara fondalternativ</p>
           <p className="text-xs text-ink-4">Gratis · Klart på under en minut</p>
           <button
             onClick={onLoginClick}
-            className="inline-flex items-center justify-center bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold px-7 py-2.5 rounded-[10px] transition-colors"
+            className="inline-flex items-center justify-center bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold px-7 py-2.5 rounded-md transition-colors"
           >
             Logga in
           </button>
@@ -2522,7 +2471,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
       )}
 
       {analysis.notFound.length > 0 && (
-        <section className="bg-warn-soft border border-amber-100 rounded-xl p-4">
+        <section className="bg-warn-soft border border-amber-100 rounded-md p-4">
           <p className="text-sm text-amber-800">
             <span className="font-medium">Hittades inte: </span>{analysis.notFound.join(", ")}
           </p>
@@ -2629,7 +2578,7 @@ function InfoPopover({ title, ariaLabel, width = POPOVER_WIDTH, children }: { ti
         }}
         onMouseEnter={() => { if (!isTouch) show(); }}
         onMouseLeave={() => { if (!isTouch) setOpen(false); }}
-        className="no-print shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+        className="no-print inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-ink-3 transition-colors duration-150 hover:text-ink"
       >
         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
@@ -2647,7 +2596,7 @@ function InfoPopover({ title, ariaLabel, width = POPOVER_WIDTH, children }: { ti
             role="dialog"
             aria-modal="true"
             aria-label={title ?? "Information"}
-            className="max-h-[80vh] overflow-y-auto overscroll-contain rounded-t-2xl bg-white px-5 pb-8 pt-4 text-left"
+            className="max-h-[80vh] overflow-y-auto overscroll-contain rounded-t-lg bg-white px-5 pb-8 pt-4 text-left"
             style={{ boxShadow: "0 -8px 24px rgba(16,24,40,.12)" }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -2675,7 +2624,7 @@ function InfoPopover({ title, ariaLabel, width = POPOVER_WIDTH, children }: { ti
           ref={panelRef}
           role="tooltip"
           style={{ top: pos.top, left: pos.left, width: Math.min(width, typeof window !== "undefined" ? window.innerWidth - 24 : width), boxShadow: "0 8px 24px rgba(16,24,40,.12)" }}
-          className="fixed z-50 bg-white border border-slate-200 rounded-xl p-4 text-left normal-case tracking-normal font-normal text-xs text-slate-600 leading-relaxed whitespace-normal"
+          className="fixed z-50 bg-white border border-slate-200 rounded-md p-4 text-left normal-case tracking-normal font-normal text-xs text-slate-600 leading-relaxed whitespace-normal"
           onClick={(e) => e.stopPropagation()}
         >
           {title && <p className="text-xs font-semibold text-ink mb-1.5">{title}</p>}
@@ -2688,16 +2637,16 @@ function InfoPopover({ title, ariaLabel, width = POPOVER_WIDTH, children }: { ti
 
 function Metric({ label, value, sub, info }: { label: string; value: string; sub: string; info: string }) {
   return (
-    <div className="min-w-0">
-      <div className="mb-1.5 flex min-w-0 items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400 sm:text-xs">
-        <span className="min-w-0 break-words leading-snug">{label}</span>
+    <Stat
+      label={label}
+      value={value}
+      sub={sub}
+      action={
         <InfoPopover title={label} ariaLabel={`Vad betyder ${label.toLowerCase()}?`}>
           {info}
         </InfoPopover>
-      </div>
-      <p className="text-[28px] sm:text-3xl font-bold text-ink leading-none tabular-nums">{value}</p>
-      <p className="text-xs text-slate-400 mt-1.5">{sub}</p>
-    </div>
+      }
+    />
   );
 }
 
@@ -2729,7 +2678,7 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
   ];
 
   return (
-    <section className="bg-white rounded-xl p-6 sm:p-8" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)", border: "1px solid #D9E0E6" }}>
+    <section className="bg-white rounded-md p-6 sm:p-8" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)", border: "1px solid #D9E0E6" }}>
       <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-1">Alternativt scenario</p>
       <p className="text-lg font-semibold text-ink mb-6">Nyckeltal med jämförbara alternativ</p>
 
@@ -2750,7 +2699,7 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
 
       <div className="mb-6">
         <p className="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400 mb-3">Jämförelse</p>
-        <div className="overflow-hidden rounded-[10px] border border-slate-100">
+        <div className="overflow-hidden rounded-md border border-slate-100">
           <table className="w-full text-xs sm:text-sm">
             <thead>
               <tr className="bg-slate-50 text-[10px] sm:text-xs font-semibold tracking-[0.06em] uppercase text-slate-400">
@@ -2784,7 +2733,7 @@ function SuggestedPortfolio({ current, suggested, portfolioValue }: { current: C
       </div>
 
       {(feeSavingsKr !== null || returnGainKr !== null) && (
-        <div className="bg-slate-50 rounded-xl p-5 space-y-4">
+        <div className="bg-slate-50 rounded-md p-5 space-y-4">
           <div className="flex items-start justify-between gap-2">
             <p className="text-sm font-semibold text-ink">Beräknad effekt per år</p>
             <p className="text-xs text-slate-400 text-right">
@@ -2832,9 +2781,9 @@ function OptimalPortfolioProjection({ current, portfolioValue }: { current: Curr
   const netKr = returnKr !== null && feeKr !== null ? returnKr - feeKr : null;
 
   return (
-    <section className="bg-white rounded-xl p-6 sm:p-8" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)", border: "1px solid #D9E0E6" }}>
+    <section className="bg-white rounded-md p-6 sm:p-8" style={{ boxShadow: "0 1px 2px rgba(16,24,40,.04)", border: "1px solid #D9E0E6" }}>
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-8 h-8 rounded-[10px] bg-green-100 flex items-center justify-center shrink-0">
+        <div className="w-8 h-8 rounded-md bg-green-100 flex items-center justify-center shrink-0">
           <svg className="w-4 h-4 text-pos" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -2845,7 +2794,7 @@ function OptimalPortfolioProjection({ current, portfolioValue }: { current: Curr
         </div>
       </div>
 
-      <div className="bg-slate-50 rounded-xl p-5">
+      <div className="bg-slate-50 rounded-md p-5">
         <div className="flex items-start justify-between gap-2 mb-4">
           <p className="text-sm font-semibold text-ink">Uppskattad avkastning per år</p>
           <p className="text-xs text-slate-400 text-right">

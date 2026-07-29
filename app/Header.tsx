@@ -4,11 +4,9 @@ import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { Plus, Search } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { createClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
-import { MOBILE_BOTTOM_OVERLAY_EVENT } from "@/lib/mobile-bottom-overlay";
 import { clearResume, prepareLoginResume } from "@/lib/resume-session";
 
 function AvatarDropdown({ user }: { user: User }) {
@@ -37,25 +35,25 @@ function AvatarDropdown({ user }: { user: User }) {
   return (
     <div ref={ref} className="relative">
       <button
-        onClick={() => setOpen((o) => !o)}
-        className="w-8 h-8 rounded-full bg-info text-accent font-bold text-sm flex items-center justify-center hover:bg-info-line transition-colors"
+        onClick={() => setOpen((value) => !value)}
+        className="flex h-8 w-8 items-center justify-center rounded-full border border-line-strong bg-white text-sm font-medium text-ink transition-colors hover:bg-section"
         aria-label="Kontomeny"
       >
         {initials}
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl border border-line py-1 z-50 overflow-hidden" style={{ boxShadow: "0 8px 24px rgba(16,24,40,.08)" }}>
-          <div className="px-4 py-2.5 border-b border-line-soft">
-            <p className="text-xs text-ink-4 truncate">{user.email}</p>
+        <div className="absolute right-0 z-50 mt-2 w-52 overflow-hidden rounded-md border border-line bg-white py-1 shadow-[0_8px_28px_rgba(20,20,30,.12)]">
+          <div className="border-b border-line-soft px-4 py-2.5">
+            <p className="truncate text-xs text-ink-4">{user.email}</p>
           </div>
-          <Link href="/portfolios" onClick={() => setOpen(false)} className="block px-4 py-2.5 text-sm text-ink-2 hover:bg-section transition-colors">
+          <Link href="/portfolios" onClick={() => setOpen(false)} className="block px-4 py-2.5 text-sm text-ink-2 transition-colors hover:bg-section">
             Mina portföljer
           </Link>
-          <Link href="/account" onClick={() => setOpen(false)} className="block px-4 py-2.5 text-sm text-ink-2 hover:bg-section transition-colors">
+          <Link href="/account" onClick={() => setOpen(false)} className="block px-4 py-2.5 text-sm text-ink-2 transition-colors hover:bg-section">
             Mitt konto
           </Link>
-          <div className="border-t border-line-soft mt-1">
-            <button onClick={signOut} className="block w-full text-left px-4 py-2.5 text-sm text-neg hover:bg-neg-soft transition-colors">
+          <div className="mt-1 border-t border-line-soft">
+            <button onClick={signOut} className="block w-full px-4 py-2.5 text-left text-sm text-neg transition-colors hover:bg-neg-soft">
               Logga ut
             </button>
           </div>
@@ -67,8 +65,8 @@ function AvatarDropdown({ user }: { user: User }) {
 
 export default function Header() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
-  const [mobileBottomOffset, setMobileBottomOffset] = useState(0);
-  const [cookieBannerVisible, setCookieBannerVisible] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const router = useRouter();
   const shouldResumeTool = pathname === "/analyze" || pathname === "/bygg-portfolj";
@@ -86,42 +84,25 @@ export default function Header() {
   }, []);
 
   useEffect(() => {
-    const overlays = new Map<string, number>();
-
-    function handleBottomOverlay(e: Event) {
-      const detail = (e as CustomEvent<{ id?: string; height?: number }>).detail;
-      if (!detail?.id) return;
-      const height = Math.max(0, detail.height ?? 0);
-      if (height > 0) overlays.set(detail.id, height);
-      else overlays.delete(detail.id);
-      if (detail.id.startsWith("cookie-banner-")) {
-        setCookieBannerVisible(height > 0);
+    function closeOnOutsideClick(e: MouseEvent) {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node)) {
+        setMobileMenuOpen(false);
       }
-      setMobileBottomOffset(Math.max(0, ...overlays.values()));
     }
-
-    window.addEventListener(MOBILE_BOTTOM_OVERLAY_EVENT, handleBottomOverlay);
-    return () => window.removeEventListener(MOBILE_BOTTOM_OVERLAY_EVENT, handleBottomOverlay);
+    function closeOnEscape(e: KeyboardEvent) {
+      if (e.key === "Escape") setMobileMenuOpen(false);
+    }
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
   }, []);
 
   function navClass(href: string) {
-    const active = pathname === href || pathname.startsWith(href + "/");
-    return `text-[15px] font-semibold transition-colors ${active ? "text-accent" : "text-ink-2 hover:text-ink"}`;
-  }
-
-  function isActivePath(href: string) {
-    return pathname === href || pathname.startsWith(href + "/");
-  }
-
-  function mobileActionClass(href: string) {
-    const active = isActivePath(href);
-    return `mobile-glass-button relative flex min-h-8 flex-1 items-center justify-center gap-1.5 rounded-[10px] px-3 text-xs font-semibold transition-colors duration-200 ${
-      active ? "text-accent" : "text-ink-2 hover:text-ink"
-    }`;
-  }
-
-  function mobileAriaCurrent(href: string) {
-    return isActivePath(href) ? "page" : undefined;
+    const active = pathname === href || pathname.startsWith(`${href}/`);
+    return `text-sm transition-colors duration-150 ${active ? "font-medium text-accent" : "text-ink-2 hover:text-ink"}`;
   }
 
   function handleLoginClick(e: ReactMouseEvent<HTMLAnchorElement>) {
@@ -134,25 +115,20 @@ export default function Header() {
   }
 
   return (
-    <>
-      <header className="bg-white/90 backdrop-blur-sm border-b border-line/70 sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 sm:h-[72px] flex items-center justify-between sm:grid sm:grid-cols-3">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 shrink-0">
-            <Image src="/logo.svg" alt="Sharpa" width={28} height={28} className="sm:h-9 sm:w-9" />
-            <span className="font-heading text-base font-extrabold tracking-tight text-ink sm:text-lg">
-              Sharpa
-            </span>
+    <header className="sticky top-0 z-50 border-b border-line bg-white">
+      <div ref={mobileMenuRef} className="relative">
+        <div className="mx-auto flex h-[56px] max-w-6xl items-center justify-between px-4 sm:grid sm:h-[66px] sm:grid-cols-3 sm:px-6">
+          <Link href="/" onClick={() => setMobileMenuOpen(false)} className="flex shrink-0 items-center gap-2.5">
+            <Image src="/logo.svg" alt="Sharpa" width={24} height={24} />
+            <span className="text-[15px] font-semibold tracking-tight text-ink sm:text-base">Sharpa</span>
           </Link>
 
-          {/* Desktop nav */}
-          <nav className="hidden sm:flex items-center justify-center gap-8">
+          <nav aria-label="Huvudnavigering" className="hidden items-center justify-center gap-7 sm:flex">
             <Link href="/analyze" className={navClass("/analyze")}>Analysera mina fonder</Link>
             <Link href="/bygg-portfolj" className={navClass("/bygg-portfolj")}>Skapa portföljexempel</Link>
           </nav>
 
-          {/* Desktop right actions */}
-          <div className="hidden sm:flex items-center justify-end gap-3">
+          <div className="hidden items-center justify-end sm:flex">
             {user !== undefined && (
               user ? (
                 <AvatarDropdown user={user} />
@@ -160,7 +136,7 @@ export default function Header() {
                 <Link
                   href={loginHref}
                   onClick={handleLoginClick}
-                  className="bg-info hover:bg-blue-100 text-accent text-sm font-semibold px-4 py-2 rounded-[10px] transition-colors"
+                  className="text-sm text-accent transition-colors duration-150 hover:text-accent-hover"
                 >
                   Logga in
                 </Link>
@@ -168,58 +144,46 @@ export default function Header() {
             )}
           </div>
 
-          {/* Mobile: avatar or login */}
-          <div className="sm:hidden">
+          <div className="flex items-center gap-3 sm:hidden">
             {user !== undefined && (
               user ? (
                 <AvatarDropdown user={user} />
               ) : (
-                <Link href={loginHref} onClick={handleLoginClick} className="text-sm font-semibold text-ink-2">
+                <Link href={loginHref} onClick={handleLoginClick} className="text-[13px] text-accent">
                   Logga in
                 </Link>
               )
             )}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen((open) => !open)}
+              className="flex h-9 w-9 items-center justify-center rounded-xs border border-line-strong bg-white text-ink transition-colors hover:bg-section"
+              aria-label={mobileMenuOpen ? "Stäng meny" : "Öppna meny"}
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-navigation"
+            >
+              {mobileMenuOpen ? <X className="h-[18px] w-[18px]" /> : <Menu className="h-[18px] w-[18px]" />}
+            </button>
           </div>
         </div>
-      </header>
 
-      {/* Mobile quick actions */}
-      <motion.nav
-        layoutRoot
-        aria-label="Snabbnavigering"
-        animate={{
-          bottom: cookieBannerVisible ? 0 : mobileBottomOffset,
-          opacity: cookieBannerVisible ? 0 : 1,
-          y: cookieBannerVisible ? 12 : 0,
-        }}
-        transition={{ type: "spring", stiffness: 360, damping: 34 }}
-        className="sm:hidden fixed inset-x-0 z-[60] flex justify-center px-3 pb-safe pointer-events-none"
-      >
-        <div className={`mobile-liquid-glass flex w-full max-w-xs items-center gap-1 rounded-[16px] p-1 ${cookieBannerVisible ? "pointer-events-none" : "pointer-events-auto"}`}>
-          <Link href="/analyze" aria-current={mobileAriaCurrent("/analyze")} className={mobileActionClass("/analyze")}>
-            {isActivePath("/analyze") && (
-              <motion.span
-                layoutId="mobileNavGlass"
-                className="mobile-glass-pill"
-                transition={{ type: "spring", bounce: 0.3, duration: 0.77 }}
-              />
-            )}
-            <Search className="relative z-[1] h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
-            <span className="relative z-[1]">Analysera</span>
-          </Link>
-          <Link href="/bygg-portfolj" aria-current={mobileAriaCurrent("/bygg-portfolj")} className={mobileActionClass("/bygg-portfolj")}>
-            {isActivePath("/bygg-portfolj") && (
-              <motion.span
-                layoutId="mobileNavGlass"
-                className="mobile-glass-pill"
-                transition={{ type: "spring", bounce: 0.3, duration: 0.7 }}
-              />
-            )}
-            <Plus className="relative z-[1] h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
-            <span className="relative z-[1]">Skapa exempel</span>
-          </Link>
-        </div>
-      </motion.nav>
-    </>
+        <nav
+          id="mobile-navigation"
+          aria-label="Mobilnavigering"
+          className={`absolute right-4 top-[calc(100%+8px)] w-[min(18rem,calc(100vw-2rem))] rounded-md border border-line bg-white px-4 py-1.5 shadow-[0_8px_28px_rgba(20,20,30,.12)] sm:hidden ${
+            mobileMenuOpen ? "block" : "hidden"
+          }`}
+        >
+          <div>
+            <Link href="/analyze" onClick={() => setMobileMenuOpen(false)} className="block border-b border-line py-3.5 text-sm text-ink">
+              Analysera mina fonder
+            </Link>
+            <Link href="/bygg-portfolj" onClick={() => setMobileMenuOpen(false)} className="block py-3.5 text-sm text-ink">
+              Skapa portföljexempel
+            </Link>
+          </div>
+        </nav>
+      </div>
+    </header>
   );
 }

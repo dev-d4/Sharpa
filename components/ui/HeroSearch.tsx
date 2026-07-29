@@ -7,7 +7,7 @@ import type { PortfolioAnalysis, SwapSuggestion } from "@/lib/analysis";
 
 type FundSuggestion = { name: string; isin: string };
 
-const PANEL_SHADOW = { boxShadow: "0 1px 2px rgba(16,24,40,.04)" };
+const PANEL_SHADOW = { boxShadow: "none" };
 
 function fundCost(f: { ongoing_cost_actual: number | null; ongoing_cost_estimated: number | null }) {
   return f.ongoing_cost_actual ?? f.ongoing_cost_estimated;
@@ -147,7 +147,7 @@ function FundPanelView({
   }[verdictTone];
 
   return (
-    <div className={`w-full bg-white border border-line rounded-[14px] overflow-hidden${live ? " animate-panel-in" : ""}`} style={PANEL_SHADOW}>
+    <div className={`w-full overflow-hidden rounded-md border border-line bg-white${live ? " animate-panel-in" : ""}`} style={PANEL_SHADOW}>
       <div className="px-5 pt-4 pb-3.5 sm:px-6 border-b border-line-soft">
         <p className="text-sm font-semibold text-ink-2 leading-snug break-words">{title}</p>
       </div>
@@ -160,7 +160,7 @@ function FundPanelView({
         {summary && <p className="mt-2 text-sm text-ink-2 leading-relaxed">{summary}</p>}
 
         {swap ? (
-          <div className="mt-5 rounded-[12px] border border-line-soft bg-section/70 px-4 py-4">
+          <div className="mt-5 rounded-md border border-line-soft bg-section/70 px-4 py-4">
             <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-4">Alternativ fond i samma kategori</p>
             <p className="mt-1.5 font-heading text-base sm:text-[17px] font-bold text-ink leading-snug break-words">
               {swap.suggestedFund.name}
@@ -176,9 +176,9 @@ function FundPanelView({
         <button
           type="button"
           onClick={onCta}
-          className="mt-5 w-full bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold py-3 rounded-[10px] transition-colors"
+          className="mt-5 w-full rounded-md bg-accent py-3 text-sm font-semibold text-white transition-colors hover:bg-accent-hover active:bg-accent-press"
         >
-          Analysera hela din portfölj →
+          Analysera hela din portfölj
         </button>
       </div>
     </div>
@@ -187,7 +187,7 @@ function FundPanelView({
 
 function LoadingPanel({ name }: { name: string }) {
   return (
-    <div className="w-full min-h-[160px] bg-white border border-line rounded-[14px] px-5 py-8 flex flex-col items-center justify-center gap-3" style={PANEL_SHADOW}>
+    <div className="flex min-h-[160px] w-full flex-col items-center justify-center gap-3 rounded-md border border-line bg-white px-5 py-8" style={PANEL_SHADOW}>
       <div className="w-6 h-6 rounded-full border-2 border-accent border-t-transparent animate-spin" />
       <p className="text-sm text-ink-2 text-center">Analyserar <span className="font-semibold text-ink">{name}</span>…</p>
     </div>
@@ -334,12 +334,11 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
           dyker upp nedanför (resultatpanelen) flödar nedåt och flyttar aldrig rubriken. */}
       {children}
 
-      <div className="mt-7 sm:mt-10 relative w-full max-w-[720px]">
+      <div className="relative mt-6 w-full max-w-[720px] sm:mt-10">
           <div
-            className="flex items-center gap-3 bg-[rgba(255,255,255,0.72)] backdrop-blur-[12px] border-[1.5px] border-[rgba(255,255,255,0.7)] rounded-[14px] px-4 sm:px-7 py-3.5 sm:py-[22px] focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/15 transition-colors"
-            style={{ boxShadow: "0 12px 32px rgba(23,33,43,.1)" }}
+            className="flex items-center gap-3 rounded-xs border border-line-strong bg-white px-4 py-3.5 transition-colors duration-150 focus-within:border-accent sm:px-6 sm:py-[18px]"
           >
-            <Search className="h-5 w-5 sm:h-[22px] sm:w-[22px] text-[#8b95a1] shrink-0" strokeWidth={2} aria-hidden="true" />
+            <Search className="h-5 w-5 sm:h-[22px] sm:w-[22px] shrink-0 text-ink-3" strokeWidth={1.75} aria-hidden="true" />
             <div className="relative flex-1 min-w-0">
               <input
                 type="text"
@@ -347,12 +346,12 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
                 onChange={(e) => handleChange(e.target.value)}
                 onBlur={() => setTimeout(() => setOpen(false), 150)}
                 aria-label="Sök fond"
-                className="w-full text-left text-[16px] sm:text-[18px] text-ink focus:outline-none bg-transparent"
+                className="w-full bg-transparent text-left text-[16px] text-ink focus:outline-none sm:text-[17px]"
               />
               {!query && (
                 <span
                   aria-hidden="true"
-                  className="pointer-events-none absolute inset-y-0 left-0 flex w-full items-center overflow-hidden whitespace-nowrap text-[16px] sm:text-[18px] text-[#8b95a1]"
+                  className="pointer-events-none absolute inset-y-0 left-0 flex w-full items-center overflow-hidden whitespace-nowrap text-[16px] text-ink-3 sm:text-[17px]"
                 >
                   <span className="shrink-0">Sök fond, t.ex.&nbsp;</span>
                   {reducedMotion ? (
@@ -360,7 +359,7 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
                   ) : (
                     <span className="min-w-0 truncate">
                       {placeholderText}
-                      <span className="animate-caret ml-px inline-block h-[1.15em] w-px shrink-0 bg-[#8b95a1]" />
+                      <span className="animate-caret ml-px inline-block h-[1.15em] w-px shrink-0 bg-ink-3" />
                     </span>
                   )}
                 </span>
@@ -371,8 +370,8 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
           {open && suggestions.length > 0 && (
             <ul
               data-testid="fund-suggestions"
-              className="absolute z-20 top-full left-0 right-0 mt-2 max-h-[min(52vh,360px)] overflow-y-auto overscroll-contain bg-white border border-line rounded-[14px] text-left"
-              style={{ boxShadow: "0 8px 24px rgba(16,24,40,.08)", WebkitOverflowScrolling: "touch" }}
+              className="absolute left-0 right-0 top-full z-20 mt-2 max-h-[min(52vh,360px)] overflow-y-auto overscroll-contain rounded-md border border-line bg-white text-left"
+              style={{ boxShadow: "0 8px 28px rgba(20,20,30,.12)", WebkitOverflowScrolling: "touch" }}
             >
               {suggestions.map((s, i) => (
                 <li key={`${s.isin}-${i}`}>
@@ -389,7 +388,7 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
             </ul>
           )}
           {open && query.length >= 2 && suggestions.length === 0 && (
-            <div className="absolute z-20 top-full left-0 right-0 mt-2 bg-white border border-line rounded-[14px] px-4 py-3 text-sm text-ink-3 text-left" style={{ boxShadow: "0 8px 24px rgba(16,24,40,.08)" }}>
+            <div className="absolute left-0 right-0 top-full z-20 mt-2 rounded-md border border-line bg-white px-4 py-3 text-left text-sm text-ink-3" style={{ boxShadow: "0 8px 28px rgba(20,20,30,.12)" }}>
               Vi hittade ingen fond som matchar &ldquo;{query}&rdquo;
             </div>
           )}

@@ -1,6 +1,7 @@
 import Hero from "@/components/ui/hero";
 import StatsRow from "@/components/ui/StatsRow";
 import HowItWorks from "@/components/ui/HowItWorks";
+import { buttonClass } from "@/components/ui/button";
 
 export default function LandingPage() {
   return (
@@ -17,21 +18,21 @@ export default function LandingPage() {
         </div>
 
         {/* För företag */}
-        <section className="bg-blue-800 mobile-dark-extend">
-          <div className="max-w-6xl mx-auto px-4 py-12 sm:px-6 sm:py-16">
-            <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-              <div className="max-w-3xl">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-blue-300">För företag och rådgivare</p>
-                <h2 className="font-heading text-2xl font-bold leading-tight text-white sm:text-3xl">
+        <section className="border-t border-line bg-white">
+          <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
+            <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+              <div className="max-w-[720px]">
+                <p className="label-meta mb-3">För företag och rådgivare</p>
+                <h2 className="font-display text-[26px] leading-tight text-ink sm:text-[32px]">
                   Fond- och portföljanalys för professionell rådgivning
                 </h2>
-                <p className="mt-3 text-sm leading-relaxed text-blue-200 sm:text-base">
+                <p className="mt-3 text-[15px] leading-relaxed text-ink-2 sm:text-base">
                   Jämför fonder och förvaltade portföljer, identifiera avgiftsläckage och skapa transparenta underlag för kundmötet.
                 </p>
               </div>
               <a
                 href="mailto:sharpakontakt@gmail.com?subject=Professionella%20verktyg%20%E2%80%94%20intresseanm%C3%A4lan"
-                className="inline-flex w-fit items-center justify-center rounded-[10px] bg-white px-5 py-2.5 text-sm font-semibold text-accent-press transition-colors hover:bg-blue-50"
+                className={buttonClass("secondary", "w-fit")}
               >
                 Kontakta oss
               </a>

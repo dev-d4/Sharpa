@@ -1,196 +1,164 @@
 @import "tailwindcss";
 
-/* ── Designsystem "Saklig kapitalförvaltning" ─────────────────────────────────
-   Egna tokens + remap av Tailwinds standardskalor till briefens exakta värden.
-   Accent #0B6E99 (petroleum), text i blågrå ink-skala, borders som separation. */
+/* ── Designsystem "Institutionell/premium" ───────────────────────────────────
+   Egna tokens + remap av Tailwinds standardskalor till designrevisionens exakta
+   värden. En accent (#1F3A5F), varm pappersgrund, hårlinjer och whitespace bär
+   strukturen. Semantiska färger används endast i datakontext, aldrig som enda
+   bärare av betydelse. Ingen teal, ingen orange, inga skuggor utom modaler. */
 
 @theme {
-  /* Egna semantiska tokens */
-  --color-canvas: #F7F8FA;
-  --color-section: #F2F4F7;
-  --color-ink: #17212B;
-  --color-ink-2: #4B5A68;
-  --color-ink-3: #6F7D89;
-  --color-ink-4: #9CA8B3;
-  --color-accent: #0B6E99;
-  --color-accent-hover: #095D82;
-  --color-accent-press: #084C69;
-  --color-pos: #18864B;
-  --color-pos-soft: #E8F3ED;
-  --color-neg: #C23A32;
-  --color-neg-soft: #F9ECEB;
-  --color-warn: #B97818;
-  --color-warn-soft: #F7EFE3;
-  --color-info: #EAF3F8;
-  --color-info-line: #BFD8E7;
-  --color-line: #D9E0E6;
-  --color-line-soft: #E8EDF2;
+  /* Ytor */
+  --color-canvas: #FBFAF8;      /* paper — sidbakgrund */
+  --color-surface: #FFFFFF;     /* kort/paneler */
+  --color-section: #F6F4EF;     /* vald rad / dämpad yta */
+  --color-fill-muted: #EFECE6;  /* track, inert stapelbakgrund */
 
-  /* Remap: slate → blågrå ink-skala */
-  --color-slate-50:  #F2F4F7;
-  --color-slate-100: #E8EDF2;
-  --color-slate-200: #D9E0E6;
-  --color-slate-300: #B9C2CB;
-  --color-slate-400: #8B97A3;
-  --color-slate-500: #5D6B78;
-  --color-slate-600: #4B5A68;
-  --color-slate-700: #33404D;
-  --color-slate-800: #212D39;
-  --color-slate-900: #17212B;
+  /* Text */
+  --color-ink: #1A1D21;
+  --color-ink-2: #565B62;
+  --color-ink-3: #8A9099;
+  --color-ink-4: #A7ACB3;
 
-  /* Remap: blue → accent (petroleum) */
-  --color-blue-50:  #EAF3F8;
-  --color-blue-100: #D8E7EF;
-  --color-blue-200: #B7D3E1;
-  --color-blue-300: #7FB3CC;
-  --color-blue-400: #3D8AB0;
-  --color-blue-500: #0B6E99;
-  --color-blue-600: #095D82;
-  --color-blue-700: #084C69;
-  --color-blue-800: #073F57;
+  /* Accent — en enda */
+  --color-accent: #1F3A5F;
+  --color-accent-hover: #172C48;
+  --color-accent-press: #122238;
 
-  /* Remap: green/emerald → positiv avkastning */
-  --color-green-50:  #E8F3ED;
-  --color-green-100: #D3E8DC;
-  --color-green-400: #4CAF7D;
-  --color-green-500: #1E9E59;
-  --color-green-600: #18864B;
-  --color-green-700: #136A3C;
-  --color-emerald-50:  #E8F3ED;
-  --color-emerald-400: #4CAF7D;
-  --color-emerald-500: #1E9E59;
-  --color-emerald-600: #18864B;
+  /* Semantiska — endast data, alltid parade med tecken/etikett */
+  --color-pos: #2F6B4F;
+  --color-pos-soft: #EDF2EF;
+  --color-neg: #9B3B34;
+  --color-neg-soft: #F6ECEB;
+  --color-warn: #8A6D3B;
+  --color-warn-soft: #F4F0E7;
+  --color-info: #EEF1F5;
+  --color-info-line: #D5DCE5;
 
-  /* Remap: red → negativ avkastning */
-  --color-red-50:  #F9ECEB;
-  --color-red-100: #F2D9D7;
-  --color-red-200: #E5B5B1;
-  --color-red-300: #D98F89;
-  --color-red-400: #D0685F;
-  --color-red-500: #C23A32;
-  --color-red-600: #A93028;
-  --color-red-700: #8F2822;
+  /* Linjer */
+  --color-line: #E7E4DE;         /* hårlinje: kort, avdelare */
+  --color-line-strong: #C7C2B8;  /* kontrollkant: inputs, sekundärknapp */
+  --color-line-soft: #F0EEE9;
 
-  /* Remap: amber → varning (ockra) */
-  --color-amber-50:  #F7EFE3;
-  --color-amber-100: #EFE1C8;
-  --color-amber-200: #EAD9BC;
-  --color-amber-300: #DDC08F;
-  --color-amber-400: #D9A542;
-  --color-amber-500: #B97818;
-  --color-amber-600: #A56A15;
-  --color-amber-700: #8F5D13;
-  --color-amber-800: #7A500F;
+  /* Remap: slate → varm neutralskala */
+  --color-slate-50:  #F6F4EF;
+  --color-slate-100: #EFECE6;
+  --color-slate-200: #E7E4DE;
+  --color-slate-300: #C7C2B8;
+  --color-slate-400: #8A9099;
+  --color-slate-500: #6B7078;
+  --color-slate-600: #565B62;
+  --color-slate-700: #3A3F45;
+  --color-slate-800: #2A2E34;
+  --color-slate-900: #1A1D21;
 
-  /* Rubriktypsnitt */
-  --font-heading: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  /* Remap: blue → accent */
+  --color-blue-50:  #EEF1F5;
+  --color-blue-100: #DDE3EB;
+  --color-blue-200: #C2CCD9;
+  --color-blue-300: #8FA0B7;
+  --color-blue-400: #4A6584;
+  --color-blue-500: #1F3A5F;
+  --color-blue-600: #172C48;
+  --color-blue-700: #122238;
+  --color-blue-800: #0E1B2C;
+
+  /* Remap: green/emerald → positiv avkastning (avmättad) */
+  --color-green-50:  #EDF2EF;
+  --color-green-100: #DCE7E0;
+  --color-green-400: #5A8C74;
+  --color-green-500: #3E7A5D;
+  --color-green-600: #2F6B4F;
+  --color-green-700: #255740;
+  --color-emerald-50:  #EDF2EF;
+  --color-emerald-400: #5A8C74;
+  --color-emerald-500: #3E7A5D;
+  --color-emerald-600: #2F6B4F;
+
+  /* Remap: red → negativ avkastning (avmättad) */
+  --color-red-50:  #F6ECEB;
+  --color-red-100: #EDD9D7;
+  --color-red-200: #DDB8B4;
+  --color-red-300: #C89792;
+  --color-red-400: #B36A63;
+  --color-red-500: #9B3B34;
+  --color-red-600: #85322C;
+  --color-red-700: #6E2924;
+
+  /* Remap: amber → varning (dämpad ockra) */
+  --color-amber-50:  #F4F0E7;
+  --color-amber-100: #E9E1CE;
+  --color-amber-200: #DFD3B8;
+  --color-amber-300: #CBBA92;
+  --color-amber-400: #A98D5A;
+  --color-amber-500: #8A6D3B;
+  --color-amber-600: #786033;
+  --color-amber-700: #66512B;
+  --color-amber-800: #554424;
+
+  /* Hörnradier — endast två: 6px ytor, 4px kontroller.
+     Tailwinds hela skala mappas ned så inga pillerformer kan uppstå. */
+  --radius-xs:  4px;
+  --radius-sm:  4px;
+  --radius-md:  6px;
+  --radius-lg:  6px;
+  --radius-xl:  6px;
+  --radius-2xl: 6px;
+  --radius-3xl: 6px;
+  --radius-4xl: 6px;
+
+  /* Skuggor — inga, kort bär en kant. Endast overlays får djup. */
+  --shadow-2xs: 0 0 #0000;
+  --shadow-xs:  0 0 #0000;
+  --shadow-sm:  0 0 #0000;
+  --shadow-md:  0 0 #0000;
+  --shadow-lg:  0 0 #0000;
+  --shadow-xl:  0 0 #0000;
+  --shadow-2xl: 0 0 #0000;
+  --shadow-overlay: 0 8px 28px rgba(20, 20, 30, .12);
+
+  /* Typografi */
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, monospace;
+  --font-heading: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-source-serif), Georgia, "Times New Roman", serif;
 }
 
 body {
-  color: #17212B;
-  background-color: #F7F8FA;
+  color: #1A1D21;
+  background-color: #FBFAF8;
   /* Tabulära siffror överallt — procenttal och belopp är produktens kärna */
-  font-feature-settings: "tnum" 1, "cv03" 1;
+  font-feature-settings: "tnum" 1;
   font-variant-numeric: tabular-nums;
 }
 
-/* Safe-area bottom padding for mobile quick actions on notched devices */
-.pb-safe {
-  padding-bottom: max(4px, calc(env(safe-area-inset-bottom) - 6px));
+/* Brödtext ska brytas snyggt utan enstaka ord på sista raden */
+p, li, dd {
+  text-wrap: pretty;
 }
 
-/* Liquid Glass bottom nav — iOS 26-style "clear" glass. The fill is kept very
-   low so the page genuinely shows through; depth comes from the backdrop
-   distortion (blur + saturate + slight brighten) and a specular rim drawn with
-   inset shadows: bright where light hits (top-left), a hair of dark where the
-   glass edge would refract (bottom). No outer drop shadow: it sits on the
-   screen edge, so a shadow would only muddy Safari's URL bar peeking beneath. */
-.mobile-liquid-glass {
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  background: rgba(255, 255, 255, 0.32);
-  backdrop-filter: blur(24px) saturate(1.9) brightness(1.05);
-  -webkit-backdrop-filter: blur(24px) saturate(1.9) brightness(1.05);
-  box-shadow:
-    inset 1.5px 2.5px 0 -1.5px rgba(255, 255, 255, 0.9),
-    inset -1.5px -1.5px 0 -1.5px rgba(255, 255, 255, 0.7),
-    inset 0 0 14px rgba(255, 255, 255, 0.28),
-    inset 0 -1px 3px rgba(30, 41, 59, 0.07);
+/* Finansiella värden: mono + tabulära siffror, så kolumner linjerar */
+.figure {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: -0.01em;
 }
 
-/* Specular sheen — a soft light that catches the top-left edge, plus a faint
-   accent bleed at the bottom-right, the way glass reflects surrounding light. */
-.mobile-liquid-glass::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    radial-gradient(120% 80% at 15% -10%, rgba(255, 255, 255, 0.5), transparent 50%),
-    radial-gradient(90% 70% at 90% 120%, rgba(11, 110, 153, 0.07), transparent 55%);
+/* Versaletikett över nyckeltal och sektioner */
+.label-meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-ink-3);
 }
 
-/* Inactive items sit directly on the glass with no fill of their own — piling
-   another opaque background here is what made the old bar look muddy. */
-.mobile-glass-button {
-  position: relative;
-  background: transparent;
-  border: 1px solid transparent;
-  transition: transform 0.18s ease;
-}
-
-.mobile-glass-button:active {
-  transform: scale(0.95);
-}
-
-/* The active "knob": a brighter, lightly tinted glass lens that lifts off the
-   bar. It's a single shared element (Framer Motion layoutId) that fluidly
-   slides — like water — from one item to the other when the route changes,
-   rather than fading out here and in there. */
-.mobile-glass-pill {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  background:
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.35),
-      rgba(255, 255, 255, 0.1) 55%,
-      rgba(255, 255, 255, 0.2)
-    ),
-    rgba(11, 110, 153, 0.04);
-  box-shadow:
-    inset 2px 2.5px 0 -1.5px rgba(255, 255, 255, 0.7),
-    inset -1.5px -2px 0 -1.5px rgba(255, 255, 255, 0.55),
-    inset 0 0 6px rgba(255, 255, 255, 0.2),
-    0 2px 6px rgba(15, 23, 42, 0.1),
-    0 0.5px 1px rgba(15, 23, 42, 0.08);
-}
-
-/* Respect reduced-transparency: fall back to a solid, legible surface. */
-@media (prefers-reduced-transparency: reduce) {
-  .mobile-liquid-glass {
-    background: #ffffff;
-    border-color: rgba(23, 33, 43, 0.12);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    box-shadow: none;
-  }
-  .mobile-glass-pill {
-    background: rgba(11, 110, 153, 0.1);
-    box-shadow: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .mobile-glass-button:active {
-    transform: none;
-  }
+/* Enhetlig fokusring — får aldrig försvagas */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 /* Räkna själv-kalkylatorns sliders: platt 2px-hårlinje-track och ett runt
@@ -201,7 +169,7 @@ body {
   width: 100%;
   height: 2px;
   margin: 14px 0 6px;
-  background: rgba(23, 33, 43, 0.15);
+  background: #C7C2B8;
   border-radius: 1px;
   outline: none;
   cursor: pointer;
@@ -214,7 +182,7 @@ body {
   border-radius: 50%;
   background: var(--color-accent);
   border: 2px solid #fff;
-  box-shadow: 0 0 0 1px rgba(23, 33, 43, 0.15);
+  box-shadow: 0 0 0 1px rgba(26, 29, 33, 0.14);
   cursor: pointer;
 }
 .calc-range::-moz-range-thumb {
@@ -223,45 +191,23 @@ body {
   border-radius: 50%;
   background: var(--color-accent);
   border: 2px solid #fff;
-  box-shadow: 0 0 0 1px rgba(23, 33, 43, 0.15);
+  box-shadow: 0 0 0 1px rgba(26, 29, 33, 0.14);
   cursor: pointer;
 }
 .calc-range::-moz-range-track {
   height: 2px;
   border-radius: 1px;
-  background: rgba(23, 33, 43, 0.15);
+  background: #C7C2B8;
 }
 .calc-range:focus-visible::-webkit-slider-thumb {
-  box-shadow: 0 0 0 3px rgba(11, 110, 153, 0.25);
+  box-shadow: 0 0 0 3px rgba(31, 58, 95, 0.30);
 }
 .calc-range:focus-visible::-moz-range-thumb {
-  box-shadow: 0 0 0 3px rgba(11, 110, 153, 0.25);
-}
-
-/* Main content bottom padding on mobile: clears the fixed quick actions + safe area.
-   Scoped to <640px — mobilbaren finns bara på mobil, och utan scopingen vann
-   klassen över sm:pb-0 och skapade ett tomt band ovanför footern på desktop. */
-@layer utilities {
-  @media (max-width: 639px) {
-    .pb-nav-safe {
-      padding-bottom: calc(76px + max(8px, env(safe-area-inset-bottom)));
-    }
-  }
-}
-
-
-/* Extend a dark section's background to cover the pb-nav-safe gap on mobile.
-   The extra padding pushes the background down into the gap; the negative margin
-   keeps the document flow (and footer position) exactly where it was. */
-@media (max-width: 639px) {
-  .mobile-dark-extend {
-    padding-bottom: calc(3rem + 76px + max(8px, env(safe-area-inset-bottom)));
-    margin-bottom: calc(-76px - max(8px, env(safe-area-inset-bottom)));
-  }
+  box-shadow: 0 0 0 3px rgba(31, 58, 95, 0.30);
 }
 
 @keyframes fade-in-up {
-  from { opacity: 0; transform: translateY(20px); }
+  from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
@@ -282,11 +228,11 @@ body {
 }
 
 .animate-fade-in-up {
-  animation: fade-in-up 0.6s ease both;
+  animation: fade-in-up 200ms ease-out both;
 }
 
 .animate-fade-in-down {
-  animation: fade-in-down 0.5s ease both;
+  animation: fade-in-down 180ms ease-out both;
 }
 
 /* Diskret fade när nytt analysresultat laddas — enda tillåtna innehållsanimationen */
@@ -306,7 +252,7 @@ body {
 }
 
 .animate-panel-in {
-  animation: panel-in 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: panel-in 200ms ease-out both;
 }
 
 /* Blinkande markör i sökfältets skrivmaskins-placeholder */
@@ -333,93 +279,11 @@ body {
   }
 }
 
-/* ── Hero animerad gradient-bakgrund ──────────────────────────────────────
-   Fyra mjuka, långsamt roterande klot bakom heron. Lagret tonar ut mot noll
-   när man skrollar förbi heron (opacity styrs i HeroGradient.tsx) och har en
-   statisk botten-toning via mask så kloten smälter in i sidan även utan skroll.
-   Endast transform animeras → inget layout-thrash. */
-.hero-blob {
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-  will-change: transform;
-}
-.hero-blob-1 {
-  width: 42%; height: 42%; top: -12%; left: -10%;
-  background: #4A93BC; filter: blur(64px); opacity: 0.20;
-  animation: blobFloatA 12s ease-in-out infinite;
-}
-.hero-blob-2 {
-  width: 40%; height: 40%; top: 2%; right: -12%;
-  background: #82BEDC; filter: blur(64px); opacity: 0.28;
-  animation: blobFloatB 14s ease-in-out infinite;
-}
-.hero-blob-3 {
-  width: 46%; height: 46%; bottom: -18%; left: 10%;
-  background: #17A05B; filter: blur(74px); opacity: 0.24;
-  animation: blobFloatC 13s ease-in-out infinite;
-}
-.hero-blob-4 {
-  width: 34%; height: 34%; bottom: -10%; right: 6%;
-  background: #5EC3C0; filter: blur(54px); opacity: 0.32;
-  animation: blobFloatA 10s ease-in-out infinite;
-}
-
-.onboarding-blob {
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-  will-change: transform;
-}
-.onboarding-blob-1 {
-  width: 56%; height: 56%; top: -18%; left: -16%;
-  background: #4A93BC; filter: blur(64px); opacity: 0.18;
-  animation: blobFloatA 12s ease-in-out infinite;
-}
-.onboarding-blob-2 {
-  width: 48%; height: 48%; top: 4%; right: -14%;
-  background: #82BEDC; filter: blur(68px); opacity: 0.22;
-  animation: blobFloatB 14s ease-in-out infinite;
-}
-.onboarding-blob-3 {
-  width: 58%; height: 58%; bottom: -22%; left: 8%;
-  background: #17A05B; filter: blur(76px); opacity: 0.18;
-  animation: blobFloatC 13s ease-in-out infinite;
-}
-.onboarding-blob-4 {
-  width: 42%; height: 42%; bottom: -10%; right: 2%;
-  background: #5EC3C0; filter: blur(60px); opacity: 0.22;
-  animation: blobFloatA 10s ease-in-out infinite;
-}
-
-/* Påtaglig drift så färgerna tydligt rör sig — stor förflyttning (~26–32%) och
-   skala. Rotation syns inte på ett symmetriskt suddigt klot; translate och
-   scale gör rörelsen. Endast transform animeras → inget layout-thrash. */
-@keyframes blobFloatA {
-  0%   { transform: translate(0, 0) scale(1); }
-  50%  { transform: translate(32%, 22%) scale(1.28); }
-  100% { transform: translate(0, 0) scale(1); }
-}
-@keyframes blobFloatB {
-  0%   { transform: translate(0, 0) scale(1.12); }
-  50%  { transform: translate(-34%, 14%) scale(1); }
-  100% { transform: translate(0, 0) scale(1.12); }
-}
-@keyframes blobFloatC {
-  0%   { transform: translate(0, 0) scale(1); }
-  50%  { transform: translate(26%, -26%) scale(1.35); }
-  100% { transform: translate(0, 0) scale(1); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hero-blob,
-  .onboarding-blob { animation: none !important; }
-}
-
 /* Accentord i rubriker — solid färg, ingen gradient */
 .hero-accent {
-  color: #0B6E99;
+  color: var(--color-accent);
 }
+
 
 /* ── Rapport mode (B2B advisor report — no site chrome) ─────────────────── */
 /* Target only the site header/footer (direct children of body),

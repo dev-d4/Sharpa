@@ -18,13 +18,13 @@ export default function StickyLandingBar() {
         visible ? "opacity-100" : "opacity-0 pointer-events-none"
       }`}
     >
-      <div className="flex items-center gap-4 bg-white border border-line px-5 py-3 rounded-xl" style={{ boxShadow: "0 8px 24px rgba(16,24,40,.08)" }}>
-        <p className="text-sm font-medium text-ink-2">Bygg din fondportfölj — gratis</p>
+      <div className="flex items-center gap-4 bg-white border border-line px-5 py-3 rounded-md" style={{ boxShadow: "0 8px 28px rgba(20,20,30,.12)" }}>
+        <p className="text-sm text-ink-2">Bygg din fondportfölj — gratis</p>
         <Link
           href="/bygg-portfolj"
-          className="bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold px-4 py-1.5 rounded-[10px] transition-colors whitespace-nowrap"
+          className="whitespace-nowrap rounded-xs bg-accent px-4 py-2 text-sm font-medium text-white transition-colors duration-150 hover:bg-accent-hover active:bg-accent-press"
         >
-          Kom igång →
+          Kom igång
         </Link>
       </div>
     </div>
