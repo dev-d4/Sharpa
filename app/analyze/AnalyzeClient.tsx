@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { ArrowRight, FileUp, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react"
+import { ArrowRight, Check, FileUp, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react"
 import type { SavedPortfolio } from "@/lib/portfolio"
 import { Button } from "@/components/ui/button"
 import DonutChart from "@/components/ui/DonutChart"
@@ -530,9 +530,6 @@ function FundSearchInput({
   if (isin) {
     return (
       <div className="flex min-w-0 items-center gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line bg-section font-mono text-[11px] text-ink-3">
-          {name.slice(0, 1).toUpperCase()}
-        </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-medium text-ink">{name}</span>
           <span className="mt-0.5 block truncate font-mono text-[10px] text-ink-3">{isin}</span>
@@ -626,13 +623,13 @@ function recordRecentFund(fund: FundSuggestion) {
 
 function FundSearchSheet({
   custodian,
-  selectedIsins,
+  selectedFunds,
   onAdd,
   onRemove,
   onClose,
 }: {
   custodian: string;
-  selectedIsins: string[];
+  selectedFunds: FundSuggestion[];
   onAdd: (isin: string, name: string) => void;
   onRemove: (isin: string) => void;
   onClose: () => void;
@@ -641,6 +638,7 @@ function FundSearchSheet({
   const [suggestions, setSuggestions] = useState<FundSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [noResults, setNoResults] = useState(false);
+  const [showSelected, setShowSelected] = useState(false);
   const [recent] = useState<FundSuggestion[]>(() => readRecentFunds());
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -652,6 +650,7 @@ function FundSearchSheet({
 
   function handleChange(q: string) {
     setQuery(q);
+    setShowSelected(false);
     if (debounce.current) clearTimeout(debounce.current);
     if (q.trim().length < 2) {
       setSuggestions([]);
@@ -690,7 +689,8 @@ function FundSearchSheet({
 
   const showRecent = query.trim().length < 2;
   const list = showRecent ? recent : suggestions;
-  const count = selectedIsins.length;
+  const selectedIsins = selectedFunds.map((fund) => fund.isin);
+  const count = selectedFunds.length;
 
   return (
     <ResponsiveDrawer
@@ -701,16 +701,28 @@ function FundSearchSheet({
       initialFocusRef={inputRef}
       className="sm:max-w-2xl"
       footer={
-        <button
-          type="button"
-          onClick={onClose}
-          className="w-full rounded-md bg-accent py-3 font-semibold text-white transition-colors hover:bg-accent-hover active:bg-accent-press"
-        >
-          {count > 0 ? `Klar · ${count} ${count === 1 ? "fond vald" : "fonder valda"}` : "Klar"}
-        </button>
+        <div className="flex gap-2">
+          {count > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowSelected((visible) => !visible)}
+              aria-expanded={showSelected}
+              className="min-w-0 flex-1 rounded-md border border-line-strong bg-white px-4 py-3 text-sm font-medium text-ink transition-colors hover:bg-section"
+            >
+              {count} {count === 1 ? "vald fond" : "valda fonder"}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="min-w-0 flex-1 rounded-md bg-accent px-4 py-3 font-semibold text-white transition-colors hover:bg-accent-hover active:bg-accent-press"
+          >
+            Klar
+          </button>
+        </div>
       }
     >
-      <div className="flex min-h-[62dvh] flex-col">
+      <div className="relative flex min-h-[62dvh] flex-col">
         {/* Search */}
         <div className="border-b border-line bg-white px-5 py-4 sm:px-6">
           <div className="relative">
@@ -791,7 +803,7 @@ function FundSearchSheet({
                       )}
                       aria-hidden="true"
                     >
-                      {isSelected ? null : "+"}
+                      {isSelected ? <Check className="h-3.5 w-3.5" /> : "+"}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium text-ink">{f.name}</span>
@@ -803,6 +815,45 @@ function FundSearchSheet({
             })}
           </ul>
         </div>
+
+        {/* On-demand overlay: the search results keep their full height. */}
+        {showSelected && selectedFunds.length > 0 && (
+          <div className="absolute inset-x-0 bottom-0 z-20 max-h-[70%] overflow-y-auto border-t border-line-strong bg-white shadow-[0_-12px_32px_rgba(20,20,30,.12)]">
+            <div className="sticky top-0 flex items-center justify-between border-b border-line bg-white px-5 py-3 sm:px-6">
+              <div>
+                <p className="text-sm font-semibold text-ink">Valda fonder</p>
+                <p className="mt-0.5 text-xs text-ink-3">{count} {count === 1 ? "fond" : "fonder"}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSelected(false)}
+                aria-label="Stäng listan med valda fonder"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-section hover:text-ink"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <ul className="divide-y divide-line px-5 sm:px-6">
+              {selectedFunds.map((fund) => (
+                <li key={fund.isin} className="flex min-w-0 items-center gap-3 py-3">
+                  <Check className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium text-ink">{fund.name}</span>
+                    <span className="mt-0.5 block truncate font-mono text-[10px] text-ink-3">{fund.isin}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onRemove(fund.isin)}
+                    aria-label={`Ta bort ${fund.name}`}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-neg-soft hover:text-neg"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
       </div>
     </ResponsiveDrawer>
@@ -1743,7 +1794,9 @@ export default function AnalyzeClient() {
             {searchSheetOpen && (
               <FundSearchSheet
                 custodian={custodian}
-                selectedIsins={entries.map((e) => e.isin).filter(Boolean)}
+                selectedFunds={entries
+                  .filter((entry) => entry.isin)
+                  .map((entry) => ({ isin: entry.isin, name: entry.name }))}
                 onAdd={addFundFromSheet}
                 onRemove={removeFundByIsin}
                 onClose={closeSearchSheet}
