@@ -1,99 +1,57 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { computePortfolioScore } from "@/lib/portfolio-score";
-import type { PortfolioAnalysis } from "@/lib/analysis";
+import { runPortfolioWatch } from "@/lib/portfolio-watch-runner";
+import { createSupabaseWatchStore } from "@/lib/portfolio-watch-store";
+import { loadCustodianFunds } from "@/lib/analysis-service";
+import { getScoreDropThreshold } from "@/lib/portfolio-watch";
 
-const SCORE_DROP_THRESHOLD = 0.5; // notify if score drops by this many points (0–10 scale)
-const REMINDER_DAYS = 90;          // remind if portfolio not updated in this many days
+/**
+ * Daglig portföljbevakning.
+ *
+ * Kör igenom sparade portföljer, analyserar om dem mot AKTUELL fonddata,
+ * uppdaterar betyg och historik, och mejlar användaren när betyget försämrats
+ * minst PORTFOLIO_SCORE_DROP_THRESHOLD poäng.
+ *
+ * Ordningsval (alternativ A i kravspecen): två separata cron-jobb behålls.
+ * refresh-funds kör måndag 03:00, den här kör dagligen 08:00. Att i stället
+ * låta fonduppdateringen anropa portföljkontrollen (alternativ B) skulle
+ * kedja ihop två långa körningar i en och samma funktionsinvokation och
+ * riskera timeout mitt i utskicken. Med två jobb får fonduppdateringen fem
+ * timmars marginal innan kontrollen börjar, och kontrollen gör sig ändå
+ * oberoende av tajmingen genom att gate:a på fonddataversionen: portföljer
+ * som redan kontrollerats mot samma version hoppas över. En körning på
+ * halvuppdaterad data kan därför bara leda till att arbetet görs om nästa dag
+ * mot den då kompletta versionen — aldrig till dubbla mejl.
+ */
 
-function getAdminSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  return createClient(url, key, { auth: { persistSession: false } });
-}
+export const dynamic = "force-dynamic";
+// Vercels maxgräns beror på plan. Körningen har en egen tidsbudget under den
+// här och plockar upp återstoden nästa dag, eftersom den är idempotent.
+export const maxDuration = 60;
 
-// ── Stub: replace with Resend call when email is configured ───────────────────
-async function sendScoreDropEmail(email: string, portfolioName: string, oldScore: number, newScore: number) {
-  console.log(`[cron] SCORE DROP EMAIL → ${email}: "${portfolioName}" ${oldScore} → ${newScore}`);
-  // TODO: await resend.emails.send({ ... })
-}
-
-async function sendReminderEmail(email: string, portfolioName: string, daysSince: number) {
-  console.log(`[cron] REMINDER EMAIL → ${email}: "${portfolioName}" (${daysSince} dagar sedan analys)`);
-  // TODO: await resend.emails.send({ ... })
-}
-// ─────────────────────────────────────────────────────────────────────────────
+const TIME_BUDGET_MS = 45_000;
 
 export async function GET(req: NextRequest) {
-  // Verify Vercel cron secret (set automatically by Vercel in production)
   const authHeader = req.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const supabase = getAdminSupabase();
-  const now = new Date();
+  try {
+    const result = await runPortfolioWatch({
+      store: createSupabaseWatchStore(),
+      loadFunds: loadCustodianFunds,
+      threshold: getScoreDropThreshold(),
+      timeBudgetMs: TIME_BUDGET_MS,
+    });
 
-  // Fetch all portfolios (bypasses RLS via service role)
-  const { data: portfolios, error } = await supabase
-    .from("portfolios")
-    .select("id, user_id, name, analysis, score, score_notified_at, reminder_sent_at, updated_at");
-
-  if (error) {
-    console.error("[cron] Failed to fetch portfolios:", error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    // Aggregerade siffror och en fonddataversion — varken e-postadresser,
+    // portföljnamn eller innehav.
+    console.log("[cron] check-portfolios klar:", JSON.stringify(result));
+    return NextResponse.json({ ok: true, ...result });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[cron] check-portfolios avbröts: ${message}`);
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
-
-  const results = { checked: 0, scoreUpdates: 0, scoreAlerts: 0, reminders: 0 };
-
-  for (const portfolio of portfolios ?? []) {
-    results.checked++;
-
-    const analysis = portfolio.analysis as PortfolioAnalysis;
-    const { score: newScore } = computePortfolioScore(analysis);
-    const oldScore: number | null = portfolio.score;
-
-    // ── Detect score drop ────────────────────────────────────────────────────
-    const scoreDrop = oldScore !== null && (oldScore - newScore) >= SCORE_DROP_THRESHOLD;
-    const lastNotified = portfolio.score_notified_at ? new Date(portfolio.score_notified_at) : null;
-    const notifiedRecently = lastNotified && (now.getTime() - lastNotified.getTime()) < 7 * 24 * 60 * 60 * 1000;
-
-    if (scoreDrop && !notifiedRecently) {
-      const { data: userInfo } = await supabase.auth.admin.getUserById(portfolio.user_id);
-      const email = userInfo?.user?.email;
-      if (email) {
-        await sendScoreDropEmail(email, portfolio.name, oldScore!, newScore);
-        results.scoreAlerts++;
-      }
-    }
-
-    // ── Detect stale portfolio (> REMINDER_DAYS since last analysis) ─────────
-    const updatedAt = new Date(portfolio.updated_at);
-    const daysSince = Math.floor((now.getTime() - updatedAt.getTime()) / (1000 * 60 * 60 * 24));
-    const lastReminder = portfolio.reminder_sent_at ? new Date(portfolio.reminder_sent_at) : null;
-    const reminderRecently = lastReminder && (now.getTime() - lastReminder.getTime()) < REMINDER_DAYS * 24 * 60 * 60 * 1000;
-
-    if (daysSince >= REMINDER_DAYS && !reminderRecently) {
-      const { data: userInfo } = await supabase.auth.admin.getUserById(portfolio.user_id);
-      const email = userInfo?.user?.email;
-      if (email) {
-        await sendReminderEmail(email, portfolio.name, daysSince);
-        results.reminders++;
-      }
-    }
-
-    // ── Persist updated score and notification timestamps ────────────────────
-    const patch: Record<string, unknown> = { score: Math.round(newScore) };
-    if (scoreDrop && !notifiedRecently) patch.score_notified_at = now.toISOString();
-    if (daysSince >= REMINDER_DAYS && !reminderRecently) patch.reminder_sent_at = now.toISOString();
-
-    if (oldScore !== newScore || Object.keys(patch).length > 1) {
-      await supabase.from("portfolios").update(patch).eq("id", portfolio.id);
-      results.scoreUpdates++;
-    }
-  }
-
-  console.log("[cron] check-portfolios done:", results);
-  return NextResponse.json({ ok: true, ...results });
 }

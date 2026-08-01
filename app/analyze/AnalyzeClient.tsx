@@ -924,6 +924,9 @@ export default function AnalyzeClient() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [savedPortfolios, setSavedPortfolios] = useState<SavedPortfolio[]>([]);
   const [savedPortfoliosLoading, setSavedPortfoliosLoading] = useState(false);
+  // Portföljbevakning: förifylls med användarens befintliga val i stället för
+  // ett tyst ja, och skickas med när portföljen sparas.
+  const [watchAlerts, setWatchAlerts] = useState(true);
   const [portfolioDropdownOpen, setPortfolioDropdownOpen] = useState(false);
   const portfolioDropdownRef = useRef<HTMLDivElement>(null);
   const [portfolioLoading, setPortfolioLoading] = useState(() =>
@@ -1001,6 +1004,10 @@ export default function AnalyzeClient() {
           .then(setSavedPortfolios)
           .catch(() => {})
           .finally(() => setSavedPortfoliosLoading(false));
+        fetch("/api/notification-preferences")
+          .then((r) => r.ok ? r.json() : null)
+          .then((p) => setWatchAlerts(p?.email_score_alerts ?? true))
+          .catch(() => {});
       }
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
@@ -1338,7 +1345,13 @@ export default function AnalyzeClient() {
       const res = await fetch("/api/portfolios", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: savingName.trim(), custodian, holdings: entries, analysis }),
+        body: JSON.stringify({
+          name: savingName.trim(),
+          custodian,
+          holdings: entries,
+          analysis,
+          emailScoreAlerts: watchAlerts,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -1816,8 +1829,10 @@ export default function AnalyzeClient() {
           {!showSaveForm ? (
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="font-semibold text-slate-900 text-sm">Spara portföljen?</p>
-                <p className="text-xs text-slate-400 mt-0.5">Kom åt den när som helst från Mitt konto.</p>
+                <p className="font-semibold text-slate-900 text-sm">Spara och bevaka portföljen?</p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Kom åt den från Mitt konto — och få veta om betyget försämras.
+                </p>
               </div>
               <button
                 onClick={() => setShowSaveForm(true)}
@@ -1838,6 +1853,25 @@ export default function AnalyzeClient() {
                 onKeyDown={(e) => e.key === "Enter" && handleSaveNew()}
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+
+              {/* Bevakning — användaren tar aktivt ställning innan portföljen sparas */}
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={watchAlerts}
+                    onChange={(e) => setWatchAlerts(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 shrink-0 accent-[#1F3A5F]"
+                  />
+                  <span className="text-xs leading-relaxed text-slate-600">
+                    <span className="font-medium text-slate-900">Mejla mig om betyget försämras.</span>{" "}
+                    Sparade portföljer analyseras om automatiskt när fonddatan uppdateras. Vi hör av
+                    oss först när betyget sjunker tydligt — inte vid oförändrat eller förbättrat
+                    betyg. Du kan ändra det här när som helst under Mitt konto.
+                  </span>
+                </label>
+              </div>
+
               {saveStatus === "error" && <p className="text-xs text-red-600">Något gick fel. Försök igen.</p>}
               <div className="flex gap-2">
                 <button
@@ -1860,7 +1894,14 @@ export default function AnalyzeClient() {
       )}
 
       {analysis && user && portfolioId && saveStatus === "saved" && (
-        <p className="text-center text-sm text-green-600 font-medium">Portföljen sparades ✓</p>
+        <div className="no-print text-center">
+          <p className="text-sm text-green-600 font-medium">Portföljen sparades ✓</p>
+          <p className="mt-1 text-xs text-slate-500">
+            {watchAlerts
+              ? "Bevakning är på — vi analyserar om portföljen när fonddatan uppdateras och mejlar dig om betyget försämras tydligt."
+              : "Bevakning är av — portföljen analyseras fortfarande om, men vi mejlar dig inte. Du kan slå på notiser under Mitt konto."}
+          </p>
+        </div>
       )}
 
       {analysis && <DataFreshness className="no-print pt-2" />}

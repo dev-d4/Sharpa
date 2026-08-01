@@ -1,4 +1,10 @@
 -- Kör detta i Supabase SQL Editor (https://supabase.com/dashboard/project/jgbwzrlkmgyyglscasfe/sql)
+--
+-- OBS: nyare schemaändringar ligger som versionshanterade migrationer i
+-- supabase/migrations/ och ska köras i filnamnsordning. Den här filen beskriver
+-- grundschemat och uppdateras inte längre för varje ändring. Portföljbevakningen
+-- (augusti 2026) ändrar bland annat portfolios.score till NUMERIC(4,2) — se
+-- supabase/migrations/20260801_000_portfolio_score_precision.sql.
 
 -- ── Unified fund data (one row per ISIN) ─────────────────────────────────────
 

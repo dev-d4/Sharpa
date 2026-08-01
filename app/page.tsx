@@ -1,6 +1,7 @@
 import Hero from "@/components/ui/hero";
 import StatsRow from "@/components/ui/StatsRow";
 import HowItWorks from "@/components/ui/HowItWorks";
+import PortfolioWatch from "@/components/ui/PortfolioWatch";
 import { buttonClass } from "@/components/ui/button";
 
 export default function LandingPage() {
@@ -12,6 +13,8 @@ export default function LandingPage() {
           <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 sm:pt-10">
             <div className="h-px bg-line" />
             <StatsRow />
+            <div className="h-px bg-line" />
+            <PortfolioWatch />
             <div className="h-px bg-line" />
             <HowItWorks />
           </div>
