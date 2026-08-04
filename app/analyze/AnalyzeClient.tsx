@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { PortfolioAnalysis, SuggestedMetrics } from "@/lib/analysis";
+import type { PortfolioAnalysis, SuggestedMetrics, SwapSuggestion } from "@/lib/analysis";
 import { createClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
@@ -895,6 +895,8 @@ export default function AnalyzeClient() {
   const [analysis, setAnalysis] = useState<PortfolioAnalysis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [inputMode, setInputMode] = useState<"weight" | "amount">("weight");
+  // ISIN för alternativ som lagts in i portföljen men ännu inte analyserats om.
+  const [appliedSwaps, setAppliedSwaps] = useState<Set<string>>(new Set());
   const [inputCollapsed, setInputCollapsed] = useState(false);
 
   // Input method: how the user wants to populate their portfolio
@@ -924,6 +926,11 @@ export default function AnalyzeClient() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [savedPortfolios, setSavedPortfolios] = useState<SavedPortfolio[]>([]);
   const [savedPortfoliosLoading, setSavedPortfoliosLoading] = useState(false);
+  // Portföljbevakning: förifylls med användarens befintliga val i stället för
+  // ett tyst ja, och skickas med när portföljen sparas.
+  // Opt-in: rutan ska vara omarkerad tills användaren aktivt kryssar i den.
+  // En förvald kryssruta är inget giltigt samtycke (GDPR art. 4.11, MFL 19 §).
+  const [watchAlerts, setWatchAlerts] = useState(false);
   const [portfolioDropdownOpen, setPortfolioDropdownOpen] = useState(false);
   const portfolioDropdownRef = useRef<HTMLDivElement>(null);
   const [portfolioLoading, setPortfolioLoading] = useState(() =>
@@ -943,8 +950,21 @@ export default function AnalyzeClient() {
     if (portfolioParam) {
       // Load saved portfolio from DB, ignore sessionStorage
       setPortfolioLoading(true);
+      // Utan session går portföljen inte att hämta. Att falla tillbaka på ett
+      // tomt formulär ser ut som att portföljen försvunnit — skicka till
+      // inloggningen och tillbaka hit i stället. Mejlen länkar hit, och de
+      // öppnas ofta i en webbläsare där sessionen saknas.
+      let sentToLogin = false;
       fetch(`/api/portfolios/${portfolioParam}`)
-        .then((r) => r.ok ? r.json() : null)
+        .then((r) => {
+          if (r.status === 401) {
+            sentToLogin = true;
+            const target = `/analyze?portfolio=${encodeURIComponent(portfolioParam)}`;
+            router.replace(`/login?next=${encodeURIComponent(target)}`);
+            return null;
+          }
+          return r.ok ? r.json() : null;
+        })
         .then((p) => {
           if (p) {
             setCustodian(p.custodian);
@@ -956,10 +976,10 @@ export default function AnalyzeClient() {
             setInputMethod("manual");
             sessionStorage.removeItem(SESSION_KEY);
           }
-          router.replace("/analyze");
+          if (!sentToLogin) router.replace("/analyze");
         })
-        .catch(() => router.replace("/analyze"))
-        .finally(() => setPortfolioLoading(false));
+        .catch(() => { if (!sentToLogin) router.replace("/analyze"); })
+        .finally(() => { if (!sentToLogin) setPortfolioLoading(false); });
       return;
     }
 
@@ -1001,6 +1021,10 @@ export default function AnalyzeClient() {
           .then(setSavedPortfolios)
           .catch(() => {})
           .finally(() => setSavedPortfoliosLoading(false));
+        fetch("/api/notification-preferences")
+          .then((r) => r.ok ? r.json() : null)
+          .then((p) => setWatchAlerts(p?.email_score_alerts ?? false))
+          .catch(() => {});
       }
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
@@ -1254,6 +1278,7 @@ export default function AnalyzeClient() {
     if (!custodian) return;
     setError(null);
     setAnalysis(null);
+    setAppliedSwaps(new Set());
 
     let workingEntries = entriesOverride ?? entries;
 
@@ -1311,13 +1336,15 @@ export default function AnalyzeClient() {
         }
       }, 150);
 
-      // Auto-save if editing an existing portfolio
+      // Auto-save if editing an existing portfolio. Spara workingEntries, inte
+      // entries: vikter som räknats fram här (fördelning, belopp → procent,
+      // tillämpat fondalternativ) finns ännu inte i state.
       if (portfolioId) {
         setSaveStatus("saving");
         fetch(`/api/portfolios/${portfolioId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ holdings: entries, analysis: data }),
+          body: JSON.stringify({ holdings: workingEntries, analysis: data }),
         })
           .then((r) => setSaveStatus(r.ok ? "saved" : "error"))
           .catch(() => setSaveStatus("error"))
@@ -1331,6 +1358,54 @@ export default function AnalyzeClient() {
     }
   }
 
+  /**
+   * Lägg in en grupps alternativ i portföljen i stället för dess nuvarande
+   * fonder. Ändrar bara innehavslistan — analysen körs om när användaren själv
+   * väljer det, så att flera byten kan göras innan portföljen räknas om.
+   *
+   * Åtgärden är alltid användarinitierad och rör bara portföljen här i Sharpa —
+   * inga innehav hos depåinstitutet ändras. Alla fall hanteras likadant: de
+   * ersatta fondernas vikt läggs på alternativet, oavsett om det redan finns i
+   * portföljen eller inte.
+   */
+  function applySwapGroup(group: SwapSuggestion[]) {
+    const suggested = group[0].suggestedFund;
+    const replaced = new Set(group.map((s) => s.currentFund.isin));
+    replaced.delete(suggested.isin);
+
+    const num = (v: string | undefined) => parseFloat(v || "0") || 0;
+    const freed = entries.filter((e) => replaced.has(e.isin));
+    if (freed.length === 0) return;
+
+    const weight = freed.reduce((sum, e) => sum + num(e.weight), 0);
+    const amount = freed.reduce((sum, e) => sum + num(e.amount), 0);
+
+    // De ersatta posterna faller bort och alternativet tar den förstas plats.
+    // Finns alternativet redan i portföljen växer den posten i stället.
+    let placed = entries.some((e) => e.isin === suggested.isin);
+    const next = entries.flatMap<Entry>((e) => {
+      if (e.isin === suggested.isin) {
+        return [{
+          ...e,
+          weight: (num(e.weight) + weight).toFixed(1),
+          ...(amount > 0 ? { amount: String(num(e.amount) + amount) } : {}),
+        }];
+      }
+      if (!replaced.has(e.isin)) return [e];
+      if (placed) return [];
+      placed = true;
+      return [{
+        isin: suggested.isin,
+        name: suggested.name,
+        weight: weight.toFixed(1),
+        ...(amount > 0 ? { amount: String(amount) } : {}),
+      }];
+    });
+
+    setEntries(next);
+    setAppliedSwaps((prev) => new Set(prev).add(suggested.isin));
+  }
+
   async function handleSaveNew() {
     if (!savingName.trim() || !analysis || !custodian) return;
     setSaveStatus("saving");
@@ -1338,7 +1413,13 @@ export default function AnalyzeClient() {
       const res = await fetch("/api/portfolios", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: savingName.trim(), custodian, holdings: entries, analysis }),
+        body: JSON.stringify({
+          name: savingName.trim(),
+          custodian,
+          holdings: entries,
+          analysis,
+          emailScoreAlerts: watchAlerts,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -1809,15 +1890,27 @@ export default function AnalyzeClient() {
     </section>
 
       <div ref={resultsRef} />
-      {analysis && <AnalysisResult analysis={analysis} portfolioValue={portfolioValue} user={user} onLoginClick={handleLoginFromBlur} />}
+      {analysis && (
+        <AnalysisResult
+          analysis={analysis}
+          portfolioValue={portfolioValue}
+          user={user}
+          onLoginClick={handleLoginFromBlur}
+          onApplySwap={applySwapGroup}
+          appliedSwaps={appliedSwaps}
+          onReanalyze={() => analyze()}
+        />
+      )}
 
       {analysis && user && !portfolioId && (
         <section className="no-print bg-white rounded-md shadow-sm border border-slate-200 p-4 sm:p-6">
           {!showSaveForm ? (
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="font-semibold text-slate-900 text-sm">Spara portföljen?</p>
-                <p className="text-xs text-slate-400 mt-0.5">Kom åt den när som helst från Mitt konto.</p>
+                <p className="font-semibold text-slate-900 text-sm">Spara och bevaka portföljen?</p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Kom åt den från Mitt konto — och få veta om betyget försämras.
+                </p>
               </div>
               <button
                 onClick={() => setShowSaveForm(true)}
@@ -1838,6 +1931,25 @@ export default function AnalyzeClient() {
                 onKeyDown={(e) => e.key === "Enter" && handleSaveNew()}
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+
+              {/* Bevakning — användaren tar aktivt ställning innan portföljen sparas */}
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={watchAlerts}
+                    onChange={(e) => setWatchAlerts(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 shrink-0 accent-[#1F3A5F]"
+                  />
+                  <span className="text-xs leading-relaxed text-slate-600">
+                    <span className="font-medium text-slate-900">Mejla mig om betyget försämras.</span>{" "}
+                    Vi håller koll på din sparade portfölj åt dig. Vi hör av oss först när betyget
+                    sjunker tydligt — inte vid oförändrat eller förbättrat betyg. Du kan ändra det
+                    här när som helst under Mitt konto.
+                  </span>
+                </label>
+              </div>
+
               {saveStatus === "error" && <p className="text-xs text-red-600">Något gick fel. Försök igen.</p>}
               <div className="flex gap-2">
                 <button
@@ -1860,7 +1972,14 @@ export default function AnalyzeClient() {
       )}
 
       {analysis && user && portfolioId && saveStatus === "saved" && (
-        <p className="text-center text-sm text-green-600 font-medium">Portföljen sparades ✓</p>
+        <div className="no-print text-center">
+          <p className="text-sm text-green-600 font-medium">Portföljen sparades ✓</p>
+          <p className="mt-1 text-xs text-slate-500">
+            {watchAlerts
+              ? "Bevakning är på — vi håller koll på portföljen och mejlar dig om betyget försämras tydligt."
+              : "Bevakning är av — vi håller fortfarande koll, men mejlar dig inte. Du kan slå på notiser under Mitt konto."}
+          </p>
+        </div>
       )}
 
       {analysis && <DataFreshness className="no-print pt-2" />}
@@ -1959,7 +2078,23 @@ function ann3yr(total3yr: number): number {
   return ((1 + total3yr / 100) ** (1 / 3) - 1) * 100;
 }
 
-function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { analysis: PortfolioAnalysis; portfolioValue: number | null; user: User | null | undefined; onLoginClick: () => void }) {
+function AnalysisResult({
+  analysis,
+  portfolioValue,
+  user,
+  onLoginClick,
+  onApplySwap,
+  appliedSwaps,
+  onReanalyze,
+}: {
+  analysis: PortfolioAnalysis;
+  portfolioValue: number | null;
+  user: User | null | undefined;
+  onLoginClick: () => void;
+  onApplySwap: (group: SwapSuggestion[]) => void;
+  appliedSwaps: Set<string>;
+  onReanalyze: () => void;
+}) {
   const showBlur = !user;
   const score = computePortfolioScore(analysis).score;
   const [showAllSwaps, setShowAllSwaps] = useState(false);
@@ -2145,7 +2280,7 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
           <>
             <Divider />
             <div className="px-5 py-6 sm:px-8 sm:py-7">
-              <Label className="mb-3">Möjlig förbättring med föreslagna alternativ</Label>
+              <Label className="mb-3">Historisk skillnad mot de jämförbara alternativen</Label>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   {/* Beloppet sätts i grotesken, inte i monon — monons breda
@@ -2153,13 +2288,11 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                       Tabulära siffror behålls så tal linjerar. */}
                   <p className="text-[30px] font-medium leading-none tracking-tight text-pos tabular-nums sm:text-[34px]">
                     +{Math.round(potentialGainKr).toLocaleString("sv-SE")} kr
-                    <span className="ml-2.5 align-baseline text-base font-normal tracking-normal text-ink-3">
-                      per år
-                    </span>
                   </p>
                   <p className="mt-2 text-xs text-ink-3">
-                    {assumed ? "Beräknat på 100 000 kr. " : ""}
-                    Baserat på avgifter och historisk treårsavkastning – inte en prognos.
+                    Skillnad i avgift och historisk treårsavkastning, omräknad per år
+                    {assumed ? " och beräknad på 100 000 kr" : ""}. Det är en historisk
+                    jämförelse, inte en prognos — utfallet framåt kan bli ett annat.
                   </p>
                 </div>
                 <a
@@ -2246,6 +2379,24 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
           />
           <section className="relative overflow-hidden rounded-md border border-line bg-white">
           <div className="p-5 sm:p-8">
+
+            {/* Ett byte ändrar bara innehavslistan. Analysen körs om en gång,
+                när användaren är klar — inte per byte. */}
+            {!showBlur && appliedSwaps.size > 0 && (
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-md border border-line bg-slate-50 px-4 py-3">
+                <p className="text-sm text-ink-2">
+                  {appliedSwaps.size === 1 ? "Ett alternativ" : `${appliedSwaps.size} alternativ`} är
+                  inlagt i portföljen. Siffrorna nedan gäller fortfarande läget före ändringen.
+                </p>
+                <button
+                  type="button"
+                  onClick={onReanalyze}
+                  className="shrink-0 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-hover active:bg-accent-press"
+                >
+                  Analysera om
+                </button>
+              </div>
+            )}
 
             {showBlur ? (
             <div>
@@ -2426,6 +2577,26 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
                               {infoPanel}
                             </div>
                           </div>
+
+                          {/* Användarinitierat byte i den egna portföljen. Ingen
+                              förvald åtgärd, och formuleringen är neutral — det
+                              här är ett verktyg användaren styr, ingen uppmaning. */}
+                          <div className="mt-3">
+                            {appliedSwaps.has(suggested.isin) ? (
+                              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-pos">
+                                <Check className="h-3.5 w-3.5" />
+                                Inlagd i portföljen
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => onApplySwap(group)}
+                                className="rounded-md border border-line px-3 py-1.5 text-xs font-medium text-ink-2 transition-colors hover:border-accent hover:text-accent"
+                              >
+                                Använd i portföljen
+                              </button>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
@@ -2486,12 +2657,15 @@ function AnalysisResult({ analysis, portfolioValue, user, onLoginClick }: { anal
           </p>
         </section>
       )}
-      {/* Friskrivning */}
+      {/* Friskrivning — se COMPLIANCE.md § 4B och § 4D */}
       <p className="no-print text-[11px] text-slate-400 leading-relaxed">
         Analysen är automatiskt genererad utifrån historiska nyckeltal och generella kriterier och
-        utgör inte finansiell rådgivning. Sharpa står inte under Finansinspektionens tillsyn och
-        har inget tillstånd att bedriva investeringsrådgivning. Historisk avkastning är ingen garanti
-        för framtida resultat — investeringsbeslut fattas på egen risk.
+        utgör varken investeringsrådgivning eller en personlig rekommendation. Den tar inte hänsyn
+        till din ekonomiska situation. Sharpa står inte under Finansinspektionens tillsyn och har
+        inget tillstånd att bedriva investeringsrådgivning. Historisk avkastning är ingen garanti
+        för framtida resultat; fondandelar kan både öka och minska i värde och du kan förlora hela
+        eller delar av det investerade kapitalet. Läs fondens faktablad (KID) hos fondbolaget eller
+        din depåplattform innan du fattar beslut — investeringsbeslut fattas på egen risk.
       </p>
 
       {/* Print footer */}

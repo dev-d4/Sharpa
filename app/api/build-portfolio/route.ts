@@ -10,13 +10,13 @@ type SelectionId =
 
 const BOND_IDS = new Set<SelectionId>(["bond-sek", "bond-global", "bond-highyield"]);
 
+// Compliance: fälten får aldrig beskriva användarens personliga förhållanden
+// (sparhorisont, förlusttolerans, beteende vid kursfall). Se COMPLIANCE.md § 2 och
+// § 5 fråga 1–2 — svar om personen som styr vilka namngivna fonder som visas gör
+// utdatan till en personlig rekommendation (2017/565 art. 9).
 type Answers = {
   platform:      "avanza" | "nordnet" | "both";
-  horizon:       "short" | "medium" | "long" | "verylong";
-  reaction:      "sell" | "wait" | "buy";
-  q3:            number | null;   // 1–5: Hur viktig är investeringen?
-  q4:            number | null;   // 1–5: Vad är viktigast?
-  riskDirect?:   number | null;  // 1–5: direkt vald risknivå (enkel-fråge-flödet)
+  riskDirect?:   number | null;  // 1–5: vald risknivå för exemplet
   selections:    SelectionId[];
   priorities:    Record<string, number> | null;
   management:    "passive" | "mixed" | "active";
@@ -51,20 +51,11 @@ const EQUITY_PCT: Record<number, number> = {
   1: 20, 2: 40, 3: 60, 4: 80, 5: 100,
 };
 
-// Same formula as calcRiskScore in lib/risk.ts — round((q1+q2+q3+q4)/4).
-// Builder and risk profile now ask identical questions so scores are always in sync.
+// Risknivån kommer enbart från användarens direkta val av vilken nivå exemplet
+// ska byggas för. Härled den aldrig ur frågor om användarens egen situation.
 function computeRiskScore(a: Answers): number {
-  // Enkel-fråge-flödet skickar en direkt vald risknivå — använd den rakt av.
-  if (a.riskDirect != null) {
-    return Math.max(1, Math.min(5, Math.round(a.riskDirect)));
-  }
-  const q1Map: Record<string, number> = { short: 2, medium: 3, long: 4, verylong: 5 };
-  const q2Map: Record<string, number> = { sell: 1, wait: 3, buy: 5 };
-  const v1 = q1Map[a.horizon]  ?? 3;
-  const v2 = q2Map[a.reaction] ?? 3;
-  const v3 = a.q3 ?? 3;
-  const v4 = a.q4 ?? 3;
-  return Math.max(1, Math.min(5, Math.round((v1 + v2 + v3 + v4) / 4)));
+  if (a.riskDirect == null) return 3;
+  return Math.max(1, Math.min(5, Math.round(a.riskDirect)));
 }
 
 // ── Live classification (mirrors scripts/classify-funds.ts) ──────────────────
@@ -237,6 +228,43 @@ function distributeByPriority(total: number, selections: SelectionId[], prioriti
   return floored;
 }
 
+export function allocateSelectionWeights(
+  total: number,
+  selections: SelectionId[],
+  priorities: Record<string, number>,
+  maxSlots = Number.POSITIVE_INFINITY,
+): { selections: SelectionId[]; weights: number[]; dropped: SelectionId[] } {
+  if (total <= 0 || selections.length === 0) {
+    return { selections: [], weights: [], dropped: [...selections] };
+  }
+
+  // A category may never be removed after the asset allocation has been set and
+  // then leave its weight to another asset class. Keep only as many categories as
+  // can fit at the minimum weight, and redistribute solely inside this class.
+  const maxByMinimum = Math.max(1, Math.floor(total / MIN_WEIGHT_PCT));
+  const ordered = selections.slice().sort((a, b) => (priorities[a] ?? 2) - (priorities[b] ?? 2));
+  let kept = ordered.slice(0, Math.min(maxSlots, maxByMinimum));
+  const dropped = ordered.slice(kept.length);
+
+  while (kept.length > 1) {
+    const weights = Object.keys(priorities).length > 0
+      ? distributeByPriority(total, kept, priorities)
+      : distributeWeights(total, kept.length);
+    const smallest = Math.min(...weights);
+    if (smallest >= MIN_WEIGHT_PCT) return { selections: kept, weights, dropped };
+
+    // Remove the smallest, least important slot and calculate the weights again.
+    let removeAt = -1;
+    for (let i = weights.length - 1; i >= 0; i--) {
+      if (weights[i] === smallest) { removeAt = i; break; }
+    }
+    dropped.push(kept[removeAt]);
+    kept = kept.filter((_, i) => i !== removeAt);
+  }
+
+  return { selections: kept, weights: [total], dropped };
+}
+
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -306,72 +334,37 @@ function buildReasoning(
 ): string[] {
   const lines: string[] = [];
 
-  // 1. Risk derivation or manual override
+  // 1. Vilken risknivå exemplet är byggt för. Beskriv parametern — aldrig personen.
   if (a.equityOverride != null) {
     const computed = EQUITY_PCT[riskScore];
     lines.push(
-      `Du valde fördelningen manuellt till ${equityPct}% aktier och ${bondPct}% räntor.` +
+      `Fördelningen är satt manuellt till ${equityPct}% aktier och ${bondPct}% räntor.` +
       (equityPct !== computed
-        ? ` Quizet beräknade ursprungligen ${computed}% aktier baserat på dina svar.`
+        ? ` Risknivån ${riskScore} av 5 motsvarar annars ${computed}% aktier.`
         : "")
     );
   } else {
-    const horizonMap: Record<string, string> = {
-      short:    "kort sparhorisont (under 3 år) drar ner risken",
-      medium:   "mellanlång sparhorisont (3–7 år) ger neutral riskbedömning",
-      long:     "lång sparhorisont (7–15 år) ökar risktolerans",
-      verylong: "mycket lång sparhorisont (över 15 år) ger hög risktolerans",
-    };
-    const reactionMap: Record<string, string> = {
-      sell: "du säljer vid nedgång — sänker risknivån",
-      wait: "du avvaktar vid nedgång — neutral riskbedömning",
-      buy:  "du köper mer vid nedgång — höjer risknivån",
-    };
-    const q3Label = a.q3 != null ? (
-      a.q3 <= 1 ? "investeringen är kritisk — kan inte förlora något, sänker risknivån kraftigt" :
-      a.q3 <= 2 ? "investeringen är viktig — tål bara lite förlust, sänker risknivån" :
-      a.q3 === 3 ? "investeringen är måttligt viktig — neutral riskbedömning" :
-      a.q3 === 4 ? "investeringen är flexibel — tål stor förlust, höjer risknivån" :
-                  "investeringen spelar minimal roll för din ekonomi — höjer risknivån"
-    ) : null;
-    const q4Label = a.q4 != null ? (
-      a.q4 <= 1 ? "trygghet prioriteras framför avkastning, sänker risknivån kraftigt" :
-      a.q4 <= 2 ? "stabilitet prioriteras, sänker risknivån" :
-      a.q4 === 3 ? "balans mellan risk och avkastning — neutral riskbedömning" :
-      a.q4 === 4 ? "avkastning prioriteras, höjer risknivån" :
-                  "maximal avkastning prioriteras, höjer risknivån kraftigt"
-    ) : null;
-    const factors = [
-      a.horizon ? horizonMap[a.horizon] : null,
-      a.reaction ? reactionMap[a.reaction] : null,
-      q3Label,
-      q4Label,
-    ].filter(Boolean) as string[];
-    if (factors.length > 0) {
-      const factorCount = factors.length === 1 ? "faktorn" : `${factors.length} faktorer`;
-      lines.push(`Din valda risknivå är ${riskScore} av 5 (${riskLabel}), beräknad utifrån ${factorCount}: ${factors.join(", ")}.`);
-    } else {
-      lines.push(`Din valda risknivå är ${riskScore} av 5 (${riskLabel}).`);
-    }
+    lines.push(`Exemplet är byggt för risknivå ${riskScore} av 5 (${riskLabel}).`);
   }
 
   // 2. Asset allocation context
   if (bondPct > 0) {
     const bondSels = (a.selections ?? []).filter((s) => BOND_IDS.has(s as SelectionId));
     const bondNote = bondSels.length > 0
-      ? ` Räntedelen är fördelad över ${bondSels.map((s) => SELECTION_RATIONALE[s as SelectionId].toLowerCase()).join(" och ")} enligt ditt val.`
+      ? ` Räntedelen är fördelad över ${bondSels.map((s) => SELECTION_RATIONALE[s as SelectionId].toLowerCase()).join(" och ")} enligt de kategorier som valts.`
       : "";
     lines.push(`Fördelningen ${equityPct}% aktier / ${bondPct}% räntor: räntedelen minskar portföljens svängningar och fungerar som stötdämpare vid börsnedgångar.${bondNote}`);
   } else {
-    lines.push(`Hela portföljen investeras i aktier (${equityPct}%) för maximal tillväxtpotential — utan räntebuffert svänger portföljen mer vid marknadsrörelser.`);
+    lines.push(`Hela portföljen ligger i aktier (${equityPct}%) — utan räntedel svänger portföljen mer vid marknadsrörelser.`);
   }
 
-  // 3. Management style
+  // 3. Management style. Avgiftspåståendet går att styrka mot vår egen fonddata;
+  // ett påstående om att index slår aktiv förvaltning gör det inte (MFL 10 §, 18 §).
   const mgmtExplain = a.management === "passive"
-    ? "Enbart indexfonder valdes — dessa följer marknadsindex till lägsta möjliga avgift och slår historiskt de flesta aktivt förvaltade fonder över lång tid."
+    ? "Enbart indexfonder valdes — dessa följer ett marknadsindex och har generellt lägre avgift än aktivt förvaltade fonder."
     : a.management === "active"
       ? "Enbart aktivt förvaltade fonder valdes — dessa har förvaltare som aktivt väljer aktier med målet att slå sitt jämförelseindex."
-      : "En mix av index- och aktivt förvaltade fonder valdes för att kombinera låga avgifter med möjligheten till överavkastning.";
+      : "En mix av index- och aktivt förvaltade fonder valdes för att kombinera lägre avgifter med aktiv förvaltning.";
   lines.push(mgmtExplain);
 
   lines.push("Fonderna valdes baserat på riskjusterad avkastning (Sharpe-kvot, väger tyngst), historisk avkastning samt lägsta möjliga avgift.");
@@ -424,25 +417,30 @@ export async function POST(req: NextRequest) {
     const bondPct   = 100 - equityPct;
     const allSels   = answers.selections?.length ? answers.selections : ["global" as SelectionId];
 
-    const equitySels = allSels.filter((s) => !BOND_IDS.has(s));
+    const selectedEquitySels = allSels.filter((s) => !BOND_IDS.has(s));
+    // Later category choices cannot erase an asset class chosen in the first step.
+    // If no equity category was selected, use a broad global equity fund as the core.
+    const equitySels = equityPct > 0 && selectedEquitySels.length === 0
+      ? ["global" as SelectionId]
+      : selectedEquitySels;
     const bondSels   = allSels.filter((s) => BOND_IDS.has(s));
     const prios      = answers.priorities ?? {};
 
-    // Sort equity selections by priority (lower number = higher importance), cap at MAX_EQUITY_SLOTS
-    const sortedEquitySels = equitySels.slice().sort((a, b) => (prios[a] ?? 2) - (prios[b] ?? 2));
-    const keptEquitySels   = sortedEquitySels.slice(0, MAX_EQUITY_SLOTS);
-    const droppedSelections: string[] = sortedEquitySels
-      .slice(MAX_EQUITY_SLOTS)
-      .map((id) => `${SELECTION_RATIONALE[id]} togs bort (för många kategorier — max ${MAX_EQUITY_SLOTS} aktieplatser)`);
-
-    const equityWeights = keptEquitySels.length === 0 ? [] :
-      Object.keys(prios).length > 0
-        ? distributeByPriority(equityPct, keptEquitySels, prios)
-        : distributeWeights(equityPct, keptEquitySels.length);
+    const equityPlan = allocateSelectionWeights(equityPct, equitySels, prios, MAX_EQUITY_SLOTS);
+    const bondPlan = allocateSelectionWeights(bondPct, bondSels, prios);
+    const keptEquitySels = equityPlan.selections;
+    const equityWeights = equityPlan.weights;
+    const droppedSelections: string[] = equityPlan.dropped.map(
+      (id) => `${SELECTION_RATIONALE[id]} togs bort för att övriga aktiekategorier ska kunna väga minst ${MIN_WEIGHT_PCT}% utan att ändra aktieandelen`,
+    );
+    droppedSelections.push(...bondPlan.dropped.map(
+      (id) => `${SELECTION_RATIONALE[id]} togs bort för att övriga räntekategorier ska kunna väga minst ${MIN_WEIGHT_PCT}% utan att ändra ränteandelen`,
+    ));
 
     type CandidateFund = { isin: string; name: string; category: string; ongoing_cost: number | null; sharpe_3yr: number | null; return_1yr: number | null; return_3yr: number | null };
     type PortfolioSlot = { isin: string; name: string; weight: number; category: string; rationale: string; ongoing_cost: number | null; sharpe_3yr: number | null; return_1yr: number | null; return_3yr: number | null; candidates: CandidateFund[]; poolSize: number; avgPoolSharpe: number | null; avgPoolCost: number | null; avgPoolReturn1yr: number | null; avgPoolReturn3yr: number | null };
-    const portfolio: PortfolioSlot[] = [];
+    const equityPortfolio: PortfolioSlot[] = [];
+    const bondPortfolio: PortfolioSlot[] = [];
     const usedIsins: string[] = [];
 
     const toCandidates = (funds: FundRow[]): CandidateFund[] =>
@@ -468,54 +466,56 @@ export async function POST(req: NextRequest) {
       const weight = equityWeights[i];
       if (weight <= 0) continue;
 
-      if (weight < MIN_WEIGHT_PCT) {
-        droppedSelections.push(`${SELECTION_RATIONALE[selId]} togs bort (vikt ${weight}% understeg minimigränsen ${MIN_WEIGHT_PCT}%)`);
-        if (portfolio.length > 0) portfolio[0].weight += weight;
-        continue;
-      }
-
       const basePool = equityFunds.filter(SELECTION_FILTER[selId]);
       const mgmtPool = applyMgmt(basePool, answers.management);
-      const pool     = mgmtPool.length > 0 ? mgmtPool : basePool;
+      const pool = mgmtPool.length > 0 ? mgmtPool : basePool.length > 0 ? basePool : equityFunds;
+      if (basePool.length === 0) {
+        droppedSelections.push(`${SELECTION_RATIONALE[selId]} saknade tillgänglig fond och ersattes inom aktiedelen`);
+      }
       const top  = pickTop(pool, usedIsins);
-      if (top.length === 0) { if (portfolio.length > 0) portfolio[0].weight += weight; continue; }
+      if (top.length === 0) { if (equityPortfolio.length > 0) equityPortfolio[0].weight += weight; continue; }
       const best = top[0];
-      portfolio.push({ isin: best.isin, name: best.name, weight, category: best.category ?? "", rationale: SELECTION_RATIONALE[selId], ongoing_cost: best.ongoing_cost_actual ?? best.ongoing_cost_estimated ?? null, sharpe_3yr: best.sharpe_3yr, return_1yr: best.return_1yr, return_3yr: best.return_3yr, candidates: toCandidates(top), ...poolStats(pool) });
+      equityPortfolio.push({ isin: best.isin, name: best.name, weight, category: best.category ?? "", rationale: SELECTION_RATIONALE[selId], ongoing_cost: best.ongoing_cost_actual ?? best.ongoing_cost_estimated ?? null, sharpe_3yr: best.sharpe_3yr, return_1yr: best.return_1yr, return_3yr: best.return_3yr, candidates: toCandidates(top), ...poolStats(pool) });
       usedIsins.push(best.isin);
     }
 
     // Bond slots — from user bond selections or one auto-picked fund
     if (bondPct > 0) {
-      if (bondSels.length > 0) {
-        const bondWeights = Object.keys(prios).length > 0
-          ? distributeByPriority(bondPct, bondSels, prios)
-          : distributeWeights(bondPct, bondSels.length);
-        for (let i = 0; i < bondSels.length; i++) {
-          const selId  = bondSels[i];
-          const weight = bondWeights[i];
+      if (bondPlan.selections.length > 0) {
+        for (let i = 0; i < bondPlan.selections.length; i++) {
+          const selId  = bondPlan.selections[i];
+          const weight = bondPlan.weights[i];
           if (weight <= 0) continue;
           const pool = fixedFunds.filter(SELECTION_FILTER[selId]);
           const activePool = pool.length ? pool : fixedFunds;
           const top  = pickTop(activePool, usedIsins);
-          if (top.length === 0) { if (portfolio.length > 0) portfolio[0].weight += weight; continue; }
+          if (top.length === 0) { if (bondPortfolio.length > 0) bondPortfolio[0].weight += weight; continue; }
           const best = top[0];
-          portfolio.push({ isin: best.isin, name: best.name, weight, category: best.category ?? "Räntefond", rationale: SELECTION_RATIONALE[selId], ongoing_cost: best.ongoing_cost_actual ?? best.ongoing_cost_estimated ?? null, sharpe_3yr: best.sharpe_3yr, return_1yr: best.return_1yr, return_3yr: best.return_3yr, candidates: toCandidates(top), ...poolStats(activePool) });
+          bondPortfolio.push({ isin: best.isin, name: best.name, weight, category: best.category ?? "Räntefond", rationale: SELECTION_RATIONALE[selId], ongoing_cost: best.ongoing_cost_actual ?? best.ongoing_cost_estimated ?? null, sharpe_3yr: best.sharpe_3yr, return_1yr: best.return_1yr, return_3yr: best.return_3yr, candidates: toCandidates(top), ...poolStats(activePool) });
           usedIsins.push(best.isin);
         }
       } else {
         const top = pickTop(fixedFunds, usedIsins);
         if (top.length > 0) {
           const best = top[0];
-          portfolio.push({ isin: best.isin, name: best.name, weight: bondPct, category: best.category ?? "Räntefond", rationale: bondPct <= 20 ? "Stabiliserar portföljen" : "Lägre risk och volatilitet", ongoing_cost: best.ongoing_cost_actual ?? best.ongoing_cost_estimated ?? null, sharpe_3yr: best.sharpe_3yr, return_1yr: best.return_1yr, return_3yr: best.return_3yr, candidates: toCandidates(top), ...poolStats(fixedFunds) });
-        } else if (portfolio.length > 0) {
-          portfolio[0].weight += bondPct;
+          bondPortfolio.push({ isin: best.isin, name: best.name, weight: bondPct, category: best.category ?? "Räntefond", rationale: bondPct <= 20 ? "Stabiliserar portföljen" : "Lägre risk och volatilitet", ongoing_cost: best.ongoing_cost_actual ?? best.ongoing_cost_estimated ?? null, sharpe_3yr: best.sharpe_3yr, return_1yr: best.return_1yr, return_3yr: best.return_3yr, candidates: toCandidates(top), ...poolStats(fixedFunds) });
         }
       }
     }
 
-    // Normalise weights to 100
-    const total = portfolio.reduce((s, f) => s + f.weight, 0);
-    if (total !== 100 && portfolio.length > 0) portfolio[0].weight += 100 - total;
+    if (equityPct > 0 && equityPortfolio.length === 0) {
+      return NextResponse.json({ error: "Det finns ingen tillgänglig aktiefond som kan behålla din valda aktieandel." }, { status: 422 });
+    }
+    if (bondPct > 0 && bondPortfolio.length === 0) {
+      return NextResponse.json({ error: "Det finns ingen tillgänglig räntefond som kan behålla din valda ränteandel." }, { status: 422 });
+    }
+
+    // Correct rounding or unavailable category slots only within the same asset class.
+    const equityTotal = equityPortfolio.reduce((s, f) => s + f.weight, 0);
+    const bondTotal = bondPortfolio.reduce((s, f) => s + f.weight, 0);
+    if (equityPortfolio.length > 0) equityPortfolio[0].weight += equityPct - equityTotal;
+    if (bondPortfolio.length > 0) bondPortfolio[0].weight += bondPct - bondTotal;
+    const portfolio = [...equityPortfolio, ...bondPortfolio];
 
     const computedLabel = RISK_LABELS[riskScore];
     const riskLabel = answers.equityOverride != null

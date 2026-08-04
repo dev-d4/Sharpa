@@ -10,7 +10,7 @@ export default function VillkorPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
       <h1 className="text-3xl font-bold text-slate-900 mb-2">Användarvillkor</h1>
-      <p className="text-sm text-slate-400 mb-10">Senast uppdaterad: juli 2026</p>
+      <p className="text-sm text-slate-400 mb-10">Senast uppdaterad: augusti 2026</p>
 
       <div className="space-y-8 text-slate-700 text-sm leading-relaxed">
 
@@ -59,17 +59,30 @@ export default function VillkorPage() {
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-bold text-slate-900">4. Datakällor och noggrannhet</h2>
+          <h2 className="text-lg font-bold text-slate-900">4. Portföljbevakning och utskick</h2>
           <p>
-            Fonddata hämtas från externa datakällor och uppdateras regelbundet, men inte i realtid.
-            Vi kan inte garantera att uppgifterna alltid är fullständiga, korrekta eller aktuella.
-            Kontrollera alltid uppgifter om en fond (avgift, avkastning, risk) hos fondbolaget eller
-            din depåplattform innan du fattar beslut.
+            Sparar du en portfölj räknar vi dagligen om dess betyg mot uppdaterad fonddata och
+            sparar resultatet som historik. Har du aktivt valt att få notiser mejlar vi dig när
+            betyget försämras tydligt. Utskicken beskriver vad som förändrats i datan — de
+            innehåller inga uppmaningar att köpa, sälja eller byta fonder och utgör inte
+            rådgivning. Du kan när som helst stänga av dem under Mitt konto eller via länken i
+            varje meddelande.
           </p>
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-bold text-slate-900">5. Immateriella rättigheter</h2>
+          <h2 className="text-lg font-bold text-slate-900">5. Datakällor och noggrannhet</h2>
+          <p>
+            Fonddata hämtas från Avanzas och Nordnets publika fondlistor och uppdateras
+            regelbundet, men inte i realtid. Vi kan inte garantera att uppgifterna alltid är
+            fullständiga, korrekta eller aktuella. Kontrollera alltid uppgifter om en fond
+            (avgift, avkastning, risk) och läs fondens faktablad (KID) hos fondbolaget eller din
+            depåplattform innan du fattar beslut.
+          </p>
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-lg font-bold text-slate-900">6. Immateriella rättigheter</h2>
           <p>
             Allt innehåll, design och kod på Sharpa tillhör Sharpa. Du får inte kopiera,
             distribuera eller skapa härledda verk utan skriftligt tillstånd.
@@ -77,17 +90,20 @@ export default function VillkorPage() {
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-bold text-slate-900">6. Ansvarsbegränsning</h2>
+          <h2 className="text-lg font-bold text-slate-900">7. Ansvarsbegränsning</h2>
           <p>
-            Sharpa ansvarar inte för ekonomiska förluster, direkta eller indirekta, som uppstår
-            till följd av användning av tjänsten eller information som genererats av den.
-            Tjänsten tillhandahålls &ldquo;i befintligt skick&rdquo; utan garantier av något slag.
-            Beslut som fattas helt eller delvis utifrån information från tjänsten fattas på egen risk.
+            Tjänsten tillhandahålls &ldquo;i befintligt skick&rdquo;. Beslut som fattas helt eller
+            delvis utifrån information från tjänsten fattas på egen risk, och Sharpa ansvarar inte
+            för ekonomiska förluster som uppstår till följd av sådana beslut.
+          </p>
+          <p>
+            Begränsningen gäller inte skada som Sharpa orsakat genom uppsåt eller grov vårdslöshet,
+            och inskränker inte de rättigheter du har som konsument enligt tvingande lag.
           </p>
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-bold text-slate-900">7. Ändringar</h2>
+          <h2 className="text-lg font-bold text-slate-900">8. Ändringar</h2>
           <p>
             Vi kan uppdatera dessa villkor när som helst. Fortsatt användning efter att ändringar
             trätt i kraft innebär att du accepterar de nya villkoren.
@@ -95,7 +111,7 @@ export default function VillkorPage() {
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-bold text-slate-900">8. Tillämplig lag</h2>
+          <h2 className="text-lg font-bold text-slate-900">9. Tillämplig lag</h2>
           <p>
             Dessa villkor regleras av svensk lag. Tvister ska i första hand lösas i samförstånd,
             och i andra hand av allmän domstol i Sverige.

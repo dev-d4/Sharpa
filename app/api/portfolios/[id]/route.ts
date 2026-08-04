@@ -31,13 +31,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
 
-  const { score } = computePortfolioScore(analysis);
+  // Betyget sparas med decimaler — se migration 20260801_000.
+  const scoreResult = computePortfolioScore(analysis);
   const updates = {
     ...(name ? { name } : {}),
     ...(custodian ? { custodian } : {}),
     holdings,
     analysis,
-    score: Math.round(score),
+    score: scoreResult.score,
+    score_breakdown: scoreResult,
     updated_at: new Date().toISOString(),
   };
 
@@ -53,6 +55,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (result.error?.code === "PGRST204") {
     const updatesWithoutScore: Partial<typeof updates> = { ...updates };
     delete updatesWithoutScore.score;
+    delete updatesWithoutScore.score_breakdown;
     result = await supabase
       .from("portfolios")
       .update(updatesWithoutScore)

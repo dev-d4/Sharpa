@@ -4,9 +4,24 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase-browser";
-import type { SavedPortfolio } from "@/lib/portfolio";
+import type { SavedPortfolio, PortfolioScoreHistoryEntry } from "@/lib/portfolio";
 import type { SwapSuggestion } from "@/lib/analysis";
 import { computePortfolioScore, SCORE_COLOR_CLASSES } from "@/lib/portfolio-score";
+
+/** "3 augusti" / "3 augusti 2025" om kontrollen skedde ett annat år. */
+function formatCheckedAt(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const sameYear = d.getFullYear() === new Date().getFullYear();
+  return d.toLocaleDateString("sv-SE", {
+    day: "numeric",
+    month: "long",
+    ...(sameYear ? {} : { year: "numeric" }),
+  });
+}
+
+const score1 = (n: number) =>
+  n.toLocaleString("sv-SE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 export default function PortfoliosClient() {
   const [portfolios, setPortfolios] = useState<SavedPortfolio[]>([]);
@@ -15,18 +30,61 @@ export default function PortfoliosClient() {
   const [expandedDetails, setExpandedDetails] = useState<Set<string>>(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [alertsEnabled, setAlertsEnabled] = useState<boolean | null>(null);
+  const [history, setHistory] = useState<Map<string, PortfolioScoreHistoryEntry>>(new Map());
+  const [focusedId, setFocusedId] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getSession().then(({ data }) => {
-      if (!data.session?.user) { router.replace("/login"); return; }
+      if (!data.session?.user) {
+        // Behåll ankaret över inloggningen. Mejlen länkar hit, och de öppnas
+        // ofta i en webbläsare där sessionen saknas — utan next hamnar man på
+        // en tom portföljlista i stället för på portföljen mejlet gällde.
+        const target = `/portfolios${window.location.hash}`;
+        router.replace(`/login?next=${encodeURIComponent(target)}`);
+        return;
+      }
       fetch("/api/portfolios")
         .then((r) => r.ok ? r.json() : [])
-        .then((p) => { setPortfolios(p); setLoading(false); })
+        .then((p: SavedPortfolio[]) => {
+          setPortfolios(p);
+          setLoading(false);
+          // Ankaret från mejlet, avläst först när portföljerna finns: kortet
+          // ska markeras, och id:t ska bara gälla om portföljen faktiskt finns.
+          const anchored = window.location.hash.match(/^#p-(.+)$/);
+          const id = anchored ? decodeURIComponent(anchored[1]) : null;
+          if (id && p.some((x) => x.id === id)) setFocusedId(id);
+        })
         .catch(() => setLoading(false));
+      fetch("/api/notification-preferences")
+        .then((r) => r.ok ? r.json() : null)
+        .then((p) => setAlertsEnabled(p?.email_score_alerts ?? false))
+        .catch(() => setAlertsEnabled(false));
+      fetch("/api/portfolio-history")
+        .then((r) => r.ok ? r.json() : [])
+        .then((rows: PortfolioScoreHistoryEntry[]) => {
+          // Raderna kommer nyast först — första träffen per portfölj med en
+          // faktisk förändring är den senaste förändringen.
+          const latest = new Map<string, PortfolioScoreHistoryEntry>();
+          for (const row of rows ?? []) {
+            if (row.previous_score === null) continue;
+            if (!latest.has(row.portfolio_id)) latest.set(row.portfolio_id, row);
+          }
+          setHistory(latest);
+        })
+        .catch(() => {});
     });
   }, [router]);
+
+  // Korten finns inte i DOM:en förrän portföljerna hämtats, så webbläsarens
+  // egen hash-scroll hinner aldrig träffa rätt — vi gör den själva när kortet
+  // väl renderats.
+  useEffect(() => {
+    if (!focusedId) return;
+    document.getElementById(`p-${focusedId}`)?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [focusedId]);
 
   async function handleDelete(id: string) {
     setDeleteError(null);
@@ -61,6 +119,14 @@ export default function PortfoliosClient() {
         <div>
           <h1 className="font-heading text-2xl font-bold text-slate-900">Mina portföljer</h1>
           <p className="text-sm text-slate-500 mt-1">{portfolios.length} sparade portföljer</p>
+          {portfolios.length > 0 && (
+            <p className="text-xs text-slate-400 mt-1">
+              Vi håller koll och hör av oss om något viktigt förändras.{" "}
+              <Link href="/account#notiser" className="underline decoration-slate-300 underline-offset-2 hover:text-slate-600">
+                Hantera bevakning
+              </Link>
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Link
@@ -102,7 +168,13 @@ export default function PortfoliosClient() {
             const scoreColors = SCORE_COLOR_CLASSES[scoreResult.color];
 
             return (
-              <div key={p.id} className="bg-white rounded-md border border-slate-200 shadow-sm overflow-hidden">
+              <div
+                key={p.id}
+                id={`p-${p.id}`}
+                className={`bg-white rounded-md border shadow-sm overflow-hidden scroll-mt-24 ${
+                  focusedId === p.id ? "border-accent ring-1 ring-accent/25" : "border-slate-200"
+                }`}
+              >
                 {/* Header */}
                 <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-100">
                   <div className="flex items-start justify-between gap-3">
@@ -125,6 +197,30 @@ export default function PortfoliosClient() {
                         {p.analysis.weightedReturn3yr !== null && (
                           <span className="text-xs text-slate-500">3 år: <span className="font-medium text-slate-700">{p.analysis.weightedReturn3yr.toFixed(1)}%</span></span>
                         )}
+                      </div>
+
+                      {/* Bevakningsstatus */}
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-0.5">
+                        <span className="inline-flex items-center gap-1.5 text-xs text-slate-500">
+                          <span className={`h-1.5 w-1.5 rounded-full ${alertsEnabled === false ? "bg-slate-300" : "bg-pos"}`} />
+                          {alertsEnabled === false ? "Bevakning av" : "Bevakning på"}
+                        </span>
+                        {p.last_checked_at && (
+                          <span className="text-xs text-slate-400">
+                            Kontrollerad {formatCheckedAt(p.last_checked_at)}
+                          </span>
+                        )}
+                        {(() => {
+                          const h = history.get(p.id);
+                          if (!h || h.previous_score === null) return null;
+                          const delta = h.score - h.previous_score;
+                          if (Math.abs(delta) < 0.05) return null;
+                          return (
+                            <span className={`text-xs font-medium ${delta < 0 ? "text-neg" : "text-pos"}`}>
+                              {score1(h.previous_score)} → {score1(h.score)}
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">

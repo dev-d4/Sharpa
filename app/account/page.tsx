@@ -12,6 +12,9 @@ export default function AccountPage() {
   const [portfolios, setPortfolios] = useState<SavedPortfolio[]>([]);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [alertsEnabled, setAlertsEnabled] = useState<boolean | null>(null);
+  const [alertsSaving, setAlertsSaving] = useState(false);
+  const [alertsError, setAlertsError] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -25,8 +28,36 @@ export default function AccountPage() {
         .then((r) => r.ok ? r.json() : [])
         .then(setPortfolios)
         .catch(() => {});
+      fetch("/api/notification-preferences")
+        .then((r) => r.ok ? r.json() : null)
+        .then((p) => setAlertsEnabled(p?.email_score_alerts ?? false))
+        // Vid läsfel visar vi det säkra läget. Ett nätverksfel får aldrig
+        // få ett opt-in-reglage att se aktiverat ut.
+        .catch(() => setAlertsEnabled(false));
     });
   }, [router]);
+
+  async function toggleAlerts(next: boolean) {
+    const previous = alertsEnabled;
+    // Optimistisk växling — reglaget känns direkt, och rullas tillbaka om
+    // sparningen misslyckas.
+    setAlertsEnabled(next);
+    setAlertsSaving(true);
+    setAlertsError(false);
+    try {
+      const res = await fetch("/api/notification-preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email_score_alerts: next }),
+      });
+      if (!res.ok) throw new Error("save failed");
+    } catch {
+      setAlertsEnabled(previous);
+      setAlertsError(true);
+    } finally {
+      setAlertsSaving(false);
+    }
+  }
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -106,6 +137,46 @@ export default function AccountPage() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Portföljbevakning */}
+      <section id="notiser" className="bg-white rounded-md border border-slate-200 shadow-sm scroll-mt-24">
+        <div className="px-6 py-4">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Portföljbevakning</p>
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-slate-900">E-post när betyget försämras</p>
+              <p className="text-xs leading-relaxed text-slate-500 mt-1">
+                Vi håller koll på dina sparade portföljer. Får de ett tydligt lägre betyg mejlar vi
+                dig om vad som förändrats. Vi skickar inget vid oförändrat eller förbättrat betyg.
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={alertsEnabled === true}
+              aria-label="E-post när betyget försämras"
+              disabled={alertsEnabled === null || alertsSaving}
+              onClick={() => toggleAlerts(!alertsEnabled)}
+              className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${
+                alertsEnabled ? "bg-accent" : "bg-slate-300"
+              }`}
+            >
+              <span
+                className={`block h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                  alertsEnabled ? "translate-x-[22px]" : "translate-x-0.5"
+                }`}
+              />
+            </button>
+          </div>
+          {alertsError && (
+            <p className="mt-3 text-xs text-red-600">Kunde inte spara inställningen. Försök igen.</p>
+          )}
+          <p className="mt-3 text-xs text-slate-400">
+            Inloggningsmejl påverkas inte av den här inställningen. Notiserna är automatiskt
+            genererad information, inte personlig finansiell rådgivning.
+          </p>
         </div>
       </section>
 

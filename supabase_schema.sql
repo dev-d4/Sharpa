@@ -1,4 +1,10 @@
 -- Kör detta i Supabase SQL Editor (https://supabase.com/dashboard/project/jgbwzrlkmgyyglscasfe/sql)
+--
+-- OBS: nyare schemaändringar ligger som versionshanterade migrationer i
+-- supabase/migrations/ och ska köras i filnamnsordning. Den här filen beskriver
+-- grundschemat och uppdateras inte längre för varje ändring. Portföljbevakningen
+-- (augusti 2026) ändrar bland annat portfolios.score till NUMERIC(4,2) — se
+-- supabase/migrations/20260801_000_portfolio_score_precision.sql.
 
 -- ── Unified fund data (one row per ISIN) ─────────────────────────────────────
 
@@ -126,10 +132,12 @@ ALTER TABLE portfolios ADD COLUMN IF NOT EXISTS score_notified_at TIMESTAMPTZ;
 ALTER TABLE portfolios ADD COLUMN IF NOT EXISTS reminder_sent_at  TIMESTAMPTZ;
 
 -- ── Notification preferences ──────────────────────────────────────────────────
+-- Utskick kräver aktivt samtycke: kolumnerna defaultar till FALSE, och en saknad
+-- rad behandlas som AV i både API och cron-jobb (GDPR art. 4.11, MFL 19 §).
 CREATE TABLE IF NOT EXISTS notification_preferences (
   user_id            UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  email_score_alerts BOOLEAN NOT NULL DEFAULT TRUE,
-  email_reminders    BOOLEAN NOT NULL DEFAULT TRUE,
+  email_score_alerts BOOLEAN NOT NULL DEFAULT FALSE,
+  email_reminders    BOOLEAN NOT NULL DEFAULT FALSE,
   updated_at         TIMESTAMPTZ DEFAULT NOW()
 );
 ALTER TABLE notification_preferences ENABLE ROW LEVEL SECURITY;

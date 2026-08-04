@@ -22,19 +22,44 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { name, custodian, holdings, analysis } = body;
+  const { name, custodian, holdings, analysis, emailScoreAlerts } = body;
   if (!name || !custodian || !holdings || !analysis) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
 
-  const { score } = computePortfolioScore(analysis);
-  // The `score` column is INTEGER — round the fractional score (e.g. 7.3 → 7)
-  // so Postgres doesn't reject the insert with 22P02 (invalid integer syntax).
-  const storedScore = Math.round(score);
+  // Betyget sparas med decimaler (kolumnen är NUMERIC(4,2) sedan migrationen
+  // 20260801_000). Tidigare avrundades det till heltal, vilket gjorde att en
+  // försämring från 7,6 till 7,0 kunde se ut som ingen förändring alls.
+  const scoreResult = computePortfolioScore(analysis);
+
+  // Användaren tar aktivt ställning till bevakningen i sparaformuläret. Vi
+  // skriver bara inställningen när ett värde faktiskt skickats med, så att
+  // andra vägar in (t.ex. import) inte tyst ändrar ett tidigare val.
+  if (typeof emailScoreAlerts === "boolean") {
+    await supabase.from("notification_preferences").upsert(
+      {
+        user_id: user.id,
+        email_score_alerts: emailScoreAlerts,
+        updated_at: new Date().toISOString(),
+        ...(emailScoreAlerts
+          ? { unsubscribed_at: null, unsubscribe_source: null }
+          : { unsubscribed_at: new Date().toISOString(), unsubscribe_source: "account" }),
+      },
+      { onConflict: "user_id" }
+    );
+  }
 
   let result = await supabase
     .from("portfolios")
-    .insert({ user_id: user.id, name, custodian, holdings, analysis, score: storedScore })
+    .insert({
+      user_id: user.id,
+      name,
+      custodian,
+      holdings,
+      analysis,
+      score: scoreResult.score,
+      score_breakdown: scoreResult,
+    })
     .select()
     .single();
 

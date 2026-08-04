@@ -1,9 +1,21 @@
 import type { PortfolioAnalysis } from "./analysis";
 
+/** De fyra dimensionerna betyget vägs samman av. */
+export type ScoreComponentKey = "cost" | "sharpe" | "return3yr" | "diversification";
+
+/**
+ * En dimensions delpoäng (0–10). Sparas i score_breakdown och jämförs mellan två
+ * kontroller för att kunna säga VILKEN del av betyget som sjunkit — utan den här
+ * uppdelningen går det bara att konstatera att totalen ändrats.
+ */
+export type ScoreComponent = { key: ScoreComponentKey; points: number };
+
 export type PortfolioScoreResult = {
   score: number;          // 0–10
   label: string;
   color: "green" | "blue" | "yellow" | "orange" | "red";
+  /** Dimensioner som kunde beräknas. Saknad data ger ingen post alls. */
+  components: ScoreComponent[];
 };
 
 /**
@@ -13,21 +25,25 @@ export type PortfolioScoreResult = {
  */
 export function computePortfolioScore(analysis: PortfolioAnalysis): PortfolioScoreResult {
   let total = 0, count = 0;
-  const add = (points: number) => { total += points; count++; };
+  const components: ScoreComponent[] = [];
+  const add = (key: ScoreComponentKey, points: number) => {
+    total += points; count++;
+    components.push({ key, points });
+  };
 
   if (analysis.avgCost !== null) {
-    add(analysis.avgCost < 0.2 ? 10 : analysis.avgCost < 0.4 ? 8 : analysis.avgCost < 0.6 ? 6 : analysis.avgCost < 0.9 ? 4 : 2);
+    add("cost", analysis.avgCost < 0.2 ? 10 : analysis.avgCost < 0.4 ? 8 : analysis.avgCost < 0.6 ? 6 : analysis.avgCost < 0.9 ? 4 : 2);
   }
   if (analysis.weightedSharpe !== null) {
-    add(analysis.weightedSharpe > 1.2 ? 10 : analysis.weightedSharpe > 0.8 ? 8 : analysis.weightedSharpe > 0.5 ? 6 : analysis.weightedSharpe > 0.2 ? 4 : 2);
+    add("sharpe", analysis.weightedSharpe > 1.2 ? 10 : analysis.weightedSharpe > 0.8 ? 8 : analysis.weightedSharpe > 0.5 ? 6 : analysis.weightedSharpe > 0.2 ? 4 : 2);
   }
   if (analysis.weightedReturn3yr !== null) {
-    add(analysis.weightedReturn3yr > 40 ? 10 : analysis.weightedReturn3yr > 25 ? 9 : analysis.weightedReturn3yr > 15 ? 8 : analysis.weightedReturn3yr > 8 ? 7 : analysis.weightedReturn3yr > 3 ? 5 : 2);
+    add("return3yr", analysis.weightedReturn3yr > 40 ? 10 : analysis.weightedReturn3yr > 25 ? 9 : analysis.weightedReturn3yr > 15 ? 8 : analysis.weightedReturn3yr > 8 ? 7 : analysis.weightedReturn3yr > 3 ? 5 : 2);
   }
   const diversitySource = analysis.detailedBreakdown ?? analysis.categoryBreakdown;
   if (diversitySource?.length) {
     const n = diversitySource.filter(c => c.weight > 5).length;
-    add(n >= 4 ? 10 : n === 3 ? 8 : n === 2 ? 5 : 2);
+    add("diversification", n >= 4 ? 10 : n === 3 ? 8 : n === 2 ? 5 : 2);
   }
 
   const score = count > 0 ? Math.round((total / count) * 10) / 10 : 5.0;
@@ -40,7 +56,7 @@ export function computePortfolioScore(analysis: PortfolioAnalysis): PortfolioSco
   else if (score >= 4)  { label = "Kan förbättras";   color = "orange"; }
   else                  { label = "Behöver ses över"; color = "red";    }
 
-  return { score, label, color };
+  return { score, label, color, components };
 }
 
 export const SCORE_COLOR_CLASSES: Record<PortfolioScoreResult["color"], {

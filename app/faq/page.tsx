@@ -19,6 +19,10 @@ const FAQS = [
     a: "Automatiskt. Varje fond jämförs med andra fonder i samma kategori utifrån riskjusterad avkastning (Sharpe-kvot), historisk avkastning och avgift. En fond visas som jämförbart alternativ när den har starkare nyckeltal än den analyserade fonden i samma kategori.",
   },
   {
+    q: "Vad innebär portföljbevakningen?",
+    a: "Sparar du en portfölj räknar vi dagligen om dess betyg mot uppdaterad fonddata. Väljer du att slå på notiser mejlar vi dig när betyget försämras tydligt, med vad som förändrats i datan. Mejlen innehåller inga fondnamn och inga uppmaningar att köpa, sälja eller byta — de beskriver bara förändringen. Bevakningen är avstängd tills du aktivt slår på den, och du kan stänga av den när som helst under Mitt konto.",
+  },
+  {
     q: "Hur aktuell är fonddatan?",
     a: "Fonddata hämtas från externa datakällor och uppdateras regelbundet, men inte i realtid. Kontrollera alltid aktuella uppgifter hos fondbolaget eller din depåplattform innan du fattar beslut.",
   },

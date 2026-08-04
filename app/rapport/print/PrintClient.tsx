@@ -293,8 +293,8 @@ export default function PrintClient() {
         {/* Document header */}
         <div className="doc-header">
           <div className="doc-header-left">
-            <div className="company-name">Ditt företag</div>
-            <div className="company-sub">Finansiell rådgivning</div>
+            <div className="company-name">Ert bolagsnamn</div>
+            <div className="company-sub">Er verksamhetsbeskrivning</div>
           </div>
           <div className="doc-header-right">
             <h1 className="report-title">{client ? `Portföljanalys — ${client}` : "Portföljanalys"}</h1>
