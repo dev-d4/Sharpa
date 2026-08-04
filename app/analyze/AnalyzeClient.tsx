@@ -1347,8 +1347,7 @@ export default function AnalyzeClient() {
           body: JSON.stringify({ holdings: workingEntries, analysis: data }),
         })
           .then((r) => setSaveStatus(r.ok ? "saved" : "error"))
-          .catch(() => setSaveStatus("error"))
-          .finally(() => setTimeout(() => setSaveStatus("idle"), 3000));
+          .catch(() => setSaveStatus("error"));
       }
     } catch (err: unknown) {
       clearInterval(stepInterval);
@@ -1428,7 +1427,6 @@ export default function AnalyzeClient() {
       setShowSaveForm(false);
       setSavingName("");
       setSaveStatus("saved");
-      setTimeout(() => setSaveStatus("idle"), 3000);
     } catch {
       setSaveStatus("error");
     }
