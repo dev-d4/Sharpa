@@ -9,24 +9,37 @@ import { createClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
 import { clearResume, prepareLoginResume } from "@/lib/resume-session";
 
-function AvatarDropdown({ user }: { user: User }) {
-  const [open, setOpen] = useState(false);
+type AvatarDropdownProps = {
+  user: User;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  menuId: string;
+};
+
+function AvatarDropdown({ user, open, onOpenChange, menuId }: AvatarDropdownProps) {
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   useEffect(() => {
     function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) onOpenChange(false);
+    }
+    function closeOnEscape(e: KeyboardEvent) {
+      if (e.key === "Escape") onOpenChange(false);
     }
     document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [onOpenChange]);
 
   async function signOut() {
     const supabase = createClient();
     await supabase.auth.signOut();
     clearResume();
-    setOpen(false);
+    onOpenChange(false);
     router.push("/");
   }
 
@@ -35,21 +48,24 @@ function AvatarDropdown({ user }: { user: User }) {
   return (
     <div ref={ref} className="relative">
       <button
-        onClick={() => setOpen((value) => !value)}
+        type="button"
+        onClick={() => onOpenChange(!open)}
         className="flex h-8 w-8 items-center justify-center rounded-full border border-line-strong bg-white text-sm font-medium text-ink transition-colors hover:bg-section"
         aria-label="Kontomeny"
+        aria-expanded={open}
+        aria-controls={menuId}
       >
         {initials}
       </button>
       {open && (
-        <div className="absolute right-0 z-50 mt-2 w-52 overflow-hidden rounded-md border border-line bg-white py-1 shadow-[0_8px_28px_rgba(20,20,30,.12)]">
+        <div id={menuId} className="absolute right-0 z-50 mt-2 w-52 overflow-hidden rounded-md border border-line bg-white py-1 shadow-[0_8px_28px_rgba(20,20,30,.12)]">
           <div className="border-b border-line-soft px-4 py-2.5">
             <p className="truncate text-xs text-ink-4">{user.email}</p>
           </div>
-          <Link href="/portfolios" onClick={() => setOpen(false)} className="block px-4 py-2.5 text-sm text-ink-2 transition-colors hover:bg-section">
+          <Link href="/portfolios" onClick={() => onOpenChange(false)} className="block px-4 py-2.5 text-sm text-ink-2 transition-colors hover:bg-section">
             Mina portföljer
           </Link>
-          <Link href="/account" onClick={() => setOpen(false)} className="block px-4 py-2.5 text-sm text-ink-2 transition-colors hover:bg-section">
+          <Link href="/account" onClick={() => onOpenChange(false)} className="block px-4 py-2.5 text-sm text-ink-2 transition-colors hover:bg-section">
             Mitt konto
           </Link>
           <div className="mt-1 border-t border-line-soft">
@@ -66,6 +82,8 @@ function AvatarDropdown({ user }: { user: User }) {
 export default function Header() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileAvatarOpen, setMobileAvatarOpen] = useState(false);
+  const [desktopAvatarOpen, setDesktopAvatarOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const router = useRouter();
@@ -131,7 +149,12 @@ export default function Header() {
           <div className="hidden items-center justify-end sm:flex">
             {user !== undefined && (
               user ? (
-                <AvatarDropdown user={user} />
+                <AvatarDropdown
+                  user={user}
+                  open={desktopAvatarOpen}
+                  onOpenChange={setDesktopAvatarOpen}
+                  menuId="desktop-account-menu"
+                />
               ) : (
                 <Link
                   href={loginHref}
@@ -147,7 +170,15 @@ export default function Header() {
           <div className="flex items-center gap-3 sm:hidden">
             {user !== undefined && (
               user ? (
-                <AvatarDropdown user={user} />
+                <AvatarDropdown
+                  user={user}
+                  open={mobileAvatarOpen}
+                  onOpenChange={(open) => {
+                    setMobileAvatarOpen(open);
+                    if (open) setMobileMenuOpen(false);
+                  }}
+                  menuId="mobile-account-menu"
+                />
               ) : (
                 <Link href={loginHref} onClick={handleLoginClick} className="text-[13px] text-accent">
                   Logga in
@@ -156,7 +187,10 @@ export default function Header() {
             )}
             <button
               type="button"
-              onClick={() => setMobileMenuOpen((open) => !open)}
+              onClick={() => {
+                setMobileAvatarOpen(false);
+                setMobileMenuOpen((open) => !open);
+              }}
               className="flex h-9 w-9 items-center justify-center rounded-xs border border-line-strong bg-white text-ink transition-colors hover:bg-section"
               aria-label={mobileMenuOpen ? "Stäng meny" : "Öppna meny"}
               aria-expanded={mobileMenuOpen}
