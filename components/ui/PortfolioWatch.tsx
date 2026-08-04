@@ -125,13 +125,13 @@ export default function PortfolioWatch() {
             />
             <span className="grid">
               <span className={`label-meta col-start-1 row-start-1 ${fadeOut(!revealed)}`}>
-                Ditt portföljbetyg bevakas
+                Exempel: ett portföljbetyg bevakas
               </span>
               <span
                 aria-hidden={!revealed}
                 className={`label-meta col-start-1 row-start-1 ${fadeIn(revealed)}`}
               >
-                Ditt portföljbetyg har sjunkit
+                Exempel: portföljbetyget har sjunkit
               </span>
             </span>
           </div>
@@ -175,14 +175,14 @@ export default function PortfolioWatch() {
           {/* Brödtexten byts ut i samma rutnätscell så höjden är konstant */}
           <span className="grid max-w-[420px] text-[15px] leading-[1.6] text-ink-2 sm:text-base">
             <span className={`col-start-1 row-start-1 ${fadeOut(!revealed)}`}>
-              Vi bevakar din sparade portfölj i bakgrunden — du behöver inte göra något.
+              I det här exemplet bevakas en sparad portfölj i bakgrunden.
             </span>
             <span
               aria-hidden={!revealed}
               className={`col-start-1 row-start-1 ${fadeIn(revealed)}`}
             >
-              Två av dina fonder har tappat mot liknande fonder. Du får ett mejl med
-              sammanfattningen.
+              I exemplet har två fonder tappat mot liknande fonder. Då kan ett mejl med
+              sammanfattningen skickas om notiser har slagits på.
             </span>
           </span>
 

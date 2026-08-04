@@ -7,17 +7,14 @@ import PortfolioWatch from "@/components/ui/PortfolioWatch";
 
 const TRUST_ITEMS = [
   {
-    value: "01",
     title: "Oberoende av fondbolag",
     desc: "Vi tar inga provisioner från fondbolag. Sharpa finansieras av licensintäkter från professionella användare. Jämförelsen följer samma kriterier för alla.",
   },
   {
-    value: "02",
     title: "Datadrivet",
     desc: "Fonder jämförs utifrån avgift, historisk avkastning och risk — samma kriterier för alla fonder.",
   },
   {
-    value: "03",
     title: "Begripligt",
     desc: "Du får ett tydligt resultat utan att behöva vara expert på ekonomi.",
   },
@@ -83,9 +80,8 @@ export default function HowItWorks() {
         <p className="label-meta mb-7 text-center">Så fungerar jämförelsen</p>
         <div className="grid gap-7 sm:grid-cols-3 sm:gap-8">
           {TRUST_ITEMS.map((item) => (
-            <div key={item.title} className="grid grid-cols-[auto_1fr] gap-x-3 sm:block">
-              <span className="figure row-span-2 text-sm text-ink-4">{item.value}</span>
-              <h3 className="text-[15px] font-semibold text-ink sm:mt-2">{item.title}</h3>
+            <div key={item.title}>
+              <h3 className="text-[15px] font-semibold text-ink">{item.title}</h3>
               <p className="mt-1 text-sm leading-[1.6] text-ink-2">{item.desc}</p>
             </div>
           ))}
