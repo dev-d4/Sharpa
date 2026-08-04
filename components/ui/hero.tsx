@@ -1,6 +1,7 @@
 import Link from "next/link";
 import HeroDemo from "@/components/ui/HeroSearch";
 import HeroBackground from "@/components/ui/HeroBackground";
+import StatsRow from "@/components/ui/StatsRow";
 
 export default function Hero() {
   return (
@@ -31,6 +32,9 @@ export default function Hero() {
             Hur bra är <em className="italic">dina fonder</em> egentligen?
           </h1>
         </HeroDemo>
+      </div>
+      <div className="relative z-10 mx-auto mt-8 max-w-6xl border-y border-line sm:mt-10">
+        <StatsRow />
       </div>
     </section>
   );

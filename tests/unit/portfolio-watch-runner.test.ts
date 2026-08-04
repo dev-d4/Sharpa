@@ -43,7 +43,12 @@ function makeStore(over: Partial<FakeState> = {}) {
   const state: FakeState = {
     fundDataVersion: VERSION_B,
     portfolios: [],
-    prefs: new Map(),
+    // De flesta testfall verifierar själva utskicksflödet och behöver därför
+    // uttryckligt opt-in. Det separata regressionstestet nedan skickar en tom map.
+    prefs: new Map([
+      ["user-1", true],
+      ["user-2", true],
+    ]),
     emails: new Map([["user-1", "a@example.com"]]),
     previousMetrics: new Map(),
     history: [],
@@ -342,12 +347,17 @@ describe("runPortfolioWatch", () => {
     expect(state.patches).toHaveLength(1);
   });
 
-  it("behandlar saknad inställning som påslagen", async () => {
+  it("behandlar saknad inställning som avslagen", async () => {
     const { store } = makeStore({ portfolios: [portfolio({ score: 10 })], prefs: new Map() });
 
-    await runPortfolioWatch({ store, analyze: analyzeReturning(DEGRADED), sendAlert });
+    const result = await runPortfolioWatch({
+      store,
+      analyze: analyzeReturning(DEGRADED),
+      sendAlert,
+    });
 
-    expect(sendAlert).toHaveBeenCalledOnce();
+    expect(sendAlert).not.toHaveBeenCalled();
+    expect(result.decisions["alerts-disabled"]).toBe(1);
   });
 
   it("låter ett fel i en portfölj inte stoppa övriga", async () => {
@@ -413,12 +423,79 @@ describe("runPortfolioWatch", () => {
     await runPortfolioWatch({ store, analyze: analyzeReturning(DEGRADED), sendAlert });
 
     const req = sendAlert.mock.calls[0][0];
-    expect(req.portfolioId).toBe("p-1");
-    expect(req.previousScore).toBe(10);
-    expect(req.newScore).toBeLessThan(10);
+    expect(req.portfolios).toHaveLength(1);
+    const [first] = req.portfolios;
+    expect(first.portfolioId).toBe("p-1");
+    expect(first.previousScore).toBe(10);
+    expect(first.newScore).toBeLessThan(10);
     expect(req.fundDataVersion).toBe(VERSION_B);
-    expect(req.reasons.length).toBeGreaterThan(0);
-    expect(req.reasons.length).toBeLessThanOrEqual(3);
+    expect(first.reasons.length).toBeGreaterThan(0);
+    expect(first.reasons.length).toBeLessThanOrEqual(3);
+  });
+
+  it("samlar flera försämrade portföljer i ett mejl per användare", async () => {
+    const { store, state } = makeStore({
+      portfolios: [
+        portfolio({ id: "p-1", name: "ISK", score: 10 }),
+        portfolio({ id: "p-2", name: "KF", score: 10 }),
+        portfolio({ id: "p-3", user_id: "user-2", name: "Annans", score: 10 }),
+      ],
+      emails: new Map([
+        ["user-1", "a@example.com"],
+        ["user-2", "b@example.com"],
+      ]),
+    });
+
+    const result = await runPortfolioWatch({
+      store,
+      analyze: analyzeReturning(DEGRADED),
+      sendAlert,
+      batchSize: 1,
+    });
+
+    // Två användare ⇒ två mejl, men tre portföljer bokförda som notifierade.
+    expect(sendAlert).toHaveBeenCalledTimes(2);
+    expect(result.emails).toBe(2);
+    expect(result.notified).toBe(3);
+    expect(state.notified.map((n) => n.portfolioId).sort()).toEqual(["p-1", "p-2", "p-3"]);
+
+    const first = sendAlert.mock.calls.find((c) => c[0].to === "a@example.com")![0];
+    expect(first.portfolios.map((p) => p.portfolioId).sort()).toEqual(["p-1", "p-2"]);
+    expect(first.checkedAt).toBeTruthy();
+  });
+
+  it("tar bara med portföljer som passerat tröskeln", async () => {
+    // p-1 försämras, p-2 (samma användare) är kvar på toppbetyg. Bara p-1 ska
+    // nämnas i mejlet — portföljer som ligger stilla hör hemma i Mina portföljer.
+    const analyze = vi.fn(async (entries: { isin: string }[]) => ({
+      analysis: entries[0].isin === "SE0000000002" ? EXCELLENT : DEGRADED,
+      entries: [] as never[],
+    }));
+
+    const { store } = makeStore({
+      portfolios: [
+        portfolio({ id: "p-1", name: "ISK", score: 10 }),
+        portfolio({
+          id: "p-2",
+          name: "Buffert",
+          score: 10,
+          holdings: [{ isin: "SE0000000002", weight: "100" }],
+        }),
+        portfolio({ id: "p-3", user_id: "user-2", name: "Annans", score: 10 }),
+      ],
+      emails: new Map([
+        ["user-1", "a@example.com"],
+        ["user-2", "b@example.com"],
+      ]),
+    });
+
+    await runPortfolioWatch({ store, analyze, sendAlert, batchSize: 10 });
+
+    const req = sendAlert.mock.calls.find((c) => c[0].to === "a@example.com")![0];
+    expect(req.portfolios.map((p) => p.portfolioId)).toEqual(["p-1"]);
+    // Varken den egna oförändrade portföljen eller någon annans går med.
+    expect(JSON.stringify(req)).not.toContain("Buffert");
+    expect(JSON.stringify(req)).not.toContain("Annans");
   });
 
   it("avbryter efter tidsbudgeten och rapporterar återstoden", async () => {

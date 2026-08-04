@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search } from "lucide-react";
+import { LoaderCircle, Search } from "lucide-react";
 import type { PortfolioAnalysis, SwapSuggestion } from "@/lib/analysis";
 
 type FundSuggestion = { name: string; isin: string };
@@ -180,6 +180,15 @@ function FundPanelView({
         >
           Analysera hela din portfölj
         </button>
+
+        {/* Friskrivningen ska stå intill utdatan, inte bara i sidfoten —
+            se COMPLIANCE.md § 4B. */}
+        <p className="mt-4 text-[11px] leading-relaxed text-ink-4">
+          Automatiskt genererad jämförelse utifrån historiska nyckeltal och generella kriterier —
+          inte investeringsrådgivning eller en personlig rekommendation. Historisk avkastning är
+          ingen garanti för framtida resultat. Läs fondens faktablad (KID) hos fondbolaget innan du
+          fattar beslut.
+        </p>
       </div>
     </div>
   );
@@ -213,11 +222,13 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
   const [reducedMotion, setReducedMotion] = useState(false);
   const [suggestions, setSuggestions] = useState<FundSuggestion[]>([]);
   const [open, setOpen] = useState(false);
+  const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState<FundSuggestion | null>(null);
   const [analysis, setAnalysis] = useState<PortfolioAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchRequestSeq = useRef(0);
   const requestSeq = useRef(0);
 
   // Landningssidan söker i hela utbudet ("övrigt"), oberoende av depåval
@@ -264,18 +275,31 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
   function handleChange(q: string) {
     setQuery(q);
     if (debounce.current) clearTimeout(debounce.current);
-    if (q.length < 2) { setSuggestions([]); setOpen(false); return; }
+    const seq = ++searchRequestSeq.current;
+    if (q.length < 2) {
+      setSuggestions([]);
+      setOpen(false);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
     debounce.current = setTimeout(async () => {
       try {
         const res = await fetch(`/api/funds/search?q=${encodeURIComponent(q)}&custodian=${encodeURIComponent(custodian())}`);
         const data: FundSuggestion[] = await res.json();
+        if (seq !== searchRequestSeq.current) return;
         setSuggestions(data.slice(0, 50));
         setOpen(true);
       } catch { /* ignore */ }
+      finally {
+        if (seq === searchRequestSeq.current) setSearching(false);
+      }
     }, 200);
   }
 
   async function analyzeFund(fund: FundSuggestion) {
+    searchRequestSeq.current += 1;
+    setSearching(false);
     setQuery(fund.name);
     setOpen(false);
     setSelected(fund);
@@ -337,8 +361,7 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
 
       <div className="relative mt-6 w-full max-w-[720px] sm:mt-10">
           <div
-            // Minimal lyft så fältet skiljer sig från heronsens bakgrundslager
-            className="flex items-center gap-3 rounded-xs border border-line-strong bg-white px-4 py-3.5 shadow-[0_1px_2px_rgba(20,20,30,.04)] sm:px-6 sm:py-[18px]"
+            className="flex items-center gap-3 rounded-md border border-line bg-white/70 px-4 py-3.5 backdrop-blur-[2px] transition-[background-color,border-color,box-shadow] duration-200 focus-within:border-accent/30 focus-within:bg-white focus-within:ring-4 focus-within:ring-accent/5 sm:px-6 sm:py-[18px]"
           >
             <Search className="h-5 w-5 sm:h-[22px] sm:w-[22px] shrink-0 text-ink-3" strokeWidth={1.75} aria-hidden="true" />
             <div className="relative flex-1 min-w-0">
@@ -368,6 +391,12 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
                 </span>
               )}
             </div>
+            {searching && (
+              <LoaderCircle
+                aria-label="Söker efter fonder"
+                className="h-4 w-4 shrink-0 animate-spin text-accent/60 sm:h-[18px] sm:w-[18px]"
+              />
+            )}
           </div>
 
           {open && suggestions.length > 0 && (

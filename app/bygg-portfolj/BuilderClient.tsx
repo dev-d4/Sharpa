@@ -18,10 +18,8 @@ import { authErrorMessage } from "@/lib/auth-errors";
 // ── Types ────────────────────────────────────────────────────────────────────
 
 type Platform   = "avanza" | "nordnet" | "both";
-type Horizon    = "short" | "medium" | "long" | "verylong";
-type Reaction   = "sell" | "wait" | "buy";
 type Management = "passive" | "mixed" | "active";
-type Step       = "platform" | "risk" | "horizon" | "reaction" | "q3" | "q4" | "selections" | "management" | "results";
+type Step       = "platform" | "risk" | "selections" | "management" | "results";
 
 export type SelectionId =
   | "global" | "sweden" | "usa" | "europe" | "nordic" | "emerging" | "asia"
@@ -32,11 +30,7 @@ export type SelectionId =
 
 type Answers = {
   platform:      Platform    | null;
-  horizon:       Horizon     | null;
-  reaction:      Reaction    | null;
-  q3:            number      | null;   // 1–5: Hur viktig är investeringen?
-  q4:            number      | null;   // 1–5: Vad är viktigast?
-  riskDirect:    number      | null;   // 1–5: direkt vald risknivå (SIMPLE_RISK_FLOW)
+  riskDirect:    number      | null;   // 1–5: vald risknivå för exemplet
   selections:    SelectionId[] | null;
   priorities:    Record<string, number> | null;
   management:    Management  | null;
@@ -100,13 +94,10 @@ type ExistingPortfolio = {
 
 // ── Option data ───────────────────────────────────────────────────────────────
 
-// Slå om till true för enkel-fråge-varianten (en ren risk-preferensfråga i stället
-// för fyra profileringsfrågor). false = det ursprungliga fyra-frågeflödet.
-const SIMPLE_RISK_FLOW = true;
-
-const STEPS: Step[] = SIMPLE_RISK_FLOW
-  ? ["risk", "selections", "management", "platform"]
-  : ["horizon", "reaction", "q3", "q4", "selections", "management", "platform"];
+// Flödet frågar efter vilken risknivå exemplet ska byggas för — aldrig efter
+// användarens sparhorisont, förlusttolerans eller reaktion vid kursfall. Lägg
+// aldrig tillbaka sådana steg här, se COMPLIANCE.md § 2 och § 5 fråga 1.
+const STEPS: Step[] = ["risk", "selections", "management", "platform"];
 
 const RISK_OPTIONS: { value: number; label: string; desc: string }[] = [
   { value: 1, label: RISK_LABELS[1], desc: `${RISK_EQUITY[1]} · minst svängningar` },
@@ -120,35 +111,6 @@ const PLATFORM_OPTIONS: { value: Platform; label: string; desc: string }[] = [
   { value: "avanza",  label: "Avanza",  desc: "Jag handlar fonder via Avanza" },
   { value: "nordnet", label: "Nordnet", desc: "Jag handlar fonder via Nordnet" },
   { value: "both",    label: "Övrigt", desc: "Jag använder flera plattformar" },
-];
-
-const Q3_OPTIONS: { value: number; label: string; desc: string }[] = [
-  { value: 1, label: "Kan inte förlora något",  desc: "Det är kritiskt att skydda allt kapital" },
-  { value: 2, label: "Kan förlora lite",          desc: "En liten förlust är acceptabel" },
-  { value: 3, label: "Accepterar viss förlust",  desc: "Jag tål tillfälliga nedgångar" },
-  { value: 4, label: "Accepterar stor förlust",  desc: "Jag tål stora svängningar för bättre avkastning" },
-  { value: 5, label: "Spelar ingen roll",         desc: "Jag fokuserar helt på långsiktig avkastning" },
-];
-
-const Q4_OPTIONS: { value: number; label: string; desc: string }[] = [
-  { value: 1, label: "Minimera risk",           desc: "Trygghet är viktigast, avkastning är sekundär" },
-  { value: 2, label: "Låg risk",                desc: "Föredrar stabilitet med viss tillväxtpotential" },
-  { value: 3, label: "Balans risk/avkastning",  desc: "Jag vill ha balans mellan trygghet och tillväxt" },
-  { value: 4, label: "Hög avkastning",          desc: "Avkastning prioriteras, jag accepterar mer risk" },
-  { value: 5, label: "Maximera avkastning",     desc: "Jag tar maximal risk för maximal avkastning" },
-];
-
-const HORIZON_OPTIONS: { value: Horizon; label: string; desc: string }[] = [
-  { value: "short",    label: "Under 3 år",   desc: "Kort sikt" },
-  { value: "medium",   label: "3–7 år",       desc: "Mellanlång sikt" },
-  { value: "long",     label: "7–15 år",      desc: "Lång sikt" },
-  { value: "verylong", label: "Mer än 15 år", desc: "Mycket lång sikt" },
-];
-
-const REACTION_OPTIONS: { value: Reaction; label: string; desc: string }[] = [
-  { value: "sell", label: "Jag säljer",    desc: "Jag oroas och vill inte riskera mer förlust" },
-  { value: "wait", label: "Jag avvaktar",  desc: "Jag stannar kvar men oroar mig" },
-  { value: "buy",  label: "Jag köper mer", desc: "Bra köpläge — jag ökar hellre när det faller" },
 ];
 
 const SELECTION_OPTIONS: { value: SelectionId; label: string; desc: string; group: string }[] = [
@@ -191,46 +153,32 @@ const MANAGEMENT_OPTIONS: { value: Management; label: string; desc: string }[] =
 
 const STEP_META: Record<Step, { title: string; subtitle: string }> = {
   platform:   { title: "Sista steget — var handlar du fonder?",             subtitle: "Vi anpassar fondvalen till tillgängliga fonder på din plattform" },
-  horizon:    { title: "Hur länge planerar du att spara?",                   subtitle: "Längre horisont ger utrymme för mer risk" },
-  reaction:   { title: "Portföljen faller 20% — vad skulle du välja?",       subtitle: "Ditt svar hjälper oss välja aktieandel i exemplet" },
-  q3:         { title: "Hur mycket svängningar vill du utgå från?",           subtitle: "Välj den nivå av kursrörelser exemplet ska bygga på" },
-  q4:         { title: "Vad är viktigast för dig?",                          subtitle: "Välj det alternativ som bäst speglar din inställning till risk och avkastning" },
-  selections: { title: "Vad vill du investera i?",                          subtitle: "Vi har valt kategorier som passar din risknivå. Behåll förslaget eller välj egna kategorier." },
-  management: { title: "Aktiv eller passiv förvaltning?",                   subtitle: "Indexfonder har generellt lägre avgifter och slår ofta aktiva fonder" },
+  selections: { title: "Vad ska exemplet innehålla?",                       subtitle: "Kategorierna nedan matchar den valda risknivån. Behåll dem eller välj egna." },
+  management: { title: "Aktiv eller passiv förvaltning?",                   subtitle: "Indexfonder har generellt lägre avgifter" },
   risk:       { title: "Vilken risknivå vill du se ett exempel för?",        subtitle: "Högre risk = större andel aktier och större svängningar" },
-  results:    { title: "Ditt illustrativa portföljexempel",                  subtitle: "" },
+  results:    { title: "Portföljexempel",                                    subtitle: "" },
 };
 
-const EMPTY: Answers = { platform: null, horizon: null, reaction: null, q3: null, q4: null, riskDirect: null, selections: null, priorities: null, management: null, equityOverride: null };
+const EMPTY: Answers = { platform: null, riskDirect: null, selections: null, priorities: null, management: null, equityOverride: null };
 
 // ── Auto-suggestion ───────────────────────────────────────────────────────────
 
-function scoreFromFourQuestions(a: Answers): number {
-  const q1Map: Record<string, number> = { short: 2, medium: 3, long: 4, verylong: 5 };
-  const q2Map: Record<string, number> = { sell: 1, wait: 3, buy: 5 };
-  const v1 = (a.horizon  && q1Map[a.horizon])  ? q1Map[a.horizon]  : 3;
-  const v2 = (a.reaction && q2Map[a.reaction]) ? q2Map[a.reaction] : 3;
-  const v3 = a.q3 ?? 3;
-  const v4 = a.q4 ?? 3;
-  return Math.max(1, Math.min(5, Math.round((v1 + v2 + v3 + v4) / 4)));
-}
-
+// Risknivån kommer bara från användarens direkta val av vilken nivå exemplet ska
+// byggas för. Härled den aldrig ur frågor om användarens egen situation — se
+// COMPLIANCE.md § 2.
 function computeRiskScoreClient(a: Answers): number {
-  // Simple flow: the single risk answer decides. Fall back to the four-question
-  // score when riskDirect is unset (e.g. a logged-in user prefilled from a saved
-  // risk profile) so the auto-selection still lands on the right level.
-  if (SIMPLE_RISK_FLOW && a.riskDirect != null) {
-    return Math.max(1, Math.min(5, a.riskDirect));
-  }
-  return scoreFromFourQuestions(a);
+  if (a.riskDirect == null) return 3;
+  return Math.max(1, Math.min(5, a.riskDirect));
 }
 
+// Formuleringarna beskriver risknivån som parameter — aldrig användaren som person.
+// "Din profil ger…" gör utdatan grundad på personens förhållanden (2017/565 art. 9).
 const AUTO_EXPLANATION: Record<number, string> = {
-  1: "Din försiktiga profil ger tyngd mot räntor med en liten kärna av globala aktier för viss tillväxtpotential.",
-  2: "Din defensiva profil ger en övervikt mot räntor kombinerat med globala och svenska aktier som kärna.",
-  3: "Balanserad portfölj med 60% aktier och 40% räntor — global aktieexponering som kärna, svenska aktier för hemmamarknad och räntedel som buffert.",
-  4: "Din tillväxtprofil ger en aktiestark portfölj med global spridning, USA och Sverige som tyngdpunkt samt tillväxtmarknader för extra potential.",
-  5: "Offensiv portfölj helst i aktier — bred global och amerikansk exponering med teknik och tillväxtmarknader för maximal tillväxtpotential.",
+  1: "Risknivå 1 (Försiktig): tyngdpunkt på räntor med en mindre kärna av globala aktier.",
+  2: "Risknivå 2 (Defensiv): övervikt mot räntor kombinerat med globala och svenska aktier som kärna.",
+  3: "Risknivå 3 (Balanserad): 60% aktier och 40% räntor — global aktieexponering som kärna, svenska aktier som hemmamarknad och en räntedel som buffert.",
+  4: "Risknivå 4 (Tillväxt): aktiestark fördelning med global spridning, USA och Sverige som tyngdpunkt samt tillväxtmarknader.",
+  5: "Risknivå 5 (Offensiv): enbart aktier — bred global och amerikansk exponering med teknik och tillväxtmarknader. Störst kursrörelser.",
 };
 
 const AUTO_SELECTIONS: Record<number, { sels: SelectionId[]; prios: Record<string, number> }> = {
@@ -733,13 +681,13 @@ export default function BuilderClient() {
   const showPreview = !isResults && stepIdx >= 1;
 
   return (
-    <div className={`${isResults ? "max-w-4xl" : step === "selections" ? "max-w-3xl" : showPreview ? "max-w-3xl" : "max-w-lg"} mx-auto px-4 py-5 transition-all duration-200 sm:py-16`}>
+    <div className={`${isResults ? "max-w-4xl" : step === "selections" ? "max-w-3xl" : showPreview ? "max-w-3xl" : "max-w-lg"} mx-auto min-h-[calc(100dvh-56px)] px-4 py-5 transition-all duration-200 sm:min-h-[calc(100dvh-66px)] sm:py-16`}>
 
       {/* Page header */}
       <div className="mb-8 text-center sm:mb-12">
-        <h1 className="font-display text-[30px] leading-tight text-ink sm:text-[42px]">Bygg din portfölj</h1>
+        <h1 className="font-display text-[30px] leading-tight text-ink sm:text-[42px]">Bygg ett portföljexempel</h1>
         <p className="mt-2 text-sm text-ink-2 sm:text-base">
-          Svara på {totalSteps} frågor — vi visar ett komplett portföljexempel.
+          Svara på {totalSteps} frågor — vi visar ett illustrativt portföljexempel.
         </p>
       </div>
 
@@ -822,26 +770,6 @@ export default function BuilderClient() {
               <OptionCard key={o.value} label={o.label} desc={o.desc} onClick={() => pick("riskDirect", o.value)} />
             ))}
 
-            {/* Horizon */}
-            {step === "horizon" && HORIZON_OPTIONS.map((o) => (
-              <OptionCard key={o.value} label={o.label} desc={o.desc} onClick={() => pick("horizon", o.value)} />
-            ))}
-
-            {/* Reaction */}
-            {step === "reaction" && REACTION_OPTIONS.map((o) => (
-              <OptionCard key={o.value} label={o.label} desc={o.desc} onClick={() => pick("reaction", o.value)} />
-            ))}
-
-            {/* Q3 — how important is the investment */}
-            {step === "q3" && Q3_OPTIONS.map((o) => (
-              <OptionCard key={o.value} label={o.label} desc={o.desc} onClick={() => pick("q3", o.value)} />
-            ))}
-
-            {/* Q4 — risk vs return priority */}
-            {step === "q4" && Q4_OPTIONS.map((o) => (
-              <OptionCard key={o.value} label={o.label} desc={o.desc} onClick={() => pick("q4", o.value)} />
-            ))}
-
             {/* Selections — auto-suggested by default */}
             {step === "selections" && (
               <>
@@ -876,7 +804,7 @@ export default function BuilderClient() {
                       <div className="flex items-start gap-2.5 rounded-md border border-line bg-section px-4 py-3">
                         <svg className="mt-0.5 h-4 w-4 shrink-0 text-ink-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         <div>
-                          <p className="text-xs font-medium text-ink">Förslag baserat på din valda risknivå</p>
+                          <p className="text-xs font-medium text-ink">Kategorier för den valda risknivån</p>
                           <p className="mt-1 text-xs leading-relaxed text-ink-2">{autoExplanation}</p>
                           <p className="mt-1.5 text-xs leading-relaxed text-ink-3">
                             Fortsätt med förslaget som det är, eller ändra kategorierna själv.
@@ -1020,7 +948,7 @@ export default function BuilderClient() {
                     <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Din valda fördelning</p>
+                          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Fördelning i exemplet</p>
                           <p className="mt-1 text-lg font-bold text-slate-900">{result.riskLabel}</p>
                           <p className="mt-1 text-sm text-slate-500">
                             {result.equityPct}% aktier · {100 - result.equityPct}% räntor
@@ -1051,8 +979,8 @@ export default function BuilderClient() {
 
                       <h2 className="pt-1 text-sm font-bold text-slate-900">Fonder i exemplet</h2>
                       <p className="-mt-1 text-xs leading-relaxed text-slate-500">
-                        <span className="sm:hidden">Byt fond under fondnamnet för att se nästa rankade alternativ i samma kategori.</span>
-                        <span className="hidden sm:inline">Använd pilarna för att byta från den bäst rankade fonden till nästa alternativ i samma kategori.</span>
+                        <span className="sm:hidden">Byt fond under fondnamnet för att se nästa alternativ i samma kategori.</span>
+                        <span className="hidden sm:inline">Använd pilarna för att bläddra mellan alternativen i samma kategori. Ordningen följer vår sortering på avgift, historisk avkastning och Sharpe — den är inte ett omdöme om vilken fond som är bäst för dig.</span>
                       </p>
 
                       {result.droppedSelections?.length > 0 && (
@@ -1085,7 +1013,7 @@ export default function BuilderClient() {
                                       <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
                                     </button>
                                     <span className="w-8 text-center text-[10px] font-semibold text-slate-500">
-                                      {idx === 0 ? "Bäst" : `${idx + 1}:a`}
+                                      {`${idx + 1}/${candidateCount}`}
                                     </span>
                                     <button type="button" aria-label="Nästa fond" onClick={() => { resetSaveState(); setSlotIndices((prev) => { const n=[...prev]; n[si]=idx+1; return n; }); }} disabled={!canNext} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-colors hover:border-slate-300 hover:text-slate-600 disabled:opacity-20">
                                       <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
@@ -1103,7 +1031,7 @@ export default function BuilderClient() {
                                         <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
                                       </button>
                                       <span className="min-w-16 border-x border-slate-200 px-2 text-center text-[10px] font-semibold text-slate-500">
-                                        {idx === 0 ? "Bäst rankad" : `${idx + 1}a`}
+                                        {`Nr ${idx + 1} av ${candidateCount}`}
                                       </span>
                                       <button type="button" aria-label="Nästa fond" onClick={() => { resetSaveState(); setSlotIndices((prev) => { const n=[...prev]; n[si]=idx+1; return n; }); }} disabled={!canNext} className="flex h-7 w-7 items-center justify-center text-slate-400 transition-colors hover:text-slate-600 disabled:opacity-20">
                                         <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
@@ -1117,6 +1045,12 @@ export default function BuilderClient() {
                           );
                         })}
                       </div>
+
+                      {/* Faktabladshänvisning — obligatorisk under varje lista med
+                          namngivna fonder, se COMPLIANCE.md § 4D. */}
+                      <p className="text-xs leading-relaxed text-slate-500">
+                        Läs fondens faktablad (KID) hos fondbolaget eller din depåplattform innan du fattar beslut.
+                      </p>
 
                       <details className="group overflow-hidden rounded-md border border-slate-200 bg-white">
                         <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50">
@@ -1307,12 +1241,12 @@ export default function BuilderClient() {
       {showPreview && (
         <div className="hidden lg:block sticky top-20 space-y-3">
           <div className="bg-white rounded-md border border-slate-200 shadow-sm p-4 space-y-4">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Dina val hittills</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Val hittills</p>
 
             {/* Risk score bar */}
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-500">Din valda risknivå</span>
+                <span className="text-xs text-slate-500">Vald risknivå</span>
                 <span className="text-xs font-semibold text-slate-700">{RISK_LABELS[previewRiskScore as RiskLevel]}</span>
               </div>
               <div className="flex gap-1">
@@ -1358,30 +1292,6 @@ export default function BuilderClient() {
                 <p className="text-[10px] text-slate-400 leading-snug">
                   <span className="font-semibold text-slate-500">Vald risknivå:</span>{" "}
                   {RISK_OPTIONS.find(o => o.value === confirmedAnswers.riskDirect)?.label}
-                </p>
-              )}
-              {confirmedAnswers.horizon && (
-                <p className="text-[10px] text-slate-400 leading-snug">
-                  <span className="font-semibold text-slate-500">Horisont:</span>{" "}
-                  {HORIZON_OPTIONS.find(o => o.value === confirmedAnswers.horizon)?.label}
-                </p>
-              )}
-              {confirmedAnswers.reaction && (
-                <p className="text-[10px] text-slate-400 leading-snug">
-                  <span className="font-semibold text-slate-500">Vid kursfall:</span>{" "}
-                  {REACTION_OPTIONS.find(o => o.value === confirmedAnswers.reaction)?.label}
-                </p>
-              )}
-              {confirmedAnswers.q3 !== null && (
-                <p className="text-[10px] text-slate-400 leading-snug">
-                  <span className="font-semibold text-slate-500">Investeringsvikt:</span>{" "}
-                  {Q3_OPTIONS.find(o => o.value === confirmedAnswers.q3)?.label}
-                </p>
-              )}
-              {confirmedAnswers.q4 !== null && (
-                <p className="text-[10px] text-slate-400 leading-snug">
-                  <span className="font-semibold text-slate-500">Prioritet:</span>{" "}
-                  {Q4_OPTIONS.find(o => o.value === confirmedAnswers.q4)?.label}
                 </p>
               )}
               {confirmedAnswers.management && (

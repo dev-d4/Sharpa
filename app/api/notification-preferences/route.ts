@@ -5,8 +5,8 @@ import { createServerSupabaseClient } from "@/lib/supabase-server";
  * Användarens notisinställningar.
  *
  * Går via den inloggade användarens egen Supabase-klient, så RLS gäller —
- * ingen service role behövs här. Saknas rad betyder det att inställningen
- * aldrig ändrats, och portföljbevakningen är då påslagen (kolumnens default).
+ * ingen service role behövs här. Saknas rad betyder att inställningen aldrig
+ * ändrats, och portföljbevakningen är då avslagen (opt-in).
  */
 
 export const dynamic = "force-dynamic";
@@ -28,7 +28,7 @@ export async function GET() {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ email_score_alerts: data?.email_score_alerts ?? true });
+  return NextResponse.json({ email_score_alerts: data?.email_score_alerts ?? false });
 }
 
 export async function PUT(req: NextRequest) {

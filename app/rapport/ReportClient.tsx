@@ -903,8 +903,8 @@ export default function ReportClient() {
               <Building2 className="w-3.5 h-3.5 text-slate-500" />
             </div>
             <div className="leading-tight">
-              <p className="text-sm font-bold text-slate-900">Ditt företag</p>
-              <p className="text-[10px] text-slate-400 hidden sm:block">Finansiell rådgivning</p>
+              <p className="text-sm font-bold text-slate-900">Ert bolagsnamn</p>
+              <p className="text-[10px] text-slate-400 hidden sm:block">Er verksamhetsbeskrivning</p>
             </div>
           </div>
 

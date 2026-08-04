@@ -1,0 +1,7 @@
+# B2B-ytorna ska inte indexeras. De innehåller demomaterial och rådgivar-
+# terminologi som inte ska kunna hittas av konsumenter via sökmotorer och
+# uppfattas som att Sharpa bedriver rådgivning. Se COMPLIANCE.md § 2.
+User-agent: *
+Disallow: /radgivning/
+Disallow: /rapport
+Disallow: /api/

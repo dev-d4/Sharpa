@@ -50,6 +50,33 @@ describe("decideNotification", () => {
     expect(decideNotification({ ...base, previousScore: 7.6, newScore: 7.4 })).toBe("below-threshold");
   });
 
+  it("fångar en långsam nedgång i steg under tröskeln", () => {
+    // Betyget glider 8,0 → 7,6 → 7,2. Inget enskilt steg når 0,5, men sedan det
+    // senast mejlade betyget 8,0 har portföljen tappat 0,8.
+    expect(
+      decideNotification({ ...base, previousScore: 8.0, newScore: 7.6, lastNotifiedScore: 8.0 })
+    ).toBe("below-threshold");
+    expect(
+      decideNotification({ ...base, previousScore: 7.6, newScore: 7.2, lastNotifiedScore: 8.0 })
+    ).toBe("notify");
+  });
+
+  it("mejlar inte igen medan betyget ligger kvar efter en notis", () => {
+    // Efter utskicket är lastNotifiedScore det nya betyget — ligger det stilla
+    // finns inget nytt att berätta.
+    expect(
+      decideNotification({ ...base, previousScore: 6.4, newScore: 6.4, lastNotifiedScore: 6.4 })
+    ).toBe("unchanged");
+  });
+
+  it("låter en återhämtning räknas som förbättring, inte som fall mot baslinjen", () => {
+    // Mejlat vid 8,0, sedan nedgång till 7,6 utan mejl. Går betyget upp igen
+    // ska baslinjen inte göra rörelsen till en försämring.
+    expect(
+      decideNotification({ ...base, previousScore: 7.6, newScore: 7.9, lastNotifiedScore: 8.0 })
+    ).toBe("improved");
+  });
+
   it("respekterar avstängda notiser", () => {
     expect(
       decideNotification({ ...base, previousScore: 7.8, newScore: 6.9, alertsEnabled: false })
@@ -151,6 +178,52 @@ describe("deriveChangeReasons", () => {
   it("upptäcker saknad eller inaktuell fonddata", () => {
     const reasons = deriveChangeReasons(metrics(), metrics({ notFoundCount: 2 }));
     expect(reasons.map((r) => r.key)).toContain("stale-data");
+  });
+
+  it("förklarar alltid en dimension som dragit ned betyget", () => {
+    // Avgiften har kryssat en tröskel i betyget (8 → 6 poäng) men rört sig för
+    // lite för en egen mening. Utan delpoängerna hade mejlet blivit tomt.
+    const reasons = deriveChangeReasons(
+      metrics({ scoreComponents: [{ key: "cost", points: 8 }] }),
+      metrics({ avgCost: 0.41, scoreComponents: [{ key: "cost", points: 6 }] })
+    );
+    expect(reasons.map((r) => r.key)).toEqual(["cost"]);
+    expect(reasons[0].text).toContain("avgiftsnivå");
+  });
+
+  it("föredrar den detaljerade meningen när nyckeltalen räcker till den", () => {
+    const reasons = deriveChangeReasons(
+      metrics({ scoreComponents: [{ key: "cost", points: 8 }] }),
+      metrics({ avgCost: 0.75, scoreComponents: [{ key: "cost", points: 4 }] })
+    );
+    expect(reasons[0].key).toBe("cost");
+    expect(reasons[0].text).toContain("0,75 %");
+  });
+
+  it("rankar dimensionen med störst betygsfall först", () => {
+    const reasons = deriveChangeReasons(
+      metrics({
+        scoreComponents: [
+          { key: "cost", points: 10 },
+          { key: "sharpe", points: 10 },
+        ],
+      }),
+      metrics({
+        avgCost: 0.45,
+        weightedSharpe: 0.3,
+        scoreComponents: [
+          { key: "cost", points: 8 },
+          { key: "sharpe", points: 4 },
+        ],
+      })
+    );
+    expect(reasons.map((r) => r.key)).toEqual(["sharpe", "cost"]);
+  });
+
+  it("faller tillbaka på nyckeltalsjämförelsen för historik utan delpoäng", () => {
+    // Historikrader skrivna innan delpoängen infördes saknar scoreComponents.
+    const reasons = deriveChangeReasons(metrics(), metrics({ weightedSharpe: 0.7 }));
+    expect(reasons.map((r) => r.key)).toContain("sharpe");
   });
 
   it("ignorerar rörelser som ligger inom brusnivån", () => {

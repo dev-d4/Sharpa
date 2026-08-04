@@ -1,4 +1,5 @@
 import type { PortfolioAnalysis, PortfolioEntry } from "./analysis";
+import { computePortfolioScore, type ScoreComponent, type ScoreComponentKey } from "./portfolio-score";
 
 /**
  * Beslutsregler och orsakshärledning för automatisk portföljbevakning.
@@ -48,6 +49,13 @@ export type PortfolioMetricsSnapshot = {
   missingMetricCount: number;
   swapSuggestionCount: number;
   funds: FundMetric[];
+  /**
+   * Betygets delpoäng vid den här kontrollen. Jämförelsen mellan två snapshots
+   * är det som gör att orsakerna i mejlet alltid förklarar det betygsfall som
+   * utlöste mejlet. Saknas fältet är snapshoten från före den här ändringen —
+   * då faller {@link deriveChangeReasons} tillbaka på nyckeltalsjämförelsen.
+   */
+  scoreComponents?: ScoreComponent[];
 };
 
 function countDiversifiedCategories(analysis: PortfolioAnalysis): number {
@@ -90,6 +98,7 @@ export function buildMetricsSnapshot(
     missingMetricCount,
     swapSuggestionCount: analysis.swapSuggestions?.length ?? 0,
     funds,
+    scoreComponents: computePortfolioScore(analysis).components,
   };
 }
 
@@ -138,8 +147,45 @@ function fundsWithLowerSharpe(
 }
 
 /**
+ * Generisk formulering per betygsdimension. Används när delpoängen bevisligen
+ * sjunkit men de underliggande nyckeltalen rört sig för lite för att få en egen
+ * mening — t.ex. när avgiften kryssat över en tröskel med några hundradelar.
+ */
+const COMPONENT_FALLBACK_TEXT: Record<ScoreComponentKey, string> = {
+  cost: "Portföljens avgiftsnivå väger nu ned betyget mer än vid förra kontrollen.",
+  sharpe:
+    "Portföljens riskjusterade avkastning (Sharpe) väger nu ned betyget mer än vid förra kontrollen.",
+  return3yr:
+    "Portföljens historiska treårsavkastning väger nu ned betyget mer än vid förra kontrollen.",
+  diversification:
+    "Portföljens spridning mellan kategorier väger nu ned betyget mer än vid förra kontrollen.",
+};
+
+/** Delpoäng per dimension, för dimensioner som gick att beräkna båda gångerna. */
+function componentDrops(
+  prev: PortfolioMetricsSnapshot,
+  next: PortfolioMetricsSnapshot
+): Map<ScoreComponentKey, number> | null {
+  if (!prev.scoreComponents?.length || !next.scoreComponents?.length) return null;
+
+  const before = new Map(prev.scoreComponents.map((c) => [c.key, c.points]));
+  const drops = new Map<ScoreComponentKey, number>();
+  for (const c of next.scoreComponents) {
+    const p = before.get(c.key);
+    if (p === undefined) continue;
+    if (p - c.points > 0) drops.set(c.key, p - c.points);
+  }
+  return drops;
+}
+
+/**
  * Härled de viktigaste orsakerna till att betyget gått ned, genom att jämföra
  * föregående och ny analys. Max {@link MAX_REASONS} orsaker.
+ *
+ * Finns delpoäng i båda snapshots styr de urvalet: en dimension som faktiskt
+ * dragit ned betyget får alltid en mening, även när nyckeltalen rört sig för
+ * lite för en detaljerad formulering. Det är det som garanterar att ett mejl om
+ * ett betygsfall aldrig går ut utan en förklaring till fallet.
  *
  * Formuleringarna beskriver vad som förändrats i datan. De innehåller
  * medvetet ingen rekommendation om att köpa, sälja eller byta något.
@@ -219,7 +265,33 @@ export function deriveChangeReasons(
     });
   }
 
-  return reasons.sort((a, b) => b.weight - a.weight).slice(0, MAX_REASONS);
+  const drops = componentDrops(prev, next);
+
+  // Utan delpoäng i båda snapshots (historikrader skrivna före den här
+  // ändringen) finns inget urval att göra — då gäller ren nyckeltalsjämförelse.
+  if (!drops) return reasons.sort((a, b) => b.weight - a.weight).slice(0, MAX_REASONS);
+
+  const byKey = new Map(reasons.map((r) => [r.key, r]));
+  const explained: ChangeReason[] = [];
+
+  // Dimensioner som bevisligen dragit ned betyget, störst fall först. Har
+  // dimensionen en detaljerad mening används den — annars den generiska.
+  for (const [key, drop] of [...drops].sort((a, b) => b[1] - a[1])) {
+    const detailed = byKey.get(key);
+    explained.push(
+      detailed
+        ? { ...detailed, weight: 1000 + drop }
+        : { key, weight: 1000 + drop, text: COMPONENT_FALLBACK_TEXT[key] }
+    );
+  }
+
+  // Orsaker utan egen betygsdimension (eftersläpande fonder, saknad fonddata)
+  // hamnar under, som komplement när det finns plats kvar.
+  for (const r of reasons) {
+    if (!drops.has(r.key as ScoreComponentKey)) explained.push(r);
+  }
+
+  return explained.sort((a, b) => b.weight - a.weight).slice(0, MAX_REASONS);
 }
 
 function fmt(n: number, decimals: number): string {
@@ -250,7 +322,10 @@ export type NotificationDecision =
 export type NotificationInput = {
   previousScore: number | null;
   newScore: number;
-  /** Betyget vid det senast SKICKADE mejlet, om något. */
+  /**
+   * Betyget vid det senast SKICKADE mejlet, om något. Utgör tillsammans med
+   * föregående betyg baslinjen som tröskeln mäts mot.
+   */
   lastNotifiedScore: number | null;
   alertsEnabled: boolean;
   threshold: number;
@@ -267,10 +342,19 @@ export function decideNotification(input: NotificationInput): NotificationDecisi
   // jämföra med.
   if (previousScore === null || previousScore === undefined) return "baseline";
 
-  const drop = previousScore - newScore;
-  if (drop <= SCORE_EPS) {
-    return newScore - previousScore > SCORE_EPS ? "improved" : "unchanged";
-  }
+  // Jämförelsen görs mot det högsta av föregående betyg och det senast MEJLADE
+  // betyget. Annars kan en portfölj glida nedåt i steg strax under tröskeln —
+  // 8,0 → 7,6 → 7,2 → 6,8 — utan att ett enda steg räknas som en försämring,
+  // trots att användaren sedan förra beskedet tappat långt över tröskeln.
+  const baseline =
+    lastNotifiedScore === null ? previousScore : Math.max(previousScore, lastNotifiedScore);
+
+  // "Förbättrad" och "oförändrad" avgörs mot föregående kontroll, inte mot
+  // baslinjen: det beskriver vad som hände sedan sist och används bara i loggen.
+  if (newScore - previousScore > SCORE_EPS) return "improved";
+
+  const drop = baseline - newScore;
+  if (drop <= SCORE_EPS) return "unchanged";
   if (drop + SCORE_EPS < threshold) return "below-threshold";
 
   // Inställningen kollas efter tröskeln så att loggen skiljer på "inget att

@@ -6,11 +6,11 @@ import { getAnalyzedPortfolioCount, getAnalyzedFundCount, formatPortfolioCount, 
 
 function StatCell({ value, label }: { value: string; label: string }) {
   return (
-    <div className="flex-1 px-2 text-center sm:px-6">
-      <span className="figure block text-[18px] leading-tight text-ink sm:text-[26px]">
+    <div className="flex-1 px-2 text-center sm:px-4">
+      <span className="figure block text-[15px] leading-tight text-ink sm:text-[19px]">
         {value}
       </span>
-      <span className="mt-1.5 block text-[11px] leading-snug text-ink-3 sm:text-[13px]">{label}</span>
+      <span className="mt-0.5 block text-[10px] leading-snug text-ink-3 sm:text-[11px]">{label}</span>
     </div>
   );
 }
@@ -24,17 +24,20 @@ export default async function StatsRow() {
     getAnalyzedPortfolioCount(),
     getAnalyzedFundCount(),
   ]);
-  const portfolios = portfolioCount > 0 ? formatPortfolioCount(portfolioCount) : "15+";
-  const funds = fundCount > 0 ? formatFundCount(fundCount) : "1 500+";
+
+  // Siffrorna är marknadsföringspåståenden och måste kunna styrkas (MFL 10 §).
+  // Går uppslaget fel returnerar countRows 0 — då visas raden inte alls, aldrig
+  // ett hittepå-värde. Etiketterna beskriver exakt det som räknas.
+  if (portfolioCount === 0 || fundCount === 0) return null;
 
   return (
-    <section className="py-8 sm:py-10">
+    <section className="py-2.5 sm:py-3">
       <div className="mx-auto flex max-w-lg items-stretch justify-center sm:max-w-none">
-        <StatCell value={funds} label="fonder analyserade" />
+        <StatCell value={formatFundCount(fundCount)} label="fonder i databasen" />
         <Divider />
-        <StatCell value={portfolios} label="portföljexempel skapade" />
+        <StatCell value={formatPortfolioCount(portfolioCount)} label="sparade portföljer" />
         <Divider />
-        <StatCell value="0 kr" label="i provision" />
+        <StatCell value="0 kr" label="i provision från fondbolag" />
       </div>
     </section>
   );

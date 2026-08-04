@@ -86,13 +86,11 @@ async function main() {
   if (error) fail(`Kunde inte läsa portföljer: ${error.message}`);
   if (!portfolios?.length) fail(`Kontot ${TO} har inga sparade portföljer att testa med.`);
 
-  const portfolio = portfolios[0];
-  const stored = portfolio.score === null ? null : Number(portfolio.score);
-  const current =
-    stored ?? computePortfolioScore(portfolio.analysis as PortfolioAnalysis).score;
-
-  const previousScore = Number(current.toFixed(1));
-  const newScore = Number((previousScore - 0.7).toFixed(1));
+  const scoreOf = (p: (typeof portfolios)[number]) => {
+    const stored = p.score === null ? null : Number(p.score);
+    const current = stored ?? computePortfolioScore(p.analysis as PortfolioAnalysis).score;
+    return Number(current.toFixed(1));
+  };
 
   const reasons = [
     "Portföljens riskjusterade avkastning (Sharpe) har försämrats, från 1,20 till 0,80.",
@@ -100,19 +98,36 @@ async function main() {
     "Den genomsnittliga avgiften har ökat, från 0,30 % till 0,45 %.",
   ];
 
+  // --flera skickar listvarianten (flera försämrade portföljer) i stället för
+  // envarianten, så att båda mallarna går att granska i mejlklienten.
+  const multi = process.argv.includes("--flera");
+  const changed = (multi ? portfolios.slice(0, 3) : portfolios.slice(0, 1)).map((p, i) => {
+    const previousScore = scoreOf(p);
+    return {
+      portfolioId: p.id as string,
+      portfolioName: p.name as string,
+      previousScore,
+      newScore: Number((previousScore - 0.7 - i * 0.3).toFixed(1)),
+      reasons: reasons.slice(i),
+    };
+  });
+
+  if (multi && changed.length < 2) {
+    fail("--flera kräver minst två sparade portföljer på kontot.");
+  }
+
   console.log(`Mottagare:  ${TO}`);
-  console.log(`Portfölj:   ${portfolio.name}`);
-  console.log(`Avsändare:  ${getPortfolioAlertFrom()}`);
-  console.log(`Betyg:      ${previousScore} → ${newScore} (illustrativt)\n`);
+  console.log(`Variant:    ${changed.length > 1 ? "flera portföljer" : "en portfölj"}`);
+  for (const c of changed) {
+    console.log(`Portfölj:   ${c.portfolioName} — ${c.previousScore} → ${c.newScore} (illustrativt)`);
+  }
+  console.log(`Avsändare:  ${getPortfolioAlertFrom()}\n`);
 
   const result = await sendPortfolioAlert({
     to: TO,
     userId: user.id,
-    portfolioId: portfolio.id,
-    portfolioName: portfolio.name,
-    previousScore,
-    newScore,
-    reasons,
+    portfolios: changed,
+    checkedAt: new Date().toLocaleDateString("sv-SE", { day: "numeric", month: "short" }).replace(/\.$/, ""),
     fundDataVersion: `manuellt-test-${new Date().toISOString()}`,
   });
 
@@ -123,7 +138,8 @@ async function main() {
   console.log(`✓ Skickat. Resend message-id: ${result.messageId}`);
   console.log("\nAtt granska i mejlet:");
   console.log("  · rubrik, betygsruta och de tre orsakerna");
-  console.log("  · knappen 'Se vad som har förändrats' → ska öppna din portfölj");
+  console.log("  · knappen → ska öppna Mina portföljer med rätt kort markerat");
+  console.log("  · i flervarianten: varje portföljnamn är en egen länk");
   console.log("  · avsändaren bevakning@sharpa.se, inte no-reply@");
   console.log("  · Gmails 'Avprenumerera' högst upp (List-Unsubscribe)");
   console.log("\nOBS: avregistreringslänken är skarp. Klickar du på den stängs");

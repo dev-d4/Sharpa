@@ -30,8 +30,10 @@ export default function AccountPage() {
         .catch(() => {});
       fetch("/api/notification-preferences")
         .then((r) => r.ok ? r.json() : null)
-        .then((p) => setAlertsEnabled(p?.email_score_alerts ?? true))
-        .catch(() => setAlertsEnabled(true));
+        .then((p) => setAlertsEnabled(p?.email_score_alerts ?? false))
+        // Vid läsfel visar vi det säkra läget. Ett nätverksfel får aldrig
+        // få ett opt-in-reglage att se aktiverat ut.
+        .catch(() => setAlertsEnabled(false));
     });
   }, [router]);
 
@@ -146,9 +148,8 @@ export default function AccountPage() {
             <div className="min-w-0">
               <p className="text-sm font-medium text-slate-900">E-post när betyget försämras</p>
               <p className="text-xs leading-relaxed text-slate-500 mt-1">
-                Dina sparade portföljer analyseras om när fonddatan uppdateras. Får de ett tydligt
-                lägre betyg mejlar vi dig om vad som förändrats. Vi skickar inget vid oförändrat
-                eller förbättrat betyg.
+                Vi håller koll på dina sparade portföljer. Får de ett tydligt lägre betyg mejlar vi
+                dig om vad som förändrats. Vi skickar inget vid oförändrat eller förbättrat betyg.
               </p>
             </div>
             <button

@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
+  buildMultiPortfolioAlertHtml,
+  buildMultiPortfolioAlertText,
+  buildMultiSubject,
   buildPortfolioAlertHtml,
   buildPortfolioAlertText,
   buildSubject,
@@ -13,7 +16,15 @@ import {
 } from "@/lib/email/resend";
 import { buildIdempotencyKey, getSiteUrl } from "@/lib/email/send-portfolio-alert";
 
+const links = {
+  portfolioUrl: "https://sharpa.se/portfolios#p-abc",
+  allPortfoliosUrl: "https://sharpa.se/portfolios",
+  unsubscribeUrl: "https://sharpa.se/api/notifications/unsubscribe?token=t",
+  preferencesUrl: "https://sharpa.se/account#notiser",
+};
+
 const content = {
+  ...links,
   portfolioName: "ISK Pension",
   previousScore: 7.8,
   newScore: 7.1,
@@ -21,9 +32,17 @@ const content = {
     "Portföljens riskjusterade avkastning (Sharpe) har försämrats, från 1,20 till 0,80.",
     "Den genomsnittliga avgiften har ökat, från 0,30 % till 0,45 %.",
   ],
-  portfolioUrl: "https://sharpa.se/analyze?portfolio=abc",
-  unsubscribeUrl: "https://sharpa.se/api/notifications/unsubscribe?token=t",
-  preferencesUrl: "https://sharpa.se/account#notiser",
+  checkedAt: "1 aug",
+};
+
+const multiContent = {
+  ...links,
+  checkedAt: "1 aug",
+  portfolios: [
+    { name: "Pension & buffert", previousScore: 7.8, newScore: 6.2, reason: "Riskjusterad avkastning har försämrats" },
+    { name: "Globala indexfonder", previousScore: 8.4, newScore: 7.1, reason: "Den historiska avkastningen har gått ned" },
+    { name: "Räntesparande", previousScore: 6.9, newScore: 5.8 },
+  ],
 };
 
 describe("mejlmall", () => {
@@ -46,8 +65,8 @@ describe("mejlmall", () => {
   it("listar orsakerna och knappen som länkar till rätt portfölj", () => {
     const html = buildPortfolioAlertHtml(content);
     for (const reason of content.reasons) expect(html).toContain(escapeHtml(reason));
-    expect(html).toContain("Se vad som har förändrats");
-    expect(html).toContain('href="https://sharpa.se/analyze?portfolio=abc"');
+    expect(html).toContain("Öppna portföljen");
+    expect(html).toContain('href="https://sharpa.se/portfolios#p-abc"');
   });
 
   it("förklarar metoden och att det inte är personlig rådgivning", () => {
@@ -89,6 +108,97 @@ describe("mejlmall", () => {
     expect(text).not.toContain("<");
     expect(text).toContain("Tidigare betyg: 7,8 / 10");
     expect(text).toContain("Nytt betyg:     7,1 / 10");
+  });
+
+  it("följer mejlreglerna: tabeller, inline-stilar, inga externa resurser", () => {
+    const html = buildPortfolioAlertHtml(content);
+    expect(html).toContain('role="presentation"');
+    expect(html).not.toMatch(/<style|<script|<img|display:\s*flex|display:\s*grid|position:\s*absolute/);
+    expect(html).toContain("max-width:480px");
+  });
+
+  it("visar bara de tre första orsakerna och hoppar över tomma", () => {
+    const html = buildPortfolioAlertHtml({
+      ...content,
+      reasons: ["ett", "två", "tre", "fyra", "   "],
+    });
+    expect(html).toContain("ett");
+    expect(html).toContain("tre");
+    expect(html).not.toContain("fyra");
+  });
+
+  it("utelämnar orsaksblocket helt när det inte finns orsaker", () => {
+    const html = buildPortfolioAlertHtml({ ...content, reasons: [] });
+    expect(html).not.toContain("Det här har förändrats");
+  });
+
+  it("nämner bara portföljen mejlet gäller, aldrig användarens övriga", () => {
+    const html = buildPortfolioAlertHtml(content);
+    expect(html).not.toContain("Dina övriga portföljer");
+    expect(html).toContain(links.portfolioUrl);
+  });
+});
+
+describe("mejlmall — flera portföljer", () => {
+  it("har ämnesrad och rubrik som speglar antalet", () => {
+    expect(buildMultiSubject(3)).toBe("3 av dina portföljer har förändrats");
+    expect(buildMultiPortfolioAlertHtml(multiContent)).toContain("Tre av dina portföljer har förändrats");
+  });
+
+  it("listar varje portfölj med båda betygen och förändringen", () => {
+    const html = buildMultiPortfolioAlertHtml(multiContent);
+    expect(html).toContain("Pension &amp; buffert");
+    expect(html).toContain("7,8");
+    expect(html).toContain("6,2");
+    expect(html).toContain("−1,6");
+    expect(html).toContain("Riskjusterad avkastning har försämrats");
+  });
+
+  it("har en gemensam knapp, inte en per rad", () => {
+    const html = buildMultiPortfolioAlertHtml(multiContent);
+    expect(html.match(/Öppna Mina portföljer/g)).toHaveLength(1);
+    expect(html).toContain(links.allPortfoliosUrl);
+  });
+
+  it("gör varje rad till en länk till sin egen portfölj", () => {
+    const html = buildMultiPortfolioAlertHtml({
+      ...multiContent,
+      portfolios: multiContent.portfolios.map((p, i) => ({
+        ...p,
+        url: `https://sharpa.se/portfolios#p-${i}`,
+      })),
+    });
+    for (let i = 0; i < multiContent.portfolios.length; i++) {
+      expect(html).toContain(`href="https://sharpa.se/portfolios#p-${i}"`);
+    }
+  });
+
+  it("renderar raden som text när portföljen saknar länk", () => {
+    const html = buildMultiPortfolioAlertHtml(multiContent);
+    expect(html).toContain("Pension &amp; buffert");
+    expect(html).not.toContain('href="undefined"');
+  });
+
+  it("har friskrivning och avregistrering även i flervarianten", () => {
+    const html = buildMultiPortfolioAlertHtml(multiContent);
+    expect(html).toContain("inte personlig finansiell rådgivning");
+    expect(html).toContain(links.unsubscribeUrl);
+    expect(html).toContain(links.preferencesUrl);
+  });
+
+  it("escapar portföljnamn", () => {
+    const html = buildMultiPortfolioAlertHtml({
+      ...multiContent,
+      portfolios: [{ name: "<b>x</b>", previousScore: 8, newScore: 7 }, multiContent.portfolios[1]],
+    });
+    expect(html).not.toContain("<b>x</b>");
+    expect(html).toContain("&lt;b&gt;x&lt;/b&gt;");
+  });
+
+  it("har en klartextversion utan markup", () => {
+    const text = buildMultiPortfolioAlertText(multiContent);
+    expect(text).not.toContain("<");
+    expect(text).toContain("Pension & buffert: 7,8 → 6,2 (−1,6)");
   });
 });
 
@@ -134,14 +244,17 @@ describe("resend-wrapper", () => {
 });
 
 describe("idempotensnyckel", () => {
-  const req = {
-    to: "a@example.com",
-    userId: "u1",
+  const one = {
     portfolioId: "p1",
     portfolioName: "ISK",
     previousScore: 7.8,
     newScore: 7.1,
     reasons: [],
+  };
+  const req = {
+    to: "a@example.com",
+    userId: "u1",
+    portfolios: [one],
     fundDataVersion: "2026-08-04T03:00:00.000Z",
   };
 
@@ -153,8 +266,19 @@ describe("idempotensnyckel", () => {
 
   it("är stabil för samma förändring och skiljer sig för en ny", () => {
     expect(buildIdempotencyKey(req)).toBe(buildIdempotencyKey({ ...req }));
-    expect(buildIdempotencyKey({ ...req, newScore: 6.5 })).not.toBe(buildIdempotencyKey(req));
+    expect(
+      buildIdempotencyKey({ ...req, portfolios: [{ ...one, newScore: 6.5 }] })
+    ).not.toBe(buildIdempotencyKey(req));
     expect(buildIdempotencyKey({ ...req, fundDataVersion: "annan" })).not.toBe(buildIdempotencyKey(req));
+  });
+
+  it("är oberoende av ordningen när flera portföljer samlas i ett mejl", () => {
+    const two = { ...one, portfolioId: "p2", previousScore: 9, newScore: 8 };
+    const a = buildIdempotencyKey({ ...req, portfolios: [one, two] });
+    const b = buildIdempotencyKey({ ...req, portfolios: [two, one] });
+    expect(a).toBe(b);
+    expect(a).toContain("multi:u1");
+    expect(a).not.toBe(buildIdempotencyKey(req));
   });
 });
 

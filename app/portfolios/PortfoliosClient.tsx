@@ -32,20 +32,36 @@ export default function PortfoliosClient() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [alertsEnabled, setAlertsEnabled] = useState<boolean | null>(null);
   const [history, setHistory] = useState<Map<string, PortfolioScoreHistoryEntry>>(new Map());
+  const [focusedId, setFocusedId] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getSession().then(({ data }) => {
-      if (!data.session?.user) { router.replace("/login"); return; }
+      if (!data.session?.user) {
+        // Behåll ankaret över inloggningen. Mejlen länkar hit, och de öppnas
+        // ofta i en webbläsare där sessionen saknas — utan next hamnar man på
+        // en tom portföljlista i stället för på portföljen mejlet gällde.
+        const target = `/portfolios${window.location.hash}`;
+        router.replace(`/login?next=${encodeURIComponent(target)}`);
+        return;
+      }
       fetch("/api/portfolios")
         .then((r) => r.ok ? r.json() : [])
-        .then((p) => { setPortfolios(p); setLoading(false); })
+        .then((p: SavedPortfolio[]) => {
+          setPortfolios(p);
+          setLoading(false);
+          // Ankaret från mejlet, avläst först när portföljerna finns: kortet
+          // ska markeras, och id:t ska bara gälla om portföljen faktiskt finns.
+          const anchored = window.location.hash.match(/^#p-(.+)$/);
+          const id = anchored ? decodeURIComponent(anchored[1]) : null;
+          if (id && p.some((x) => x.id === id)) setFocusedId(id);
+        })
         .catch(() => setLoading(false));
       fetch("/api/notification-preferences")
         .then((r) => r.ok ? r.json() : null)
-        .then((p) => setAlertsEnabled(p?.email_score_alerts ?? true))
-        .catch(() => setAlertsEnabled(true));
+        .then((p) => setAlertsEnabled(p?.email_score_alerts ?? false))
+        .catch(() => setAlertsEnabled(false));
       fetch("/api/portfolio-history")
         .then((r) => r.ok ? r.json() : [])
         .then((rows: PortfolioScoreHistoryEntry[]) => {
@@ -61,6 +77,14 @@ export default function PortfoliosClient() {
         .catch(() => {});
     });
   }, [router]);
+
+  // Korten finns inte i DOM:en förrän portföljerna hämtats, så webbläsarens
+  // egen hash-scroll hinner aldrig träffa rätt — vi gör den själva när kortet
+  // väl renderats.
+  useEffect(() => {
+    if (!focusedId) return;
+    document.getElementById(`p-${focusedId}`)?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [focusedId]);
 
   async function handleDelete(id: string) {
     setDeleteError(null);
@@ -97,7 +121,7 @@ export default function PortfoliosClient() {
           <p className="text-sm text-slate-500 mt-1">{portfolios.length} sparade portföljer</p>
           {portfolios.length > 0 && (
             <p className="text-xs text-slate-400 mt-1">
-              Analyseras om när fonddatan uppdateras.{" "}
+              Vi håller koll och hör av oss om något viktigt förändras.{" "}
               <Link href="/account#notiser" className="underline decoration-slate-300 underline-offset-2 hover:text-slate-600">
                 Hantera bevakning
               </Link>
@@ -144,7 +168,13 @@ export default function PortfoliosClient() {
             const scoreColors = SCORE_COLOR_CLASSES[scoreResult.color];
 
             return (
-              <div key={p.id} className="bg-white rounded-md border border-slate-200 shadow-sm overflow-hidden">
+              <div
+                key={p.id}
+                id={`p-${p.id}`}
+                className={`bg-white rounded-md border shadow-sm overflow-hidden scroll-mt-24 ${
+                  focusedId === p.id ? "border-accent ring-1 ring-accent/25" : "border-slate-200"
+                }`}
+              >
                 {/* Header */}
                 <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-100">
                   <div className="flex items-start justify-between gap-3">

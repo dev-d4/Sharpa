@@ -68,7 +68,7 @@ export function createSupabaseWatchStore(supabase: SupabaseClient = getAdminSupa
         console.error(`[cron] kunde inte läsa notisinställningar: ${error.message}`);
         return map;
       }
-      for (const row of data ?? []) map.set(row.user_id, row.email_score_alerts !== false);
+      for (const row of data ?? []) map.set(row.user_id, row.email_score_alerts === true);
       return map;
     },
 
