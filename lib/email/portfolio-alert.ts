@@ -75,6 +75,18 @@ export type MultiPortfolioAlertContent = PortfolioAlertLinks & {
   checkedAt?: string;
 };
 
+export type StablePortfolio = {
+  name: string;
+  score: number;
+  url?: string;
+};
+
+export type PortfolioUpdateContent = PortfolioAlertLinks & {
+  portfolios: StablePortfolio[];
+  checkedAt?: string;
+  threshold: number;
+};
+
 // ── Text som återkommer i båda varianterna ───────────────────────────────────
 
 const DISCLAIMER =
@@ -99,6 +111,12 @@ export function buildSubject(portfolioName: string): string {
 
 export function buildMultiSubject(count: number): string {
   return `${count} av dina portföljer har förändrats`;
+}
+
+export function buildUpdateSubject(count: number): string {
+  return count === 1
+    ? "Din portfölj är kontrollerad"
+    : `Dina ${count} portföljer är kontrollerade`;
 }
 
 /** Alltid med tecken, svenskt decimaltecken och riktigt minustecken (U+2212). */
@@ -373,6 +391,50 @@ ${methodAndDisclaimer}`;
   });
 }
 
+// ── Variant 3: kontroll genomförd, ingen tydlig försämring ───────────────────
+
+export function buildPortfolioUpdateHtml(c: PortfolioUpdateContent): string {
+  const rows = c.portfolios.map((p, i) => {
+    const border = i === c.portfolios.length - 1 ? "" : `border-bottom:1px solid ${LINE_SOFT};`;
+    const name = p.url
+      ? `<a href="${escapeHtml(p.url)}" target="_blank" style="color:${ACCENT};text-decoration:none;font-weight:600;">${escapeHtml(p.name)}&nbsp;&rsaquo;</a>`
+      : `<span style="color:${INK};font-weight:600;">${escapeHtml(p.name)}</span>`;
+    return `
+                      <tr>
+                        <td style="padding:15px 20px;${border};font-family:${FONT};font-size:15px;line-height:20px;">${name}</td>
+                        <td align="right" style="padding:15px 20px;${border};font-family:${FONT};font-size:15px;line-height:20px;font-weight:700;color:${INK};white-space:nowrap;">${formatScore(p.score)} / 10</td>
+                      </tr>`;
+  }).join("");
+
+  const checked = c.checkedAt
+    ? ` Senast kontrollerade ${escapeHtml(c.checkedAt)}.`
+    : "";
+  const cardRows = `
+                <tr>
+                  <td style="padding:34px 34px 0 34px;font-family:${FONT};">
+                    <p style="margin:0;font-size:21px;line-height:27px;font-weight:700;color:${INK};letter-spacing:-0.2px;">Kontrollen är klar</p>
+                    <p style="margin:12px 0 0 0;font-size:15px;line-height:22px;color:${INK_2};">
+                      Ingen av de granskade portföljerna har försämrats med ${formatScore(c.threshold)} poäng eller mer.${checked}
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:24px 34px 0 34px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid ${LINE};border-radius:4px;">${rows}
+                    </table>
+                  </td>
+                </tr>
+${button(c.allPortfoliosUrl, "Öppna Mina portföljer", 26)}
+${divider(30)}
+${methodAndDisclaimer}`;
+
+  return shell({
+    preheader: `Vi har kontrollerat ${c.portfolios.length === 1 ? "din portfölj" : `dina ${c.portfolios.length} portföljer`} – ingen tydlig försämring upptäcktes.`,
+    cardRows,
+    links: c,
+  });
+}
+
 // ── Klartextversioner ────────────────────────────────────────────────────────
 
 function textFooter(links: PortfolioAlertLinks): string[] {
@@ -445,6 +507,23 @@ export function buildMultiPortfolioAlertText(c: MultiPortfolioAlertContent): str
     `Öppna Mina portföljer: ${c.allPortfoliosUrl}`
   );
 
+  lines.push(...textFooter(c));
+  return lines.join("\n");
+}
+
+export function buildPortfolioUpdateText(c: PortfolioUpdateContent): string {
+  const lines = [
+    "Kontrollen är klar",
+    "",
+    `Ingen av de granskade portföljerna har försämrats med ${formatScore(c.threshold)} poäng eller mer.`,
+  ];
+  if (c.checkedAt) lines.push(`Senast kontrollerade ${c.checkedAt}.`);
+  lines.push("");
+  for (const p of c.portfolios) {
+    lines.push(`- ${p.name}: ${formatScore(p.score)} / 10`);
+    if (p.url) lines.push(`  ${p.url}`);
+  }
+  lines.push("", `Öppna Mina portföljer: ${c.allPortfoliosUrl}`);
   lines.push(...textFooter(c));
   return lines.join("\n");
 }

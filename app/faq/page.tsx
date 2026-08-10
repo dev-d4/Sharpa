@@ -20,7 +20,7 @@ const FAQS = [
   },
   {
     q: "Vad innebär portföljbevakningen?",
-    a: "Sparar du en portfölj räknar vi dagligen om dess betyg mot uppdaterad fonddata. Väljer du att slå på notiser mejlar vi dig när betyget försämras tydligt, med vad som förändrats i datan. Mejlen innehåller inga fondnamn och inga uppmaningar att köpa, sälja eller byta — de beskriver bara förändringen. Bevakningen är avstängd tills du aktivt slår på den, och du kan stänga av den när som helst under Mitt konto.",
+    a: "Alla dina sparade portföljer granskas när fondinformationen har uppdaterats, normalt en gång i veckan. Väljer du att slå på e-post får du ett samlat förändringsmejl om minst en portfölj har sjunkit 0,5 poäng eller mer. Om ingen når gränsen får du i stället ett kort kontrollbesked med aktuellt betyg för de granskade portföljerna. Mejlen innehåller inga uppmaningar att köpa, sälja eller byta. Bevakningsmejl är avstängda tills du aktivt slår på dem och kan stängas av när som helst under Mitt konto.",
   },
   {
     q: "Hur aktuell är fonddatan?",

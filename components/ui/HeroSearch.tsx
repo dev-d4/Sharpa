@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LoaderCircle, Search } from "lucide-react";
+import { track } from "@vercel/analytics";
 import type { PortfolioAnalysis, SwapSuggestion } from "@/lib/analysis";
 
 type FundSuggestion = { name: string; isin: string };
@@ -99,8 +100,8 @@ function buildFundVerdict(
   if (swap) {
     return {
       tone: "warn",
-      title: "Fonden kan förbättras",
-      comparison: "Vi hittade ett alternativ med starkare nyckeltal i samma kategori.",
+      title: "Starkare alternativ hittat",
+      comparison: "",
     };
   }
 
@@ -149,23 +150,29 @@ function FundPanelView({
   return (
     <div className={`w-full overflow-hidden rounded-md border border-line bg-white${live ? " animate-panel-in" : ""}`} style={PANEL_SHADOW}>
       <div className="px-5 pt-4 pb-3.5 sm:px-6 border-b border-line-soft">
-        <p className="text-sm font-semibold text-ink-2 leading-snug break-words">{title}</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-4">Analyserad fond</p>
+        <p className="mt-1 text-sm font-semibold text-ink-2 leading-snug break-words">{title}</p>
       </div>
 
       <div className="px-5 py-5 sm:px-6">
-        <div className="flex items-center gap-2.5">
-          <span aria-hidden="true" className={`h-2 w-2 rounded-full shrink-0 ${dotColor}`} />
-          <h3 className="text-base font-semibold text-ink leading-snug">{verdictTitle}</h3>
-        </div>
+        {!swap && (
+          <div className="flex items-center gap-2.5">
+            <span aria-hidden="true" className={`h-2 w-2 rounded-full shrink-0 ${dotColor}`} />
+            <h3 className="text-base font-semibold text-ink leading-snug">{verdictTitle}</h3>
+          </div>
+        )}
         {summary && <p className="mt-2 text-sm text-ink-2 leading-relaxed">{summary}</p>}
 
         {swap ? (
-          <div className="mt-5 rounded-md border border-line-soft bg-section/70 px-4 py-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-4">Alternativ fond i samma kategori</p>
-            <p className="mt-1.5 font-heading text-base sm:text-[17px] font-bold text-ink leading-snug break-words">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <span aria-hidden="true" className={`h-2 w-2 rounded-full shrink-0 ${dotColor}`} />
+              <h3 className="text-base font-semibold text-ink leading-snug">{verdictTitle}</h3>
+            </div>
+            <p className="mt-1 font-heading text-lg font-bold text-ink leading-snug break-words">
               {swap.suggestedFund.name}
             </p>
-            <p className="mt-2.5 text-xs text-ink-2 leading-relaxed">
+            <p className="mt-2 text-sm text-ink-2 leading-relaxed">
               {swapReasonText(swap)}
             </p>
           </div>
@@ -298,6 +305,7 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
   }
 
   async function analyzeFund(fund: FundSuggestion) {
+    track("analysis_started", { source: "landing_fund_search", kind: "single_fund" });
     searchRequestSeq.current += 1;
     setSearching(false);
     setQuery(fund.name);
@@ -317,6 +325,7 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
       if (seq !== requestSeq.current) return;
       if (!res.ok) throw new Error(data.error ?? "Okänt fel");
       setAnalysis(data);
+      track("analysis_completed", { source: "landing_fund_search", kind: "single_fund" });
     } catch {
       if (seq === requestSeq.current) setError("Kunde inte analysera fonden just nu. Prova igen om en stund.");
     } finally {
@@ -325,6 +334,7 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
   }
 
   function goToAnalyzer() {
+    track("analysis_started", { source: "landing_result", kind: "portfolio" });
     router.push("/analyze");
   }
 
@@ -343,7 +353,7 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
         verdictTitle={verdict.title}
         // Är fonden bäst i sin kategori säger nyckeltalsraden inget som domen
         // inte redan täcker — och den riskerar att motsäga "inget slår den".
-        summary={verdict.tone === "good" ? undefined : buildFundSummary(analysis, swap)}
+        summary={swap || verdict.tone === "good" ? undefined : buildFundSummary(analysis, swap)}
         comparison={verdict.comparison}
         swap={swap}
         onCta={goToAnalyzer}

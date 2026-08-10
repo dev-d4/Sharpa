@@ -6,6 +6,9 @@ import {
   buildPortfolioAlertHtml,
   buildPortfolioAlertText,
   buildSubject,
+  buildPortfolioUpdateHtml,
+  buildPortfolioUpdateText,
+  buildUpdateSubject,
   escapeHtml,
 } from "@/lib/email/portfolio-alert";
 import {
@@ -199,6 +202,35 @@ describe("mejlmall — flera portföljer", () => {
     const text = buildMultiPortfolioAlertText(multiContent);
     expect(text).not.toContain("<");
     expect(text).toContain("Pension & buffert: 7,8 → 6,2 (−1,6)");
+  });
+});
+
+describe("mejlmall — kontroll utan tydlig försämring", () => {
+  const update = {
+    ...links,
+    checkedAt: "10 aug",
+    threshold: 0.5,
+    portfolios: [
+      { name: "ISK", score: 7.8, url: "https://sharpa.se/portfolios#p-1" },
+      { name: "Pension", score: 8.2, url: "https://sharpa.se/portfolios#p-2" },
+    ],
+  };
+
+  it("bekräftar kontrollen och visar samtliga granskade portföljer", () => {
+    const html = buildPortfolioUpdateHtml(update);
+    expect(buildUpdateSubject(2)).toBe("Dina 2 portföljer är kontrollerade");
+    expect(html).toContain("Kontrollen är klar");
+    expect(html).toContain("0,5 poäng");
+    expect(html).toContain("ISK");
+    expect(html).toContain("Pension");
+    expect(html).toContain("7,8 / 10");
+  });
+
+  it("har klartext, portföljlänkar och avregistrering", () => {
+    const text = buildPortfolioUpdateText(update);
+    expect(text).toContain("Ingen av de granskade portföljerna");
+    expect(text).toContain("https://sharpa.se/portfolios#p-1");
+    expect(text).toContain(links.unsubscribeUrl);
   });
 });
 

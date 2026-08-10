@@ -3,7 +3,7 @@ import Image from "next/image";
 
 export default function Footer() {
   return (
-    <footer className="border-t border-line bg-white">
+    <footer className="mt-12 border-t border-line bg-white sm:mt-16">
       <div className="mx-auto max-w-6xl space-y-4 px-4 py-10 sm:px-6 sm:py-12">
         <div className="flex items-center gap-2">
           <Image src="/logo.svg" alt="Sharpa" width={20} height={20} />

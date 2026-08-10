@@ -146,17 +146,18 @@ export default function AccountPage() {
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Portföljbevakning</p>
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-sm font-medium text-slate-900">E-post när betyget försämras</p>
+              <p className="text-sm font-medium text-slate-900">E-post om portföljkontroller</p>
               <p className="text-xs leading-relaxed text-slate-500 mt-1">
-                Vi håller koll på dina sparade portföljer. Får de ett tydligt lägre betyg mejlar vi
-                dig om vad som förändrats. Vi skickar inget vid oförändrat eller förbättrat betyg.
+                Vi granskar alla dina sparade portföljer när fondinformationen uppdateras, normalt
+                en gång i veckan. Sjunker någon minst 0,5 poäng får du ett samlat förändringsmejl.
+                Annars får du ett kort besked om att kontrollen är klar.
               </p>
             </div>
             <button
               type="button"
               role="switch"
               aria-checked={alertsEnabled === true}
-              aria-label="E-post när betyget försämras"
+              aria-label="E-post om portföljkontroller"
               disabled={alertsEnabled === null || alertsSaving}
               onClick={() => toggleAlerts(!alertsEnabled)}
               className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${

@@ -11,7 +11,7 @@ import {
   type PortfolioMetricsSnapshot,
 } from "./portfolio-watch";
 import { analyzePortfolioEntries } from "./analysis-service";
-import { sendPortfolioAlert } from "./email/send-portfolio-alert";
+import { sendPortfolioAlert, sendPortfolioUpdate } from "./email/send-portfolio-alert";
 import type { SendEmailResult } from "./email/resend";
 
 /**
@@ -27,12 +27,12 @@ import type { SendEmailResult } from "./email/resend";
  *   3. skriv historikraden först — unikt index (portfolio_id, fund_data_version)
  *      gör att en omkörning stoppas här och aldrig når utskicket
  *   4. spara ny analys, betyg och delresultat
- *   5. lägg portföljen i utskickskön bara om beslutsreglerna säger till
+ *   5. lägg portföljen i underlaget för användarens samlade utskick
  *
- * Utskicket sker sedan i ett andra steg, grupperat per användare: har flera av
- * en användares portföljer försämrats i samma körning blir det ett samlat mejl
- * i stället för ett per portfölj. Notisen bokförs — per portfölj — först efter
- * att Resend accepterat meddelandet.
+ * Utskicket sker sedan i ett andra steg, grupperat per användare. Har någon
+ * portfölj nått larmgränsen skickas ett förändringsmejl med de berörda; annars
+ * skickas ett kontrollbesked med alla portföljer som granskats. Notisen om en
+ * förändring bokförs per portfölj först efter att Resend accepterat mejlet.
  */
 
 // ── Datamodell ────────────────────────────────────────────────────────────────
@@ -102,6 +102,7 @@ export type WatchRunDeps = {
   loadFunds?: (custodian: Custodian) => Promise<Fund[]>;
   analyze?: typeof analyzePortfolioEntries;
   sendAlert?: typeof sendPortfolioAlert;
+  sendUpdate?: typeof sendPortfolioUpdate;
   now?: () => Date;
   threshold?: number;
   /** Antal portföljer som behandlas samtidigt. */
@@ -124,6 +125,8 @@ export type WatchRunResult = {
   notified: number;
   /** Antal mejl som faktiskt skickades — ett per användare, inte per portfölj. */
   emails: number;
+  /** Kontrollmejl som skickades när ingen portfölj nådde larmgränsen. */
+  updateEmails: number;
   skipped: number;
   failed: number;
   /** Portföljer som inte hanns med inom tidsbudgeten. */
@@ -143,6 +146,13 @@ type PendingNotification = {
   previousScore: number;
   newScore: number;
   reasons: string[];
+};
+
+type ReviewedPortfolio = {
+  userId: string;
+  portfolioId: string;
+  portfolioName: string;
+  score: number;
 };
 
 // ── Hjälpare ──────────────────────────────────────────────────────────────────
@@ -182,6 +192,7 @@ export async function runPortfolioWatch(deps: WatchRunDeps): Promise<WatchRunRes
     store,
     analyze = analyzePortfolioEntries,
     sendAlert = sendPortfolioAlert,
+    sendUpdate = sendPortfolioUpdate,
     now = () => new Date(),
     threshold = getScoreDropThreshold(),
     batchSize = DEFAULT_BATCH_SIZE,
@@ -195,6 +206,7 @@ export async function runPortfolioWatch(deps: WatchRunDeps): Promise<WatchRunRes
     degraded: 0,
     notified: 0,
     emails: 0,
+    updateEmails: 0,
     skipped: 0,
     failed: 0,
     remaining: 0,
@@ -246,6 +258,7 @@ export async function runPortfolioWatch(deps: WatchRunDeps): Promise<WatchRunRes
   // Samlas under körningen och skickas i ett svep när alla batchar är klara, så
   // att en användare med flera försämrade portföljer får ett mejl och inte tre.
   const notifications: PendingNotification[] = [];
+  const reviewed: ReviewedPortfolio[] = [];
 
   const startedAt = now().getTime();
   const timeBudgetMs = deps.timeBudgetMs ?? Infinity;
@@ -281,6 +294,7 @@ export async function runPortfolioWatch(deps: WatchRunDeps): Promise<WatchRunRes
             result,
             bump,
             notifications,
+            reviewed,
           });
         } catch (err) {
           result.failed++;
@@ -297,9 +311,12 @@ export async function runPortfolioWatch(deps: WatchRunDeps): Promise<WatchRunRes
     fundDataVersion,
     store,
     sendAlert,
+    sendUpdate,
     now,
     result,
     bump,
+    reviewed,
+    threshold,
   });
 
   return result;
@@ -312,14 +329,17 @@ type DeliverArgs = {
   fundDataVersion: string;
   store: WatchStore;
   sendAlert: typeof sendPortfolioAlert;
+  sendUpdate: typeof sendPortfolioUpdate;
   now: () => Date;
   result: WatchRunResult;
   bump: (decision: string) => void;
+  reviewed: ReviewedPortfolio[];
+  threshold: number;
 };
 
 async function deliverNotifications(args: DeliverArgs): Promise<void> {
-  const { notifications, store, sendAlert, now, result, bump } = args;
-  if (notifications.length === 0) return;
+  const { notifications, store, sendAlert, sendUpdate, now, result, bump, reviewed } = args;
+  if (reviewed.length === 0) return;
 
   const byUser = new Map<string, PendingNotification[]>();
   for (const n of notifications) {
@@ -330,10 +350,44 @@ async function deliverNotifications(args: DeliverArgs): Promise<void> {
 
   const checkedAt = formatCheckedAt(now());
 
-  for (const [userId, items] of byUser) {
+  const reviewedByUser = new Map<string, ReviewedPortfolio[]>();
+  for (const item of reviewed) {
+    const list = reviewedByUser.get(item.userId);
+    if (list) list.push(item);
+    else reviewedByUser.set(item.userId, [item]);
+  }
+
+  for (const [userId, reviewedItems] of reviewedByUser) {
+    const items = byUser.get(userId) ?? [];
     const email = await store.getUserEmail(userId);
     if (!email) {
-      for (let i = 0; i < items.length; i++) bump("no-email");
+      bump("no-email");
+      continue;
+    }
+
+    // Om någon portfölj nådde larmgränsen går förändringsmejlet före. Annars
+    // får användaren ett kontrollbesked med samtliga portföljer som granskats.
+    if (items.length === 0) {
+      const updateResult = await sendUpdate({
+        to: email,
+        userId,
+        portfolios: reviewedItems.map((i) => ({
+          portfolioId: i.portfolioId,
+          portfolioName: i.portfolioName,
+          score: i.score,
+        })),
+        checkedAt,
+        fundDataVersion: args.fundDataVersion,
+        threshold: args.threshold,
+      });
+      if (!updateResult.ok) {
+        result.failed++;
+        bump(updateResult.skipped ? "update-send-skipped" : "update-send-failed");
+        continue;
+      }
+      result.emails++;
+      result.updateEmails++;
+      bump("update-sent");
       continue;
     }
 
@@ -393,6 +447,7 @@ type CheckOneArgs = {
   result: WatchRunResult;
   bump: (decision: string) => void;
   notifications: PendingNotification[];
+  reviewed: ReviewedPortfolio[];
 };
 
 async function checkOnePortfolio(args: CheckOneArgs): Promise<void> {
@@ -468,6 +523,15 @@ async function checkOnePortfolio(args: CheckOneArgs): Promise<void> {
     last_checked_fund_version: fundDataVersion,
   });
   result.updated++;
+
+  if (alertsEnabled) {
+    args.reviewed.push({
+      userId: portfolio.user_id,
+      portfolioId: portfolio.id,
+      portfolioName: portfolio.name,
+      score: newScore,
+    });
+  }
 
   if (previousScore !== null) {
     if (newScore > previousScore) result.improved++;

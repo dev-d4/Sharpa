@@ -61,9 +61,10 @@ export default function VillkorPage() {
         <section className="space-y-3">
           <h2 className="text-lg font-bold text-slate-900">4. Portföljbevakning och utskick</h2>
           <p>
-            Sparar du en portfölj räknar vi dagligen om dess betyg mot uppdaterad fonddata och
-            sparar resultatet som historik. Har du aktivt valt att få notiser mejlar vi dig när
-            betyget försämras tydligt. Utskicken beskriver vad som förändrats i datan — de
+            Sparar du en portfölj räknar vi om dess betyg när fondinformationen uppdateras och
+            sparar resultatet som historik. Har du aktivt valt e-post får du ett samlat
+            förändringsmejl när minst en granskad portfölj når den angivna larmgränsen, annars ett
+            kontrollbesked med aktuella betyg. Utskicken beskriver kontrollens resultat — de
             innehåller inga uppmaningar att köpa, sälja eller byta fonder och utgör inte
             rådgivning. Du kan när som helst stänga av dem under Mitt konto eller via länken i
             varje meddelande.

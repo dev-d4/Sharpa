@@ -8,8 +8,8 @@ import { getScoreDropThreshold } from "@/lib/portfolio-watch";
  * Daglig portföljbevakning.
  *
  * Kör igenom sparade portföljer, analyserar om dem mot AKTUELL fonddata,
- * uppdaterar betyg och historik, och mejlar användaren när betyget försämrats
- * minst PORTFOLIO_SCORE_DROP_THRESHOLD poäng.
+ * uppdaterar betyg och historik, och skickar ett samlat mejl per användare:
+ * förändringsmejl när gränsen nås, annars ett kontrollbesked.
  *
  * Ordningsval (alternativ A i kravspecen): två separata cron-jobb behålls.
  * refresh-funds kör måndag 03:00, den här kör dagligen 08:00. Att i stället

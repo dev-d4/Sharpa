@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase-browser";
 import type { SavedPortfolio, PortfolioScoreHistoryEntry } from "@/lib/portfolio";
 import type { SwapSuggestion } from "@/lib/analysis";
 import { computePortfolioScore, SCORE_COLOR_CLASSES } from "@/lib/portfolio-score";
+import { track } from "@vercel/analytics";
 
 /** "3 augusti" / "3 augusti 2025" om kontrollen skedde ett annat år. */
 function formatCheckedAt(iso: string): string {
@@ -51,6 +52,9 @@ export default function PortfoliosClient() {
         .then((p: SavedPortfolio[]) => {
           setPortfolios(p);
           setLoading(false);
+          if (p.length > 0) {
+            track("portfolio_viewed_again", { portfolio_count: p.length });
+          }
           // Ankaret från mejlet, avläst först när portföljerna finns: kortet
           // ska markeras, och id:t ska bara gälla om portföljen faktiskt finns.
           const anchored = window.location.hash.match(/^#p-(.+)$/);
@@ -121,7 +125,7 @@ export default function PortfoliosClient() {
           <p className="text-sm text-slate-500 mt-1">{portfolios.length} sparade portföljer</p>
           {portfolios.length > 0 && (
             <p className="text-xs text-slate-400 mt-1">
-              Vi håller koll och hör av oss om något viktigt förändras.{" "}
+              Alla portföljer granskas vid nästa fonduppdatering. Bevakningen mejlar ett samlat besked efter kontrollen.{" "}
               <Link href="/account#notiser" className="underline decoration-slate-300 underline-offset-2 hover:text-slate-600">
                 Hantera bevakning
               </Link>

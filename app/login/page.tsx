@@ -7,6 +7,9 @@ import { MAGIC_LINK_ENABLED } from "@/lib/features";
 import { authErrorMessage } from "@/lib/auth-errors";
 import Image from "next/image";
 import Link from "next/link";
+import { track } from "@vercel/analytics";
+
+const LOGIN_MARKER = "sharpa_login_started";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
@@ -28,6 +31,8 @@ function LoginForm() {
 
   async function handleGoogle() {
     const next = searchParams.get("next") ?? "/portfolios";
+    localStorage.setItem(LOGIN_MARKER, searchParams.get("intent") ?? "general");
+    track("login_started", { method: "google", intent: searchParams.get("intent") ?? "general" });
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -43,6 +48,8 @@ function LoginForm() {
     setError(null);
     setLoading(true);
     const next = searchParams.get("next") ?? "/portfolios";
+    localStorage.setItem(LOGIN_MARKER, searchParams.get("intent") ?? "general");
+    track("login_started", { method: "magic_link", intent: searchParams.get("intent") ?? "general" });
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: getCallbackUrl(next) },
@@ -60,9 +67,13 @@ function LoginForm() {
           <Link href="/">
             <Image src="/logo.svg" alt="Sharpa" width={28} height={28} />
           </Link>
-          <h1 className="mt-5 font-display text-[26px] leading-tight text-ink sm:text-[30px]">Logga in eller skapa konto</h1>
-          <p className="mt-2 text-[15px] text-ink-2">
-            Inget konto? Vi skapar ett åt dig automatiskt.
+          <h1 className="mt-5 font-display text-[26px] leading-tight text-ink sm:text-[30px]">
+            {searchParams.get("intent") === "save" ? "Spara din analys och portfölj" : "Logga in eller skapa konto"}
+          </h1>
+          <p className="mt-2 text-[15px] leading-relaxed text-ink-2">
+            {searchParams.get("intent") === "save"
+              ? "Logga in för att behålla resultatet. Du kommer tillbaka direkt efteråt."
+              : "Inget konto? Vi skapar ett åt dig automatiskt."}
           </p>
         </div>
 

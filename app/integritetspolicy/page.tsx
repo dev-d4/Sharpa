@@ -36,7 +36,7 @@ export default function IntegritetspolicyPage() {
               analysen). Det gör att vi kan visa hur portföljen utvecklats och avgöra om något
               förändrats.
             </li>
-            <li><strong>Notisinställning</strong> — om du har valt att få e-post när betyget försämras.</li>
+            <li><strong>Notisinställning</strong> — om du har valt att få e-post efter portföljkontroller.</li>
             <li><strong>Tekniska uppgifter</strong> — sessionskakor som krävs för inloggning.</li>
             <li>
               <strong>Anonymiserad besöksstatistik</strong> — exempelvis sidvisningar, hänvisande
@@ -58,7 +58,7 @@ export default function IntegritetspolicyPage() {
           <ul className="list-disc pl-5 space-y-1">
             <li><strong>Tillhandahålla tjänsten</strong> — för att du ska kunna logga in och spara portföljer.</li>
             <li><strong>Autentisering</strong> — sessionskakor krävs tekniskt för att hålla dig inloggad.</li>
-            <li><strong>Portföljbevakning</strong> — för att räkna om betyget på dina sparade portföljer och, om du har valt det, mejla dig när betyget försämras tydligt.</li>
+            <li><strong>Portföljbevakning</strong> — för att räkna om betyget på dina sparade portföljer och, om du har valt det, mejla dig om kontrollens resultat.</li>
             <li><strong>Förbättra webbplatsen</strong> — anonymiserad och sammanställd besöksstatistik hjälper oss förstå hur tjänsten används.</li>
           </ul>
           <p>

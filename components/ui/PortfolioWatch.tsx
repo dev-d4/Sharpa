@@ -5,9 +5,9 @@ import { useEffect, useRef, useState } from "react";
 /**
  * Portföljbevakning på landningssidan — riktning 1b ("notisen i centrum").
  *
- * Betygsfallet bär sektionen genom skala; de tre stegen ligger som dämpade
- * marginalnoteringar bredvid. Sektionen har medvetet ingen egen CTA — den finns
- * längre ned på sidan.
+ * Betygsfallet bär sektionen genom skala; de tre stegen står som en dämpad
+ * kolumn till höger på desktop och som en vågrät rad på mobil. Stegskenans
+ * loop är ren CSS och oberoende av scroll.
  *
  * Notisen styrs av hur långt användaren har scrollat genom sektionen: läget går
  * från "vi bevakar" till "vi har upptäckt en försämring" och betyget rullar
@@ -16,20 +16,7 @@ import { useEffect, useRef, useState } from "react";
  * Vid prefers-reduced-motion visas slutläget direkt.
  */
 
-const STEPS = [
-  {
-    title: "Spara din portfölj",
-    desc: "Analysera dina fonder och spara resultatet på ditt konto.",
-  },
-  {
-    title: "Vi håller koll åt dig",
-    desc: "Sharpa bevakar portföljen i bakgrunden. Du behöver inte göra något.",
-  },
-  {
-    title: "Slå på notiser om du vill",
-    desc: "Väljer du att få notiser mejlar vi dig när betyget försämras tydligt — med vad som har förändrats.",
-  },
-];
+const STEPS = ["Spara din portfölj", "Alla portföljer granskas", "Du får ett samlat mejl"];
 
 const SCORE_BEFORE = 7.8;
 const SCORE_AFTER = 7.1;
@@ -43,7 +30,6 @@ export default function PortfolioWatch() {
   const [revealed, setRevealed] = useState(false);
   const [score, setScore] = useState(SCORE_BEFORE);
   const [complete, setComplete] = useState(false);
-
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -99,21 +85,18 @@ export default function PortfolioWatch() {
     `transition-opacity duration-200 ease-out ${MOTION_OFF} ${on ? "opacity-100" : "opacity-0"}`;
 
   return (
-    <section ref={ref} className="flex flex-col gap-10 py-12 sm:gap-[52px] sm:py-16">
+    <section ref={ref} className="flex flex-col gap-8 py-12 sm:gap-10 sm:py-16">
       {/* Intro */}
-      <div className="flex flex-col gap-4">
-        <p className="label-meta">Portföljbevakning</p>
+      <div className="flex flex-col gap-3">
         <h2 className="font-display text-[26px] leading-[1.12] text-ink sm:text-[30px]">
-          Din portfölj bevakas — även när du inte gör det.
+          Få veta när din portfölj förändras
         </h2>
         <p className="max-w-[620px] text-[15px] leading-[1.65] text-ink-2 sm:text-base">
-          Analysen är inte en engångssak. Vi håller ett öga på din sparade portfölj och hör av oss
-          när något viktigt har förändrats.
+          Spara portföljen så följer vi betyget och mejlar dig efter varje ny kontroll.
         </p>
       </div>
 
-      {/* Artefakt: notisen i stor skala, stegen underordnade */}
-      <div className="grid gap-10 lg:grid-cols-[minmax(0,65fr)_minmax(0,35fr)] lg:items-start lg:gap-16">
+      <div className="grid items-start gap-10 border-t border-line pt-7 lg:grid-cols-2 lg:gap-16">
         <div className="flex min-w-0 flex-col gap-6">
           {/* Etikett — pricken tänds när försämringen upptäcks */}
           <div className="flex items-center gap-3">
@@ -172,45 +155,65 @@ export default function PortfolioWatch() {
             </span>
           </p>
 
-          {/* Brödtexten byts ut i samma rutnätscell så höjden är konstant */}
+          {/* Exempeltexten byts ut i samma rutnätscell så höjden är konstant. */}
           <span className="grid max-w-[420px] text-[15px] leading-[1.6] text-ink-2 sm:text-base">
             <span className={`col-start-1 row-start-1 ${fadeOut(!revealed)}`}>
-              I det här exemplet bevakas en sparad portfölj i bakgrunden.
+              Portföljen bevakas i bakgrunden.
             </span>
             <span
               aria-hidden={!revealed}
               className={`col-start-1 row-start-1 ${fadeIn(revealed)}`}
             >
-              I exemplet har två fonder tappat mot liknande fonder. Då kan ett mejl med
-              sammanfattningen skickas om notiser har slagits på.
+              Två fonder har tappat mot jämförbara fonder.
             </span>
           </span>
 
           {/* Friskrivningen står intill utdatan, inte i den dämpade sidospalten —
               se COMPLIANCE.md § 4B. */}
           <p className="max-w-[420px] text-xs leading-[1.6] text-ink-4">
-            Automatiskt genererad information om en sparad portfölj — inte personlig finansiell
-            rådgivning. Siffrorna ovan är ett illustrativt exempel. Historisk avkastning är ingen
-            garanti för framtida resultat.
+            Illustrativt exempel, inte personlig rådgivning. Historisk avkastning är ingen garanti
+            för framtida resultat.
           </p>
         </div>
 
-        {/* Tre steg som marginalnoteringar — hårlinjen flyttar från topp till
-            vänsterkant vid samma brytpunkt som kolumnerna läggs sida vid sida. */}
-        <div className="flex min-w-0 flex-col border-t border-line pt-8 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8">
-          <ol className="flex flex-col gap-6">
-            {STEPS.map((step, i) => (
-              <li key={step.title} className="flex flex-col gap-1">
-                <span className="figure text-xs text-ink-4">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <p className="text-sm font-semibold text-ink">{step.title}</p>
-                <p className="text-[13px] leading-[1.55] text-ink-2">{step.desc}</p>
-              </li>
-            ))}
-          </ol>
-
-        </div>
+        {/* Ett ljust segment vandrar längs skenan i en ständig loop. Bara linjen
+            rör sig — texten står stilla och fullt läsbar hela tiden. Skenan
+            ligger vågrätt ovanför stegen på mobil och lodrätt vid sidan på
+            desktop, så flödet alltid följer läsriktningen. */}
+        <ol className="relative grid min-w-0 grid-cols-3 gap-x-4 pt-6 lg:flex lg:flex-col lg:gap-0 lg:pl-7 lg:pt-0">
+          {/* Skenorna spänner mellan första och sista prickens mittpunkt, så
+              segmentet alltid börjar och slutar exakt på en punkt. På mobil är
+              det kolumnmitterna: en halv kolumnbredd in från vardera kanten. */}
+          <span
+            aria-hidden
+            className="absolute left-[calc((100%-2rem)/6)] right-[calc((100%-2rem)/6)] top-[3px] h-px bg-line-strong lg:hidden"
+          >
+            <span className="animate-rail-draw-x rail-glow absolute inset-y-0 bg-accent" />
+          </span>
+          <span
+            aria-hidden
+            className="absolute bottom-[11px] left-[3px] top-[10px] hidden w-px bg-line-strong lg:block"
+          >
+            <span className="animate-rail-draw rail-glow absolute inset-x-0 bg-accent" />
+          </span>
+          {STEPS.map((step, i) => (
+            <li
+              key={step}
+              /* Fast höjd på desktop i stället för padding: då ligger prickarna
+                 garanterat jämnt fördelade på skenan — och mittenpricken exakt
+                 på 50 % — även om en etikett skulle radbrytas. */
+              className="relative min-w-0 text-center lg:text-left lg:[&:not(:last-child)]:h-[112px]"
+            >
+              <span
+                aria-hidden
+                className={`absolute -top-6 left-1/2 size-[7px] -translate-x-1/2 rounded-full bg-line-strong lg:left-0 lg:top-[7px] lg:-ml-7 lg:translate-x-0 ${
+                  ["animate-dot-lit-1", "animate-dot-lit-2", "animate-dot-lit-3"][i]
+                }`}
+              />
+              <span className="block text-sm leading-snug text-ink lg:text-base">{step}</span>
+            </li>
+          ))}
+        </ol>
       </div>
     </section>
   );

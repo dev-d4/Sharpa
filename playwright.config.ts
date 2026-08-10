@@ -5,13 +5,10 @@ export default defineConfig({
   timeout: 30_000,
   retries: 1,
   reporter: "list",
-  globalSetup: "./tests/e2e/global-setup.ts",
 
   use: {
     baseURL: "http://localhost:3000",
     trace: "on-first-retry",
-    // Gate-cookie (integration_auth) så testerna når sidorna när sajten är lösenordsgrindad
-    storageState: "test-results/storage-state.json",
   },
 
   projects: [

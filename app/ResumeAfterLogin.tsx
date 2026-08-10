@@ -4,6 +4,9 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import { markResumeRedirected, peekResumePath } from "@/lib/resume-session";
+import { track } from "@vercel/analytics";
+
+const LOGIN_MARKER = "sharpa_login_started";
 
 /**
  * Skyddsnät för inloggningens återhopp.
@@ -21,6 +24,18 @@ const CATCH_PATHS = new Set(["/", "/portfolios"]);
 export default function ResumeAfterLogin() {
   const pathname = usePathname();
   const router = useRouter();
+
+  useEffect(() => {
+    const intent = localStorage.getItem(LOGIN_MARKER);
+    if (!intent) return;
+
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data }) => {
+      if (!data.session?.user) return;
+      track("login_completed", { intent });
+      localStorage.removeItem(LOGIN_MARKER);
+    });
+  }, [pathname]);
 
   useEffect(() => {
     if (!pathname) return;

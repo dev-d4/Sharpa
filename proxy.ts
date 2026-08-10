@@ -1,26 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const SITE_COOKIE  = "integration_auth";
-const LOGIN_PAGE   = "/radgivning/fundguide/login";
-const LOGIN_API    = "/api/radgivning/fundguide/auth";
-
 export async function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  // ── Site-wide password gate ───────────────────────────────────────────────
-  const isGateExempt =
-    pathname === LOGIN_PAGE ||
-    pathname.startsWith(LOGIN_API) ||
-    pathname === "/auth/callback";
-  if (!isGateExempt) {
-    const token    = request.cookies.get(SITE_COOKIE)?.value;
-    const expected = process.env.INTEGRATION_PASSWORD;
-    if (expected && token !== expected) {
-      return NextResponse.redirect(new URL(LOGIN_PAGE, request.url));
-    }
-  }
-
   // ── Supabase session refresh for API routes ───────────────────────────────
   let response = NextResponse.next({ request });
 

@@ -6,6 +6,9 @@ import {
   buildPortfolioAlertHtml,
   buildPortfolioAlertText,
   buildSubject,
+  buildPortfolioUpdateHtml,
+  buildPortfolioUpdateText,
+  buildUpdateSubject,
 } from "./portfolio-alert";
 import { createUnsubscribeToken } from "../unsubscribe-token";
 
@@ -43,6 +46,15 @@ export type PortfolioAlertRequest = {
   checkedAt?: string;
   /** Identifierare för fonddatakörningen — ingår i idempotensnyckeln. */
   fundDataVersion: string;
+};
+
+export type PortfolioUpdateRequest = {
+  to: string;
+  userId: string;
+  portfolios: { portfolioId: string; portfolioName: string; score: number }[];
+  checkedAt?: string;
+  fundDataVersion: string;
+  threshold: number;
 };
 
 /**
@@ -139,6 +151,44 @@ export async function sendPortfolioAlert(
     html: buildMultiPortfolioAlertHtml(content),
     text: buildMultiPortfolioAlertText(content),
     idempotencyKey: buildIdempotencyKey(req),
+    listUnsubscribeUrl: unsubscribeUrl,
+  });
+}
+
+/** Kontrollbesked när ingen av användarens portföljer nådde larmgränsen. */
+export async function sendPortfolioUpdate(
+  req: PortfolioUpdateRequest
+): Promise<SendEmailResult> {
+  if (req.portfolios.length === 0) {
+    return { ok: false, skipped: true, reason: "inga portföljer" };
+  }
+
+  const site = getSiteUrl();
+  const token = createUnsubscribeToken(req.userId, "portfolio-alerts");
+  const unsubscribeUrl = `${site}/api/notifications/unsubscribe?token=${encodeURIComponent(token)}`;
+  const links = {
+    portfolioUrl: portfolioUrlFor(site, req.portfolios[0].portfolioId),
+    allPortfoliosUrl: `${site}/portfolios`,
+    unsubscribeUrl,
+    preferencesUrl: `${site}/account#notiser`,
+  };
+  const content = {
+    ...links,
+    checkedAt: req.checkedAt,
+    threshold: req.threshold,
+    portfolios: req.portfolios.map((p) => ({
+      name: p.portfolioName,
+      score: p.score,
+      url: portfolioUrlFor(site, p.portfolioId),
+    })),
+  };
+
+  return sendEmail({
+    to: req.to,
+    subject: buildUpdateSubject(req.portfolios.length),
+    html: buildPortfolioUpdateHtml(content),
+    text: buildPortfolioUpdateText(content),
+    idempotencyKey: ["portfolio-update", req.userId, req.fundDataVersion].join(":"),
     listUnsubscribeUrl: unsubscribeUrl,
   });
 }

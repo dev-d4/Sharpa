@@ -14,6 +14,15 @@ import type { Custodian } from "@/lib/funds";
 import type { SendEmailResult } from "@/lib/email/resend";
 import type { PortfolioAlertRequest } from "@/lib/email/send-portfolio-alert";
 
+const { sendUpdate } = vi.hoisted(() => ({
+  sendUpdate: vi.fn(async () => ({ ok: true as const, messageId: "update-msg-1" })),
+}));
+
+vi.mock("@/lib/email/send-portfolio-alert", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/email/send-portfolio-alert")>()),
+  sendPortfolioUpdate: sendUpdate,
+}));
+
 type SendAlertFn = (req: PortfolioAlertRequest) => Promise<SendEmailResult>;
 
 /**
@@ -163,6 +172,7 @@ let sendAlert: Mock<SendAlertFn>;
 
 beforeEach(() => {
   sendAlert = vi.fn<SendAlertFn>(async () => ({ ok: true, messageId: "msg-1" }));
+  sendUpdate.mockClear();
   vi.spyOn(console, "warn").mockImplementation(() => {});
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
@@ -207,7 +217,7 @@ describe("runPortfolioWatch", () => {
     expect(loadFunds.mock.calls.map((c) => c[0]).sort()).toEqual(["avanza", "nordnet"]);
   });
 
-  it("skapar baslinje utan mejl första gången", async () => {
+  it("skapar baslinje och skickar ett kontrollmejl första gången", async () => {
     const { store, state } = makeStore({
       portfolios: [portfolio({ score: null, analysis: null, last_checked_fund_version: null })],
     });
@@ -221,36 +231,41 @@ describe("runPortfolioWatch", () => {
     expect(result.updated).toBe(1);
     expect(result.notified).toBe(0);
     expect(sendAlert).not.toHaveBeenCalled();
+    expect(sendUpdate).toHaveBeenCalledOnce();
     expect(state.history[0].previous_score).toBeNull();
     expect(result.decisions.baseline).toBe(1);
   });
 
-  it("skickar inget mejl vid oförändrat betyg", async () => {
+  it("skickar kontrollmejl vid oförändrat betyg", async () => {
     const { store } = makeStore({ portfolios: [portfolio({ score: 10 })] });
 
     const result = await runPortfolioWatch({ store, analyze: analyzeReturning(EXCELLENT), sendAlert });
 
     expect(sendAlert).not.toHaveBeenCalled();
+    expect(sendUpdate).toHaveBeenCalledOnce();
+    expect(result.updateEmails).toBe(1);
     expect(result.decisions.unchanged).toBe(1);
   });
 
-  it("skickar inget mejl vid förbättrat betyg", async () => {
+  it("skickar kontrollmejl vid förbättrat betyg", async () => {
     const { store } = makeStore({ portfolios: [portfolio({ score: 5 })] });
 
     const result = await runPortfolioWatch({ store, analyze: analyzeReturning(EXCELLENT), sendAlert });
 
     expect(sendAlert).not.toHaveBeenCalled();
+    expect(sendUpdate).toHaveBeenCalledOnce();
     expect(result.improved).toBe(1);
     expect(result.decisions.improved).toBe(1);
   });
 
-  it("skickar inget mejl vid försämring under tröskeln", async () => {
+  it("skickar kontrollmejl vid försämring under tröskeln", async () => {
     // Nytt betyg blir 10; tidigare 10,3 ⇒ försämring 0,3 < 0,5.
     const { store } = makeStore({ portfolios: [portfolio({ score: 10.3 })] });
 
     const result = await runPortfolioWatch({ store, analyze: analyzeReturning(EXCELLENT), sendAlert });
 
     expect(sendAlert).not.toHaveBeenCalled();
+    expect(sendUpdate).toHaveBeenCalledOnce();
     expect(result.decisions["below-threshold"]).toBe(1);
   });
 
@@ -341,6 +356,7 @@ describe("runPortfolioWatch", () => {
     const result = await runPortfolioWatch({ store, analyze: analyzeReturning(DEGRADED), sendAlert });
 
     expect(sendAlert).not.toHaveBeenCalled();
+    expect(sendUpdate).not.toHaveBeenCalled();
     expect(result.decisions["alerts-disabled"]).toBe(1);
     // Analysen och betyget sparas ändå — bevakning ≠ notiser.
     expect(result.updated).toBe(1);

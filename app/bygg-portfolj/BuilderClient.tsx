@@ -14,6 +14,9 @@ import { useMobileBottomOverlay } from "@/lib/mobile-bottom-overlay";
 import { BEFORE_LOGIN_EVENT, prepareLoginResume, saveResume, takeResumeData } from "@/lib/resume-session";
 import { MAGIC_LINK_ENABLED } from "@/lib/features";
 import { authErrorMessage } from "@/lib/auth-errors";
+import { track } from "@vercel/analytics";
+
+const LOGIN_MARKER = "sharpa_login_started";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -432,11 +435,14 @@ export default function BuilderClient() {
   }, [step, answers, pending, priorities, result, localEquity, slotIndices, showAdvanced, autoExplanation, showManualSelections]);
 
   function openAuthModal() {
+    track("save_cta_clicked", { source: "portfolio_builder", authenticated: false });
     prepareLoginResume("/bygg-portfolj");
     setAuthModal(true);
   }
 
   async function handleAuthGoogle() {
+    localStorage.setItem(LOGIN_MARKER, "save");
+    track("login_started", { method: "google", intent: "save", source: "portfolio_builder" });
     const supabase = createClient();
     await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -452,6 +458,8 @@ export default function BuilderClient() {
     if (!MAGIC_LINK_ENABLED) return;
     setAuthError(null);
     setAuthLoading(true);
+    localStorage.setItem(LOGIN_MARKER, "save");
+    track("login_started", { method: "magic_link", intent: "save", source: "portfolio_builder" });
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
       email: authEmail,
@@ -554,6 +562,7 @@ export default function BuilderClient() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Okänt fel");
       setResult(data);
+      track("portfolio_built", { source: "portfolio_builder" });
       setLocalEquity(data.equityPct);
       setSlotIndices(data.portfolio.map(() => 0));
       setShowSaveForm(loggedIn ?? user !== null);
@@ -619,6 +628,7 @@ export default function BuilderClient() {
       setShowSaveForm(false);
       setSavingName("");
       setDuplicatePortfolio(null);
+      track("portfolio_saved", { source: "portfolio_builder", overwrite: Boolean(overwrite && existing) });
     } catch {
       setSaveStatus("error");
     }
@@ -1168,7 +1178,7 @@ export default function BuilderClient() {
                                       <p className="text-sm font-semibold text-slate-900">Spara din portfölj</p>
                                       <p className="text-xs text-slate-400 mt-0.5">Kom åt den när som helst från Mina portföljer.</p>
                                     </div>
-                                    <button onClick={() => { setShowSaveForm(true); requestAnimationFrame(() => saveNameRef.current?.focus({ preventScroll: true })); }} className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold py-3.5 rounded-md transition-colors">
+                                    <button onClick={() => { track("save_cta_clicked", { source: "portfolio_builder", authenticated: true }); setShowSaveForm(true); requestAnimationFrame(() => saveNameRef.current?.focus({ preventScroll: true })); }} className="w-full bg-accent hover:bg-accent-hover active:bg-accent-press text-white text-sm font-semibold py-3.5 rounded-md transition-colors">
                                       Spara portfölj
                                     </button>
                                   </>
