@@ -1,6 +1,7 @@
 import HeroDemo from "@/components/ui/HeroSearch";
 import HeroBackground from "@/components/ui/HeroBackground";
 import StatsRow from "@/components/ui/StatsRow";
+import HeroCopy from "@/components/ui/HeroCopy";
 
 export default function Hero() {
   return (
@@ -11,15 +12,10 @@ export default function Hero() {
       <div className="relative z-20 mx-auto w-full max-w-[760px]">
         <HeroDemo
           belowSearch={
-            <p className="mx-auto mt-5 max-w-[560px] text-[15px] leading-[1.6] text-ink-2 sm:text-base">
-              Analysera dina fonder gratis. Spara sedan portföljen så håller vi koll på betyget
-              och mejlar dig vid en tydlig försämring.
-            </p>
+            <HeroCopy part="description" />
           }
         >
-          <h1 className="mx-auto max-w-[680px] font-display text-[34px] leading-[1.1] text-ink sm:text-[48px] lg:text-[52px]">
-            Hur bra är <em className="italic">dina fonder</em> egentligen?
-          </h1>
+          <HeroCopy part="title" />
         </HeroDemo>
       </div>
       <div className="relative z-10 mx-auto mt-8 max-w-6xl border-y border-line sm:mt-10">

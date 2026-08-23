@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useLanguage } from "@/lib/i18n";
 
 /**
  * Portföljbevakning på landningssidan — riktning 1b ("notisen i centrum").
@@ -26,6 +27,8 @@ const fmt = (n: number) =>
 const DELTA = `−${fmt(Math.abs(SCORE_BEFORE - SCORE_AFTER))}`;
 
 export default function PortfolioWatch() {
+  const { isEnglish } = useLanguage();
+  const steps = isEnglish ? ["Save your portfolio", "All portfolios are reviewed", "You receive one summary email"] : STEPS;
   const ref = useRef<HTMLElement>(null);
   const [revealed, setRevealed] = useState(false);
   const [score, setScore] = useState(SCORE_BEFORE);
@@ -89,10 +92,10 @@ export default function PortfolioWatch() {
       {/* Intro */}
       <div className="flex flex-col gap-3">
         <h2 className="font-display text-[26px] leading-[1.12] text-ink sm:text-[30px]">
-          Få veta när din portfölj förändras
+          {isEnglish ? "Find out when your portfolio changes" : "Få veta när din portfölj förändras"}
         </h2>
         <p className="max-w-[620px] text-[15px] leading-[1.65] text-ink-2 sm:text-base">
-          Spara portföljen så följer vi betyget och mejlar dig efter varje ny kontroll.
+          {isEnglish ? "Save your portfolio and we will track its score and email you after every new review." : "Spara portföljen så följer vi betyget och mejlar dig efter varje ny kontroll."}
         </p>
       </div>
 
@@ -108,13 +111,13 @@ export default function PortfolioWatch() {
             />
             <span className="grid">
               <span className={`label-meta col-start-1 row-start-1 ${fadeOut(!revealed)}`}>
-                Exempel: ett portföljbetyg bevakas
+                {isEnglish ? "Example: a portfolio score is monitored" : "Exempel: ett portföljbetyg bevakas"}
               </span>
               <span
                 aria-hidden={!revealed}
                 className={`label-meta col-start-1 row-start-1 ${fadeIn(revealed)}`}
               >
-                Exempel: portföljbetyget har sjunkit
+                {isEnglish ? "Example: the portfolio score has fallen" : "Exempel: portföljbetyget har sjunkit"}
               </span>
             </span>
           </div>
@@ -123,8 +126,8 @@ export default function PortfolioWatch() {
             className="figure flex items-baseline gap-4 leading-none tracking-[-0.02em] sm:gap-[22px]"
             aria-label={
               revealed
-                ? `Betyget har gått från ${fmt(SCORE_BEFORE)} till ${fmt(SCORE_AFTER)}, ${DELTA}`
-                : `Betyget är ${fmt(SCORE_BEFORE)}`
+                ? (isEnglish ? `The score has fallen from ${SCORE_BEFORE.toFixed(1)} to ${SCORE_AFTER.toFixed(1)}, ${DELTA}` : `Betyget har gått från ${fmt(SCORE_BEFORE)} till ${fmt(SCORE_AFTER)}, ${DELTA}`)
+                : (isEnglish ? `The score is ${SCORE_BEFORE.toFixed(1)}` : `Betyget är ${fmt(SCORE_BEFORE)}`)
             }
           >
             <span
@@ -158,21 +161,20 @@ export default function PortfolioWatch() {
           {/* Exempeltexten byts ut i samma rutnätscell så höjden är konstant. */}
           <span className="grid max-w-[420px] text-[15px] leading-[1.6] text-ink-2 sm:text-base">
             <span className={`col-start-1 row-start-1 ${fadeOut(!revealed)}`}>
-              Portföljen bevakas i bakgrunden.
+              {isEnglish ? "The portfolio is monitored in the background." : "Portföljen bevakas i bakgrunden."}
             </span>
             <span
               aria-hidden={!revealed}
               className={`col-start-1 row-start-1 ${fadeIn(revealed)}`}
             >
-              Två fonder har tappat mot jämförbara fonder.
+              {isEnglish ? "Two funds have fallen behind comparable funds." : "Två fonder har tappat mot jämförbara fonder."}
             </span>
           </span>
 
           {/* Friskrivningen står intill utdatan, inte i den dämpade sidospalten —
               se COMPLIANCE.md § 4B. */}
           <p className="max-w-[420px] text-xs leading-[1.6] text-ink-4">
-            Illustrativt exempel, inte personlig rådgivning. Historisk avkastning är ingen garanti
-            för framtida resultat.
+            {isEnglish ? "Illustrative example, not personal advice. Past performance is no guarantee of future results." : "Illustrativt exempel, inte personlig rådgivning. Historisk avkastning är ingen garanti för framtida resultat."}
           </p>
         </div>
 
@@ -196,7 +198,7 @@ export default function PortfolioWatch() {
           >
             <span className="animate-rail-draw rail-glow absolute inset-x-0 bg-accent" />
           </span>
-          {STEPS.map((step, i) => (
+          {steps.map((step, i) => (
             <li
               key={step}
               /* Fast höjd på desktop i stället för padding: då ligger prickarna

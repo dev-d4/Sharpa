@@ -1108,7 +1108,8 @@ export default function BuilderClient() {
                                     <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-400">
                                       {returnValue != null && (
                                         <span>
-                                          Avkastning {returnYears} år {returnValue.toFixed(1)}%
+                                          {/* En textnod, inte tre — SiteTranslator slår upp hela frasen. */}
+                                          {`Avkastning ${returnYears} år ${returnValue.toFixed(1)}%`}
                                           {avgReturn != null && ` · snitt ${avgReturn.toFixed(1)}%`}
                                         </span>
                                       )}

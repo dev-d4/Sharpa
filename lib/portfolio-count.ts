@@ -35,8 +35,9 @@ export function formatPortfolioCount(n: number): string {
   return String(n);
 }
 
-// Rounds down to the nearest 100 with a Swedish thousands separator (e.g. 2120 → "2 100+").
-export function formatFundCount(n: number): string {
+// Rounds down to the nearest 100 with a locale-aware thousands separator
+// (e.g. 2120 → "2 100+" in Swedish, "2,100+" in English).
+export function formatFundCount(n: number, locale: string = "sv-SE"): string {
   if (n < 100) return String(n);
-  return `${(Math.floor(n / 100) * 100).toLocaleString("sv-SE")}+`;
+  return `${(Math.floor(n / 100) * 100).toLocaleString(locale)}+`;
 }

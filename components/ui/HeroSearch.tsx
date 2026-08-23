@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { LoaderCircle, Search } from "lucide-react";
 import { track } from "@vercel/analytics";
 import type { PortfolioAnalysis, SwapSuggestion } from "@/lib/analysis";
+import { useLanguage } from "@/lib/i18n";
 
 type FundSuggestion = { name: string; isin: string };
 
@@ -24,29 +25,29 @@ function fmtSigned(v: number, decimals = 1) {
 
 type VerdictTone = "good" | "warn" | "neutral";
 
-function swapReasonText(swap: SwapSuggestion): string {
+function swapReasonText(swap: SwapSuggestion, english = false): string {
   const imp = swap.improvement;
   const reasons: string[] = [];
 
   // Ett prestandaskäl (riskjusterat före rått), sedan avgift — så avgiften
   // inte alltid dominerar utan de starkaste skälen vävs ihop till en mening.
   if (imp.sharpe !== undefined) {
-    reasons.push("starkare riskjusterad avkastning historiskt");
+    reasons.push(english ? "stronger historical risk-adjusted returns" : "starkare riskjusterad avkastning historiskt");
   } else if (imp.return3yr !== undefined) {
-    reasons.push(`högre historisk avkastning (${fmtPct(swap.suggestedFund.return_3yr, 1)} mot ${fmtPct(swap.currentFund.return_3yr, 1)})`);
+    reasons.push(`${english ? "higher historical returns" : "högre historisk avkastning"} (${fmtPct(swap.suggestedFund.return_3yr, 1)} ${english ? "versus" : "mot"} ${fmtPct(swap.currentFund.return_3yr, 1)})`);
   } else if (imp.return1yr !== undefined) {
     // Legacy — gamla sparade snapshots skrev return1yr
     reasons.push(`högre historisk avkastning (${fmtPct(swap.suggestedFund.return_1yr, 1)} mot ${fmtPct(swap.currentFund.return_1yr, 1)})`);
   }
   if (imp.cost !== undefined) {
-    reasons.push(`lägre avgift (${fmtPct(fundCost(swap.suggestedFund))} mot ${fmtPct(fundCost(swap.currentFund))})`);
+    reasons.push(`${english ? "lower fee" : "lägre avgift"} (${fmtPct(fundCost(swap.suggestedFund))} ${english ? "versus" : "mot"} ${fmtPct(fundCost(swap.currentFund))})`);
   }
 
   if (reasons.length === 0) {
-    return "Starkare helhet i jämförelsen när vi väger samman avgift, avkastning och risk.";
+    return english ? "A stronger overall result when fees, returns and risk are considered together." : "Starkare helhet i jämförelsen när vi väger samman avgift, avkastning och risk.";
   }
 
-  const joined = reasons.length === 2 ? `${reasons[0]} och ${reasons[1]}` : reasons[0];
+  const joined = reasons.length === 2 ? `${reasons[0]} ${english ? "and" : "och"} ${reasons[1]}` : reasons[0];
   return joined.charAt(0).toUpperCase() + joined.slice(1) + ".";
 }
 
@@ -93,14 +94,15 @@ function buildFundSummary(analysis: PortfolioAnalysis, swap: SwapSuggestion | nu
 function buildFundVerdict(
   analysis: PortfolioAnalysis,
   selected: FundSuggestion,
-  swap: SwapSuggestion | null
+  swap: SwapSuggestion | null,
+  english = false
 ): { tone: VerdictTone; title: string; comparison: string } {
   const bestMatch = analysis.bestInCategory?.find((fund) => fund.isin === selected.isin);
 
   if (swap) {
     return {
       tone: "warn",
-      title: "Starkare alternativ hittat",
+      title: english ? "Stronger alternative found" : "Starkare alternativ hittat",
       comparison: "",
     };
   }
@@ -108,15 +110,15 @@ function buildFundVerdict(
   if (bestMatch) {
     return {
       tone: "good",
-      title: "Fonden står sig bra i sin kategori",
-      comparison: "Vi hittar inget alternativ som tydligt slår den just nu.",
+      title: english ? "The fund compares well in its category" : "Fonden står sig bra i sin kategori",
+      comparison: english ? "We cannot find an alternative that clearly outperforms it right now." : "Vi hittar inget alternativ som tydligt slår den just nu.",
     };
   }
 
   return {
     tone: "neutral",
-    title: "Fonden klarar sig helt okej",
-      comparison: "Den sticker inte ut som bäst i sin kategori, men vi hittar inget tydligt starkare alternativ just nu.",
+    title: english ? "The fund performs reasonably well" : "Fonden klarar sig helt okej",
+      comparison: english ? "It does not stand out as the best in its category, but we cannot find a clearly stronger alternative right now." : "Den sticker inte ut som bäst i sin kategori, men vi hittar inget tydligt starkare alternativ just nu.",
   };
 }
 
@@ -131,6 +133,7 @@ function FundPanelView({
   comparison,
   swap,
   onCta,
+  english,
 }: {
   title: string;
   live: boolean;
@@ -140,6 +143,7 @@ function FundPanelView({
   comparison: string;
   swap: SwapSuggestion | null;
   onCta: () => void;
+  english?: boolean;
 }) {
   const dotColor = {
     good: "bg-pos",
@@ -150,7 +154,7 @@ function FundPanelView({
   return (
     <div className={`w-full overflow-hidden rounded-md border border-line bg-white${live ? " animate-panel-in" : ""}`} style={PANEL_SHADOW}>
       <div className="px-5 pt-4 pb-3.5 sm:px-6 border-b border-line-soft">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-4">Analyserad fond</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-4">{english ? "Analysed fund" : "Analyserad fond"}</p>
         <p className="mt-1 text-sm font-semibold text-ink-2 leading-snug break-words">{title}</p>
       </div>
 
@@ -173,7 +177,7 @@ function FundPanelView({
               {swap.suggestedFund.name}
             </p>
             <p className="mt-2 text-sm text-ink-2 leading-relaxed">
-              {swapReasonText(swap)}
+              {swapReasonText(swap, english)}
             </p>
           </div>
         ) : (
@@ -185,27 +189,24 @@ function FundPanelView({
           onClick={onCta}
           className="mt-5 w-full rounded-md bg-accent py-3 text-sm font-semibold text-white transition-colors hover:bg-accent-hover active:bg-accent-press"
         >
-          Analysera hela din portfölj
+          {english ? "Analyse your entire portfolio" : "Analysera hela din portfölj"}
         </button>
 
         {/* Friskrivningen ska stå intill utdatan, inte bara i sidfoten —
             se COMPLIANCE.md § 4B. */}
         <p className="mt-4 text-[11px] leading-relaxed text-ink-4">
-          Automatiskt genererad jämförelse utifrån historiska nyckeltal och generella kriterier —
-          inte investeringsrådgivning eller en personlig rekommendation. Historisk avkastning är
-          ingen garanti för framtida resultat. Läs fondens faktablad (KID) hos fondbolaget innan du
-          fattar beslut.
+          {english ? "Automatically generated comparison based on historical key figures and general criteria — not investment advice or a personal recommendation. Past performance is no guarantee of future results. Read the fund's key information document (KID) before making a decision." : "Automatiskt genererad jämförelse utifrån historiska nyckeltal och generella kriterier — inte investeringsrådgivning eller en personlig rekommendation. Historisk avkastning är ingen garanti för framtida resultat. Läs fondens faktablad (KID) hos fondbolaget innan du fattar beslut."}
         </p>
       </div>
     </div>
   );
 }
 
-function LoadingPanel({ name }: { name: string }) {
+function LoadingPanel({ name, english }: { name: string; english?: boolean }) {
   return (
     <div className="flex min-h-[160px] w-full flex-col items-center justify-center gap-3 rounded-md border border-line bg-white px-5 py-8" style={PANEL_SHADOW}>
       <div className="w-6 h-6 rounded-full border-2 border-accent border-t-transparent animate-spin" />
-      <p className="text-sm text-ink-2 text-center">Analyserar <span className="font-semibold text-ink">{name}</span>…</p>
+      <p className="text-sm text-ink-2 text-center">{english ? "Analysing" : "Analyserar"} <span className="font-semibold text-ink">{name}</span>…</p>
     </div>
   );
 }
@@ -221,6 +222,7 @@ const PLACEHOLDER_EXAMPLES = [
 ];
 
 export default function HeroDemo({ children, belowSearch }: { children: React.ReactNode; belowSearch?: React.ReactNode }) {
+  const { isEnglish } = useLanguage();
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
@@ -323,11 +325,11 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
       });
       const data = await res.json();
       if (seq !== requestSeq.current) return;
-      if (!res.ok) throw new Error(data.error ?? "Okänt fel");
+      if (!res.ok) throw new Error(data.error ?? (isEnglish ? "Unknown error" : "Okänt fel"));
       setAnalysis(data);
       track("analysis_completed", { source: "landing_fund_search", kind: "single_fund" });
     } catch {
-      if (seq === requestSeq.current) setError("Kunde inte analysera fonden just nu. Prova igen om en stund.");
+      if (seq === requestSeq.current) setError(isEnglish ? "The fund could not be analysed right now. Please try again shortly." : "Kunde inte analysera fonden just nu. Prova igen om en stund.");
     } finally {
       if (seq === requestSeq.current) setLoading(false);
     }
@@ -341,10 +343,10 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
   // Resultatpanel: visas bara efter faktisk sökning/analys — inget påhittat exempel
   let panel: React.ReactNode;
   if (loading && selected) {
-    panel = <LoadingPanel name={selected.name} />;
+    panel = <LoadingPanel name={selected.name} english={isEnglish} />;
   } else if (analysis && selected) {
     const swap = analysis.swapSuggestions?.[0] ?? null;
-    const verdict = buildFundVerdict(analysis, selected, swap);
+    const verdict = buildFundVerdict(analysis, selected, swap, isEnglish);
     panel = (
       <FundPanelView
         title={selected.name}
@@ -357,6 +359,7 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
         comparison={verdict.comparison}
         swap={swap}
         onCta={goToAnalyzer}
+        english={isEnglish}
       />
     );
   } else {
@@ -380,7 +383,7 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
                 value={query}
                 onChange={(e) => handleChange(e.target.value)}
                 onBlur={() => setTimeout(() => setOpen(false), 150)}
-                aria-label="Sök fond"
+                aria-label={isEnglish ? "Search for a fund" : "Sök fond"}
                 className="w-full bg-transparent text-left text-[16px] text-ink sm:text-[17px]"
                 style={{ outline: "none" }}
               />
@@ -389,7 +392,7 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
                   aria-hidden="true"
                   className="pointer-events-none absolute inset-y-0 left-0 flex w-full items-center overflow-hidden whitespace-nowrap text-[16px] text-ink-3 sm:text-[17px]"
                 >
-                  <span className="shrink-0">Sök fond, t.ex.&nbsp;</span>
+                  <span className="shrink-0">{isEnglish ? "Search for a fund, e.g. " : "Sök fond, t.ex. "}</span>
                   {reducedMotion ? (
                     <span className="truncate">{PLACEHOLDER_EXAMPLES[0]}</span>
                   ) : (
@@ -403,7 +406,7 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
             </div>
             {searching && (
               <LoaderCircle
-                aria-label="Söker efter fonder"
+                aria-label={isEnglish ? "Searching for funds" : "Söker efter fonder"}
                 className="h-4 w-4 shrink-0 animate-spin text-accent/60 sm:h-[18px] sm:w-[18px]"
               />
             )}
@@ -431,7 +434,7 @@ export default function HeroDemo({ children, belowSearch }: { children: React.Re
           )}
           {open && query.length >= 2 && suggestions.length === 0 && (
             <div className="absolute left-0 right-0 top-full z-20 mt-2 rounded-md border border-line bg-white px-4 py-3 text-left text-sm text-ink-3" style={{ boxShadow: "0 8px 28px rgba(20,20,30,.12)" }}>
-              Vi hittade ingen fond som matchar &ldquo;{query}&rdquo;
+              {isEnglish ? <>We could not find a fund matching &ldquo;{query}&rdquo;</> : <>Vi hittade ingen fond som matchar &ldquo;{query}&rdquo;</>}
             </div>
           )}
       </div>

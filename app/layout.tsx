@@ -8,6 +8,8 @@ import ResumeAfterLogin from "./ResumeAfterLogin";
 import { Prefetch } from "@/components/ui/prefetch";
 import CookieBanner from "@/components/ui/CookieBanner";
 import { ScrollToTop } from "@/components/ui/ScrollToTop";
+import { LanguageProvider } from "@/lib/i18n";
+import SiteTranslator from "@/components/SiteTranslator";
 
 // Neutral grotesk för all UI och brödtext — äkta tabulära siffror och full
 // svensk teckenuppsättning. Ersätter Manrope, vars geometriska former läste
@@ -82,6 +84,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="sv" className={htmlClass}>
       <body className={bodyClass}>
+        <LanguageProvider>
+        <SiteTranslator />
         <ScrollToTop />
         <ResumeAfterLogin />
         <Header />
@@ -92,6 +96,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Footer />
 
         <CookieBanner />
+        </LanguageProvider>
         <Analytics />
       </body>
     </html>

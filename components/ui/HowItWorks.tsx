@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AccordionItem } from "@/components/ui/Accordion";
 import { ButtonLink } from "@/components/ui/button";
 import PortfolioWatch from "@/components/ui/PortfolioWatch";
+import { useLanguage } from "@/lib/i18n";
 
 const TRUST_ITEMS = [
   {
@@ -36,36 +37,47 @@ const FAQS = [
 ];
 
 export default function HowItWorks() {
+  const { isEnglish } = useLanguage();
+  const trustItems = isEnglish ? [
+    { title: "Independent of fund providers", desc: "We receive no commission from fund providers. Sharpa is funded by licence revenue from professional users. Every fund is compared using the same criteria." },
+    { title: "Data-driven", desc: "Funds are compared by fees, historical returns and risk — using the same criteria for every fund." },
+    { title: "Easy to understand", desc: "You get a clear result without having to be a financial expert." },
+  ] : TRUST_ITEMS;
+  const faqs = isEnglish ? [
+    { q: "Is this financial advice?", a: "No. Sharpa is an automated analysis tool that compares funds using historical key figures. The analysis does not consider your personal circumstances, and you make all investment decisions yourself." },
+    { q: "Is Sharpa really free?", a: "Yes. The basic features are free and require neither a credit card nor an account." },
+    { q: "Do I need to log in?", a: "No. You can analyse funds and view sample portfolios without an account. You only need an account to save and monitor a portfolio." },
+  ] : FAQS;
   return (
     <div>
       {/* Analysera och Bygg är de två aktiva vägarna in i produkten. */}
       <section className="py-14 sm:py-20">
-        <p className="label-meta text-center">Välj vad du vill göra</p>
+        <p className="label-meta text-center">{isEnglish ? "Choose what you want to do" : "Välj vad du vill göra"}</p>
 
         <div className="mt-7 grid gap-8 sm:grid-cols-2 sm:gap-12">
           <div className="border-t-2 border-ink pt-5">
-            <p className="label-meta">01 · Analysera</p>
+            <p className="label-meta">{isEnglish ? "01 · Analyse" : "01 · Analysera"}</p>
             <h3 className="mt-3 font-display text-[22px] leading-tight text-ink sm:text-[26px]">
-              Se hur dina fonder står sig
+              {isEnglish ? "See how your funds compare" : "Se hur dina fonder står sig"}
             </h3>
             <p className="mt-2 max-w-[440px] text-[15px] leading-relaxed text-ink-2">
-              Jämför avgift, avkastning och risk mot liknande fonder och få ett tydligt betyg.
+              {isEnglish ? "Compare fees, returns and risk with similar funds and get a clear score." : "Jämför avgift, avkastning och risk mot liknande fonder och få ett tydligt betyg."}
             </p>
             <ButtonLink href="/analyze" variant="primary" className="mt-6">
-              Analysera min portfölj
+              {isEnglish ? "Analyse my portfolio" : "Analysera min portfölj"}
             </ButtonLink>
           </div>
 
           <div className="border-t-2 border-ink pt-5">
-            <p className="label-meta">02 · Bygg</p>
+            <p className="label-meta">{isEnglish ? "02 · Build" : "02 · Bygg"}</p>
             <h3 className="mt-3 font-display text-[22px] leading-tight text-ink sm:text-[26px]">
-              Börja med ett portföljexempel
+              {isEnglish ? "Start with a sample portfolio" : "Börja med ett portföljexempel"}
             </h3>
             <p className="mt-2 max-w-[440px] text-[15px] leading-relaxed text-ink-2">
-              Svara på fyra frågor och se ett illustrativt exempel anpassat efter din risknivå.
+              {isEnglish ? "Answer four questions and see an illustrative example tailored to your risk level." : "Svara på fyra frågor och se ett illustrativt exempel anpassat efter din risknivå."}
             </p>
             <ButtonLink href="/bygg-portfolj" variant="primary" className="mt-6">
-              Bygg ett portföljexempel
+              {isEnglish ? "Build a sample portfolio" : "Bygg ett portföljexempel"}
             </ButtonLink>
           </div>
         </div>
@@ -77,9 +89,9 @@ export default function HowItWorks() {
 
       {/* Förtroendeargumenten hålls till en enda kompakt rad. */}
       <section className="border-y border-line py-10 sm:py-12">
-        <p className="label-meta mb-7 text-center">Så fungerar jämförelsen</p>
+        <p className="label-meta mb-7 text-center">{isEnglish ? "How the comparison works" : "Så fungerar jämförelsen"}</p>
         <div className="grid gap-7 sm:grid-cols-3 sm:gap-8">
-          {TRUST_ITEMS.map((item) => (
+          {trustItems.map((item) => (
             <div key={item.title}>
               <h3 className="text-[15px] font-semibold text-ink">{item.title}</h3>
               <p className="mt-1 text-sm leading-[1.6] text-ink-2">{item.desc}</p>
@@ -92,19 +104,19 @@ export default function HowItWorks() {
       <section className="py-14 sm:py-20">
         <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,4fr)_minmax(0,7fr)] lg:gap-16">
           <div>
-            <p className="label-meta mb-3">Bra att veta</p>
+            <p className="label-meta mb-3">{isEnglish ? "Good to know" : "Bra att veta"}</p>
             <h2 className="font-display text-[26px] leading-tight text-ink sm:text-[32px]">
-              Vanliga frågor
+              {isEnglish ? "Frequently asked questions" : "Vanliga frågor"}
             </h2>
             <Link
               href="/faq"
               className="mt-4 inline-block text-sm text-accent underline decoration-line-strong underline-offset-2 transition-colors duration-150 hover:decoration-accent"
             >
-              Se alla frågor och svar
+              {isEnglish ? "See all questions and answers" : "Se alla frågor och svar"}
             </Link>
           </div>
           <div className="border-t border-ink">
-            {FAQS.map((faq) => (
+            {faqs.map((faq) => (
               <AccordionItem key={faq.q} q={faq.q} a={faq.a} />
             ))}
           </div>
