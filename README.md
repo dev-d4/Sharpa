@@ -2,8 +2,6 @@
 
 Sharpa is a full-stack investment analysis platform for Swedish fund savers and financial advisers. It helps users inspect an existing portfolio, understand risk and fees, compare funds, build a diversified alternative, and monitor how a saved portfolio develops over time.
 
-![Sharpa portfolio analysis](design-review-screenshots/11-analysresultat-desktop.png)
-
 ## Highlights
 
 - Portfolio analysis with diversification, risk, fee, and concentration insights
