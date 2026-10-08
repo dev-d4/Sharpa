@@ -53,6 +53,7 @@ export const EN: Record<string, string> = {
 
   // ------------------------------------------------------------------ Landning
   "Sharpa – Hur bra är dina fonder egentligen?": "Sharpa – How good are your funds, really?",
+  "Sharpa – Jämför dina fonder gratis": "Sharpa – Compare your funds for free",
   "Sök upp dina fonder och se på 2 minuter hur de står sig mot liknande fonder utifrån avgift, avkastning och risk. Gratis och oberoende.":
     "Look up your funds and see in 2 minutes how they compare with similar funds on fees, returns and risk. Free and independent.",
   "Analysera dina fonder gratis. Spara sedan portföljen så håller vi koll på betyget och mejlar dig vid en tydlig försämring.":
@@ -68,7 +69,7 @@ export const EN: Record<string, string> = {
   "Svara på fyra frågor och se ett illustrativt exempel anpassat efter din risknivå.":
     "Answer four questions and see an illustrative example tailored to your risk level.",
   "Se hur dina fonder står sig": "See how your funds measure up",
-  "fonder i databasen": "funds in the database",
+  "fonder analyserade": "funds analysed",
   "sparade portföljer": "saved portfolios",
   "portföljer byggda": "portfolios built",
   "Fonder analyserade": "Funds analysed",

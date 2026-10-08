@@ -51,14 +51,19 @@ export default function HowItWorks() {
   return (
     <div>
       {/* Analysera och Bygg är de två aktiva vägarna in i produkten. */}
-      <section className="py-14 sm:py-20">
-        <p className="label-meta text-center">{isEnglish ? "Choose what you want to do" : "Välj vad du vill göra"}</p>
+      <section className="py-12 sm:py-16">
+        <div className="max-w-[620px]">
+          <p className="label-meta">{isEnglish ? "Two ways to get started" : "Två sätt att komma igång"}</p>
+          <h2 className="mt-3 font-display text-[26px] leading-tight text-ink sm:text-[32px]">
+            {isEnglish ? "Choose what suits you" : "Välj det som passar dig"}
+          </h2>
+        </div>
 
-        <div className="mt-7 grid gap-8 sm:grid-cols-2 sm:gap-12">
+        <div className="mt-8 grid gap-8 sm:grid-cols-2 sm:gap-12">
           <div className="border-t-2 border-ink pt-5">
-            <p className="label-meta">{isEnglish ? "01 · Analyse" : "01 · Analysera"}</p>
+            <p className="label-meta">{isEnglish ? "I already own funds" : "Jag har redan fonder"}</p>
             <h3 className="mt-3 font-display text-[22px] leading-tight text-ink sm:text-[26px]">
-              {isEnglish ? "See how your funds compare" : "Se hur dina fonder står sig"}
+              {isEnglish ? "Analyse my portfolio" : "Analysera min portfölj"}
             </h3>
             <p className="mt-2 max-w-[440px] text-[15px] leading-relaxed text-ink-2">
               {isEnglish ? "Compare fees, returns and risk with similar funds and get a clear score." : "Jämför avgift, avkastning och risk mot liknande fonder och få ett tydligt betyg."}
@@ -69,9 +74,9 @@ export default function HowItWorks() {
           </div>
 
           <div className="border-t-2 border-ink pt-5">
-            <p className="label-meta">{isEnglish ? "02 · Build" : "02 · Bygg"}</p>
+            <p className="label-meta">{isEnglish ? "I want help getting started" : "Jag vill ha hjälp att komma igång"}</p>
             <h3 className="mt-3 font-display text-[22px] leading-tight text-ink sm:text-[26px]">
-              {isEnglish ? "Start with a sample portfolio" : "Börja med ett portföljexempel"}
+              {isEnglish ? "Build a sample portfolio" : "Bygg ett portföljexempel"}
             </h3>
             <p className="mt-2 max-w-[440px] text-[15px] leading-relaxed text-ink-2">
               {isEnglish ? "Answer four questions and see an illustrative example tailored to your risk level." : "Svara på fyra frågor och se ett illustrativt exempel anpassat efter din risknivå."}

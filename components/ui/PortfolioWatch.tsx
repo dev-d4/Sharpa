@@ -1,14 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ArrowRight, Mail } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 
 /**
  * Portföljbevakning på landningssidan — riktning 1b ("notisen i centrum").
- *
- * Betygsfallet bär sektionen genom skala; de tre stegen står som en dämpad
- * kolumn till höger på desktop och som en vågrät rad på mobil. Stegskenans
- * loop är ren CSS och oberoende av scroll.
  *
  * Notisen styrs av hur långt användaren har scrollat genom sektionen: läget går
  * från "vi bevakar" till "vi har upptäckt en försämring" och betyget rullar
@@ -16,8 +13,6 @@ import { useLanguage } from "@/lib/i18n";
  * animeras ligger i DOM:en från start med reserverad plats, så inget hoppar.
  * Vid prefers-reduced-motion visas slutläget direkt.
  */
-
-const STEPS = ["Spara din portfölj", "Alla portföljer granskas", "Du får ett samlat mejl"];
 
 const SCORE_BEFORE = 7.8;
 const SCORE_AFTER = 7.1;
@@ -28,7 +23,6 @@ const DELTA = `−${fmt(Math.abs(SCORE_BEFORE - SCORE_AFTER))}`;
 
 export default function PortfolioWatch() {
   const { isEnglish } = useLanguage();
-  const steps = isEnglish ? ["Save your portfolio", "All portfolios are reviewed", "You receive one summary email"] : STEPS;
   const ref = useRef<HTMLElement>(null);
   const [revealed, setRevealed] = useState(false);
   const [score, setScore] = useState(SCORE_BEFORE);
@@ -99,8 +93,8 @@ export default function PortfolioWatch() {
         </p>
       </div>
 
-      <div className="grid items-start gap-10 border-t border-line pt-7 lg:grid-cols-2 lg:gap-16">
-        <div className="flex min-w-0 flex-col gap-6">
+      <div className="grid items-stretch gap-8 border-t border-line pt-7 lg:grid-cols-[minmax(0,3fr)_minmax(260px,2fr)] lg:gap-16">
+        <div className="flex max-w-[560px] min-w-0 flex-col gap-6">
           {/* Etikett — pricken tänds när försämringen upptäcks */}
           <div className="flex items-center gap-3">
             <span
@@ -178,44 +172,33 @@ export default function PortfolioWatch() {
           </p>
         </div>
 
-        {/* Ett ljust segment vandrar längs skenan i en ständig loop. Bara linjen
-            rör sig — texten står stilla och fullt läsbar hela tiden. Skenan
-            ligger vågrätt ovanför stegen på mobil och lodrätt vid sidan på
-            desktop, så flödet alltid följer läsriktningen. */}
-        <ol className="relative grid min-w-0 grid-cols-3 gap-x-4 pt-6 lg:flex lg:flex-col lg:gap-0 lg:pl-7 lg:pt-0">
-          {/* Skenorna spänner mellan första och sista prickens mittpunkt, så
-              segmentet alltid börjar och slutar exakt på en punkt. På mobil är
-              det kolumnmitterna: en halv kolumnbredd in från vardera kanten. */}
-          <span
-            aria-hidden
-            className="absolute left-[calc((100%-2rem)/6)] right-[calc((100%-2rem)/6)] top-[3px] h-px bg-line-strong lg:hidden"
+        <aside className="rounded-md border border-line bg-white p-5 sm:p-6" aria-label={isEnglish ? "Example notification" : "Exempel på notis"}>
+          <div className="flex items-center gap-2.5">
+            <Mail aria-hidden="true" className="size-4 shrink-0 text-accent" strokeWidth={1.7} />
+            <p className="label-meta">{isEnglish ? "Example notification" : "Exempel på notis"}</p>
+          </div>
+          <h3 className="mt-4 text-base font-semibold leading-snug text-ink">
+            {isEnglish ? "The portfolio score has fallen" : "Portföljbetyget har sjunkit"}
+          </h3>
+          <p className="mt-2 max-w-[360px] text-sm leading-relaxed text-ink-2">
+            {isEnglish ? "The latest review shows that two funds have fallen behind comparable funds." : "Den senaste kontrollen visar att två fonder har tappat mot jämförbara fonder."}
+          </p>
+
+          <div
+            className="mt-5 grid grid-cols-[1fr_auto_1fr] items-end gap-3 border-t border-line-soft pt-4"
+            aria-label={isEnglish ? "The score has changed from 7.8 to 7.1" : "Betyget har ändrats från 7,8 till 7,1"}
           >
-            <span className="animate-rail-draw-x rail-glow absolute inset-y-0 bg-accent" />
-          </span>
-          <span
-            aria-hidden
-            className="absolute bottom-[11px] left-[3px] top-[10px] hidden w-px bg-line-strong lg:block"
-          >
-            <span className="animate-rail-draw rail-glow absolute inset-x-0 bg-accent" />
-          </span>
-          {steps.map((step, i) => (
-            <li
-              key={step}
-              /* Fast höjd på desktop i stället för padding: då ligger prickarna
-                 garanterat jämnt fördelade på skenan — och mittenpricken exakt
-                 på 50 % — även om en etikett skulle radbrytas. */
-              className="relative min-w-0 text-center lg:text-left lg:[&:not(:last-child)]:h-[112px]"
-            >
-              <span
-                aria-hidden
-                className={`absolute -top-6 left-1/2 size-[7px] -translate-x-1/2 rounded-full bg-line-strong lg:left-0 lg:top-[7px] lg:-ml-7 lg:translate-x-0 ${
-                  ["animate-dot-lit-1", "animate-dot-lit-2", "animate-dot-lit-3"][i]
-                }`}
-              />
-              <span className="block text-sm leading-snug text-ink lg:text-base">{step}</span>
-            </li>
-          ))}
-        </ol>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-4">{isEnglish ? "Previous" : "Tidigare"}</p>
+              <p aria-hidden="true" className="figure mt-1 text-xl text-ink-3">7,8</p>
+            </div>
+            <ArrowRight aria-hidden="true" className="mb-1 size-4 text-ink-4" strokeWidth={1.6} />
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-4">{isEnglish ? "Now" : "Nu"}</p>
+              <p aria-hidden="true" className="figure mt-1 text-xl text-ink">7,1</p>
+            </div>
+          </div>
+        </aside>
       </div>
     </section>
   );

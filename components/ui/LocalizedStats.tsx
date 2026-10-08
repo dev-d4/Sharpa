@@ -29,7 +29,7 @@ export default function LocalizedStats({
       <div className="mx-auto flex max-w-lg items-stretch justify-center sm:max-w-none">
         <StatCell
           value={formatFundCount(fundCount, isEnglish ? "en-US" : "sv-SE")}
-          label={isEnglish ? "funds in the database" : "fonder i databasen"}
+          label={isEnglish ? "funds analysed" : "fonder analyserade"}
         />
         {divider}
         <StatCell

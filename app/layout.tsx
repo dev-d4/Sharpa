@@ -47,12 +47,12 @@ const OG_DESCRIPTION = "Sök upp dina fonder och se på 2 minuter hur de står s
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Sharpa – Hur bra är dina fonder egentligen?",
+    default: "Sharpa – Jämför dina fonder gratis",
     template: "%s – Sharpa",
   },
   description: OG_DESCRIPTION,
   openGraph: {
-    title: "Sharpa – Hur bra är dina fonder egentligen?",
+    title: "Sharpa – Jämför dina fonder gratis",
     description: OG_DESCRIPTION,
     url: SITE_URL,
     siteName: "Sharpa",
@@ -62,7 +62,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Sharpa – Hur bra är dina fonder egentligen?",
+    title: "Sharpa – Jämför dina fonder gratis",
     description: OG_DESCRIPTION,
     images: ["/og.png"],
   },

@@ -7,7 +7,7 @@ import { useLanguage } from "@/lib/i18n";
 export default function Footer() {
   const { isEnglish } = useLanguage();
   return (
-    <footer className="mt-12 border-t border-line bg-white sm:mt-16">
+    <footer className="border-t border-line bg-white">
       <div className="mx-auto max-w-6xl space-y-4 px-4 py-10 sm:px-6 sm:py-12">
         <div className="flex items-center gap-2">
           <Image src="/logo.svg" alt="Sharpa" width={20} height={20} />
